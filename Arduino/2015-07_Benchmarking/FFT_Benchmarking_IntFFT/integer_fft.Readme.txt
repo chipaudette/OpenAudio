@@ -1,0 +1,19 @@
+Here it is... an integer FFT routine that's pretty fast.  I've only tested
+it on a 68k powerbook, and it's much faster than either software floating
+point or the built in FPU.  The orignal source was DOS only and came off
+the net.  
+I simply removed the ugly DOS stuff and did some simple testing.  I do not
+guarantee that it works... but try compiling with -DMAIN to test it yourself.
+
+Those of you with impoverished floating point hardware (notably, some new
+Powerbooks, and maybe even Intel machines) might find these routines
+useful.
+
+Input and output is an array of shorts.  I haven't tested all the routines,
+but the FFT looks good enough to use.  It keeps a table of trig functions, so
+it will only run up to 1024 points.
+
+-- Malcolm
+
+Written by:  Tom Roberts  11/8/89
+Made portable:  Malcolm Slaney 12/15/94 malcolm@interval.com
