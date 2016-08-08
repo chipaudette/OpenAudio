@@ -1,0 +1,73 @@
+
+
+Download 3 different packages
+You have to register before downloading two of them.
+Wait for email to confirm your account.
+Download.  ~1GB total.  Kinetis Design Studio IDE is free, which is good.
+Install.  Takes a while.
+Wants access through my firewall.  Let's deny it.
+
+The SDK doesn't contain "boardS" or any demos for the FRDM-K66. Re-installing.  Wow, this is taking forever.
+
+Looking at the PDF docs, I guess that I use the FRDM-K64 docs instead.
+
+To open an example, you don't do "open"...but you do import and then drill way down.  Not intuitive.
+
+The paths are a fair bit different than the video.  Same number of nested directories, but different names.  Oh well.
+
+Driver wouldn't install.  Says that there are no mBed Microcontrollers were found, even though I'm plugged in.  Device manager does show "Jlink CDC UART Port (COM35)", which is what the video says that we want.  OK.
+
+Won't complie hellow world.  Says:
+
+make: *** No rule to make target 'C:/Freescale/KSDK_1.3.0/examples/frdmk64f/demo_apps/hello_world/kds/../../../../../lib/ksdk_platform_lib/kds/K64F12/release/libksdk_platform.a', needed by 'hello_world_frdmk64f.elf'.
+make: Target 'all' not remade because of errors.
+
+Uninstalled the IDE.  (This takes a while).  Will re-install.
+
+Meanwhile, I found that a new SDK is available.  It can be custom built for ones specific platform.  And they have FRDM-K66!  It's here:
+
+https://kex.nxp.com/en/welcome
+
+Before I could download it, I had to update my profile.  I've had to update my profile like 3 times now.   Annoying.
+
+Opening it.  Aha!  This has the right directory structure!  Yay!  6000+ files is a lot of files to unpack and copy, though.  I'm annoyed again.  Ooh, it really picked up steam at the end.  Excellent.
+
+Now I'm re-installing the IDE.  I'm allowing it access to my network this time.  I'm running the updates that the IDE identified.
+
+Cleared and then added hellow_world to the workspace.  I compiled.  It appears to be successful!  Hello world runs!  I'm debugging!  it echos characters!
+
+
+Loaded up bubble.  Kinda tricky to see how to get OUT of debug mode.  Gotta click on C/C++ on the upper right.
+
+It compiled.  I compiled as Release.  Then I hit the green run button.  It works!
+
+Trying the ADC/DAC. It complies but I can't run or debug it!  I tried fiddling with the debug settings.  Didn't help.  Restarting IDE.  
+
+I did clean all.  I built the debug version (hammer).  I pressed the debug button and changed the settngs back.  Then I hit go (or whatever).  it runs!
+
+This time, I hit the stop button in the debugger.  Then I compiled release.  Then i hit the run button for release.  It runs fine.  Yay!
+
+
+Tried to make my own program from New->Projects.  Won't debug.  Looking at hello_world project.  Seeing that I need to copy code from board.c/.h, clock_config.c/.h and pin_mux.c/.h.  So, I litterally copied and pasted them.
+
+Clean all.  Recompile.  Debugging works!  Recompile and "Run" (as Debug build).  It works.  I get stuff on my serial!
+
+Did a bunch of tests on FIR speed.  Using Realterm to measure the time.  Pretty good success.
+
+Now, trying to add a timer to the project.  Like "millis()" or "micros()" from Arduino.  Not clear how to do this. Found examples in the SDK of the LPTMR and PIT.  Trying the LPTMR.
+
+Seems to get stuck on EnableIRQ(LPTMR0_IRQn);  /* Enable at the NVIC */.  Can't debug either.  "arm-none-eabi-gdb.exe has stopped working".  Messed around a bit, commenting out lines and stuff.  Even with nearly all new lines commented, couldn't debug.
+
+Did WinDiff on lptmr. Found that pin_mux had differences.  Moved the differences over to my pin_mux.  Now it debugs with all lines commented.  Still won't run, though.
+
+Created a new project with KDS PRoject generator.  Once created, couldn't use KDS IDE's "rename" feature.  it munged everything up.  So, I created another new project (with the correct name), using "advanced", choosing "board" (not "device") and choosing "stand-alone".
+
+it compiles.  it runs!  It works!  I get timing info!  Weird thing is that it rebuilds all (as if cleaned) every time.  That's annoying.
+
+
+After getting all of my FI.R results.  I fought some more with cleaning up the timing code.  It's amazing how long it's taking me.
+
+I got the FFT code working, though I seem to be short on memory.  I can only get up to N=64 to run.  Anything higher than that and it hangs.  And the debugger won't work in those cases, giving the "arm-none-eabi-gdb.exe has stopped working" error.  That's not helpful.  Since the FFT code uses dynamic memory allocation (I think), how do I check the memroy when running?
+
+
+
