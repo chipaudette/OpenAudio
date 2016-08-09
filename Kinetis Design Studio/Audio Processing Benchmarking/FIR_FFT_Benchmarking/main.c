@@ -176,9 +176,9 @@ int kiss_fft_func(void);
 #else
 #include "fftsettings.h"
 #include "kiss_fft.h"
-#define MAX_NFFT 64
-#define N_ALL_FFT 2
-int ALL_N_FFT[N_ALL_FFT] = {64, 32};
+#define MAX_NFFT 128
+#define N_ALL_FFT 1
+int ALL_N_FFT[N_ALL_FFT] = {128};
 int N_FFT;
 kiss_fft_cpx in_buffer[MAX_NFFT];
 kiss_fft_cpx out_buffer[MAX_NFFT];
@@ -189,12 +189,12 @@ int kiss_fft_func(void) {
 	float dt_millis=0;
 	int is_ifft=0;
 
-	//PRINTF("Start kiss_fft_func\r\n");
+	PRINTF("Start kiss_fft_func\r\n");
 	for (;;) {  //loop forever
 
 		for (int I_N_FFT = 0; I_N_FFT < N_ALL_FFT; I_N_FFT++) {
 			N_FFT = ALL_N_FFT[I_N_FFT];
-			//PRINTF("Starting FFT %i\r\n", N_FFT);
+			PRINTF("Starting FFT %i\r\n", N_FFT);
 
 			//Serial << "Allocating memory for N = " << N_FFT << '\n';
 			is_ifft = 0;
@@ -203,8 +203,8 @@ int kiss_fft_func(void) {
 
 			count = 0;
 
-			//PRINTF("STARTING N_FFT_LOOP = %i\r\n", N_FFT_LOOP);
 			start_tics = LPTMR_GetCurrentTimerCount(LPTMR0) + lptmrCounter*tics_per_loop;
+			PRINTF("STARTING N_FFT_LOOP = %i\r\n", N_FFT_LOOP);
 			while (count < N_FFT_LOOP) {
 				count++;
 
@@ -215,9 +215,9 @@ int kiss_fft_func(void) {
 				}
 
 				//do fft
-				//PRINTF("Starting FFT %i\r\n", count);
+				PRINTF("Starting FFT %i\r\n", count);
 				kiss_fft(my_fft_cfg,in_buffer,out_buffer);
-				//PRINTF("FFT %i completer\r\n", count);
+				PRINTF("FFT %i completer\r\n", count++);
 
 			}
 
