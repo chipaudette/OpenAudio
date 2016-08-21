@@ -247,33 +247,50 @@ int kiss_fft_func(void);
 #include "arm_math.h"
 #include "arm_const_structs.h" //from CMSIS example.  Is it needed?
 
-//q15_t buffer_real[MAX_N_FFT*2];
-//q15_t buffer_complex[MAX_N_FFT*2];
-//q31_t buffer_real[MAX_N_FFT*2];
-//q31_t buffer_complex[MAX_N_FFT*2];
-//float32_t buffer_real[MAX_N_FFT*2];
-float32_t buffer_complex[MAX_N_FFT*2];
 uint8_t ifftFlag = 0;
 uint8_t doBitReverse = 1;
-//arm_cfft_radix2_instance_q15 cfft_inst;
-arm_cfft_radix2_instance_q31 cfft_inst;
-//arm_cfft_radix4_instance_q15 cfft_inst;
-//arm_rfft_instance_q15 rfft_inst;
-//arm_cfft_radix2_instance_f32 cfft_inst;
-//arm_cfft_radix4_instance_f32 cfft_inst;
-//arm_rfft_instance_f32 rfft_inst;
 
+//q15_t buffer_complex[MAX_N_FFT*2];
+//arm_cfft_radix2_instance_q15 cfft_inst;
 //#define ARM_FFT_INIT_FUNC arm_cfft_radix2_init_q15
-#define ARM_FFT_INIT_FUNC arm_cfft_radix2_init_q31
+//#define ARM_FFT_FUNC arm_cfft_radix2_q15
+
+//q15_t buffer_complex[MAX_N_FFT*2];
+//arm_cfft_radix4_instance_q15 cfft_inst;
 //#define ARM_FFT_INIT_FUNC arm_cfft_radix4_init_q15
+//#define ARM_FFT_FUNC arm_cfft_radix4_q15
+
+//q31_t buffer_complex[MAX_N_FFT*2];
+//arm_cfft_radix2_instance_q31 cfft_inst;
+//#define ARM_FFT_INIT_FUNC arm_cfft_radix2_init_q31
+//#define ARM_FFT_FUNC arm_cfft_radix2_q31
+
+//q31_t buffer_complex[MAX_N_FFT*2];
+//arm_cfft_radix4_instance_q31 cfft_inst;
 //#define ARM_FFT_INIT_FUNC arm_cfft_radix4_init_q31
-//#define ARM_FFT_INIT_FUNC arm_cfft_radix4_init_q15
-//#define ARM_FFT_INIT_FUNC arm_rfft_init_q15
-//#define ARM_FFT_INIT_FUNC arm_cfft_radix4_init_q31
-//#define ARM_FFT_INIT_FUNC arm_rfft_init_q31
-//#define ARM_FFT_INIT_FUNC arm_cfft_radix2_init_f32
+//#define ARM_FFT_FUNC arm_cfft_radix4_q31
+
+float32_t buffer_complex[MAX_N_FFT*2];
+arm_cfft_radix2_instance_f32 cfft_inst;
+#define ARM_FFT_INIT_FUNC arm_cfft_radix2_init_f32
+#define ARM_FFT_FUNC arm_cfft_radix2_f32
+
+//float32_t buffer_complex[MAX_N_FFT*2];
+//arm_cfft_radix4_instance_f32 cfft_inst;
 //#define ARM_FFT_INIT_FUNC arm_cfft_radix4_init_f32
-//#define ARM_FFT_INIT_FUNC arm_rfft_init_f32
+//#define ARM_FFT_FUNC arm_cfft_radix4_f32
+
+// //arm_cfft_f32(&arm_cfft_sR_f32_len1024, testInput_f32_10khz, ifftFlag, doBitReverse);
+// //arm_cfft_radix2_q15(fft_instance,input_data)
+// //arm_cfft_q31(fft_instance,input_complex_Q31,ifftFlag,bitReverseFlag);
+// //if (window) apply_window_to_fft_buffer(buffer, window);
+// //arm_cfft_radix4_q15(&fft_inst, buffer_complex_Q15);
+//arm_cfft_radix2_q15(&cfft_inst, buffer_complex);
+//arm_cfft_radix2_q31(&cfft_inst, buffer_complex);
+//arm_cfft_radix4_q15(&cfft_inst, buffer_complex);
+//arm_cfft_radix4_q31(&cfft_inst, buffer_complex);
+//arm_cfft_radix2_f32(&cfft_inst, buffer_complex);
+//arm_cfft_radix4_f32(&cfft_inst, buffer_complex);
 
 int arm_fft_func(void) {
 	float dt_millis=0;
@@ -307,20 +324,7 @@ int arm_fft_func(void) {
 			        }
 
 			        /* Process the data through the CFFT/CIFFT module */
-			        // //arm_cfft_f32(&arm_cfft_sR_f32_len1024, testInput_f32_10khz, ifftFlag, doBitReverse);
-			        // //arm_cfft_radix2_q15(fft_instance,input_data)
-			        // //arm_cfft_q31(fft_instance,input_complex_Q31,ifftFlag,bitReverseFlag);
-			        // //if (window) apply_window_to_fft_buffer(buffer, window);
-			        // //arm_cfft_radix4_q15(&fft_inst, buffer_complex_Q15);
-			        //arm_cfft_radix2_q15(&cfft_inst, buffer_complex);
-			        arm_cfft_radix2_q31(&cfft_inst, buffer_complex);
-			        //arm_cfft_radix4_q15(&cfft_inst, buffer_complex);
-			        //arm_cfft_radix4_q31(&cfft_inst, buffer_complex);
-			        //arm_rfft_q15(&rfft_inst, buffer_real, buffer_complex);
-			        //arm_rfft_q31(&rfft_inst, buffer_real, buffer_complex);
-			        //arm_cfft_radix2_f32(&cfft_inst, buffer_complex);
-			        //arm_cfft_radix4_f32(&cfft_inst, buffer_complex);
-			        //arm_rfft_f32(&rfft_inst, buffer_real, buffer_complex);
+			        ARM_FFT_FUNC(&cfft_inst, buffer_complex);
 
 				}
 
@@ -344,7 +348,8 @@ int arm_fft_func(void) {
 int main(void) {
 
 	BOARD_InitPins();
-	BOARD_BootClockRUN();
+	//BOARD_BootClockRUN();   //120 MHz
+	BOARD_BootClockHSRUN(); //180MHz
 	BOARD_InitDebugConsole();
 
 	initMillis();

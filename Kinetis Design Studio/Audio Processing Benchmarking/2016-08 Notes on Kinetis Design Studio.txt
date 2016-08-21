@@ -97,9 +97,15 @@ Complied for DEBUG.  It runs!!!  Success!!!
 Doesn't compile for RELEASE.  Ah, in Porject -> C/C++ Build -> Settings -> Libraries, I should have (at the top) done Configurion "All".  Now it works.
 
 
+>>>>>>>>>>>>>> Running at 180MHz
 
+I noticed a while back that the processor speed is reporting as only 120 MHz.  I learned this via this print statement:
 
+PRINTF("System Clock = %i Hz\r\n",CLOCK_GetFreq(kCLOCK_CoreSysClk));
 
+Looking through my main.c file, I see this function call near the beginning:  BOARD_BootClockRUN();.  When I look up this function (right click -> "Open Declaration") it opens clock_config.c.  Right below the function BOARD_BootClockRUN() is BOARD_BootClockHSRUN(), which is for High-Speed run.  When I try this function, I get my 180 MHz!
+
+I also see that there is BOARD_BootClockVLPR.  When I use this function, it runs at only 4 MHz!  Wow, slow!
 
 
 
