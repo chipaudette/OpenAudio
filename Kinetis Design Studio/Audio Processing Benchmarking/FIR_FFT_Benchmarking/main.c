@@ -39,7 +39,11 @@
 #include "fsl_gpio.h"
 #include <math.h>
 
-#define do_FFT  //comment this to do FIR
+
+#define DO_FIR 0
+#define DO_FFT 1
+#define DO_FFT_CMSIS 2
+#define OPERATION_TO_DO DO_FFT_CMSIS  //comment this to do FIR
 
 // For millis()
 #define LPTMR_CLOCK_HZ CLOCK_GetFreq(kCLOCK_LpoClk)  /* Get source clock for LPTMR driver */
@@ -69,9 +73,8 @@ uint32_t start_tics = 0;
 uint32_t end_tics = 0;
 int count=0;
 
-#ifndef do_fir
-int naive_fir_func(void);
-#else
+#if OPERATION_TO_DO == DO_FIR
+
 // /////////////////////// DEFINE FIR PARAMETERS
 //Define test parameters
 #define N_TRIALS 10000
@@ -168,23 +171,25 @@ int naive_fir_func(void) {
 
 	return 0;
 }
+#else
+int naive_fir_func(void);
 #endif
 
 // /////////////////////////// DEFINE FFT PARAMETERS
-#ifdef DO_FIR
-int kiss_fft_func(void);
-#else
+#if ((OPERATION_TO_DO == DO_FFT) || (OPERATION_TO_DO == DO_FFT_CMSIS))
+#define MAX_N_FFT 2048
+#define N_ALL_FFT 7
+int ALL_N_FFT[N_ALL_FFT] = {32, 64, 128, 256, 512, 1024, 2048};
+int N_FFT;
+#define N_FFT_LOOP 1000
+#endif
+
+#if (OPERATION_TO_DO == DO_FFT)
 #include "fftsettings.h"
 #include "kiss_fft.h"
-#define MAX_NFFT 128
-#define N_ALL_FFT 1
-int ALL_N_FFT[N_ALL_FFT] = {128};
-int N_FFT;
-kiss_fft_cpx in_buffer[MAX_NFFT];
-kiss_fft_cpx out_buffer[MAX_NFFT];
+kiss_fft_cpx in_buffer[MAX_N_FFT];
+kiss_fft_cpx out_buffer[MAX_N_FFT];
 kiss_fft_cfg my_fft_cfg;
-#define N_FFT_LOOP 5000
-
 int kiss_fft_func(void) {
 	float dt_millis=0;
 	int is_ifft=0;
@@ -194,7 +199,7 @@ int kiss_fft_func(void) {
 
 		for (int I_N_FFT = 0; I_N_FFT < N_ALL_FFT; I_N_FFT++) {
 			N_FFT = ALL_N_FFT[I_N_FFT];
-			PRINTF("Starting FFT %i\r\n", N_FFT);
+			//PRINTF("Starting FFT %i\r\n", N_FFT);
 
 			//Serial << "Allocating memory for N = " << N_FFT << '\n';
 			is_ifft = 0;
@@ -204,7 +209,7 @@ int kiss_fft_func(void) {
 			count = 0;
 
 			start_tics = LPTMR_GetCurrentTimerCount(LPTMR0) + lptmrCounter*tics_per_loop;
-			PRINTF("STARTING N_FFT_LOOP = %i\r\n", N_FFT_LOOP);
+			//PRINTF("STARTING N_FFT_LOOP = %i\r\n", N_FFT_LOOP);
 			while (count < N_FFT_LOOP) {
 				count++;
 
@@ -215,9 +220,9 @@ int kiss_fft_func(void) {
 				}
 
 				//do fft
-				PRINTF("Starting FFT %i\r\n", count);
+				//PRINTF("Starting FFT %i\r\n", count);
 				kiss_fft(my_fft_cfg,in_buffer,out_buffer);
-				PRINTF("FFT %i completer\r\n", count++);
+				//PRINTF("FFT %i completer\r\n", count++);
 
 			}
 
@@ -233,6 +238,107 @@ int kiss_fft_func(void) {
 	}
 	return 0;
 };
+#else
+int kiss_fft_func(void);
+#endif
+
+#if (OPERATION_TO_DO == DO_FFT_CMSIS)
+#define ARM_MATH_CM4
+#include "arm_math.h"
+#include "arm_const_structs.h" //from CMSIS example.  Is it needed?
+
+//q15_t buffer_real[MAX_N_FFT*2];
+//q15_t buffer_complex[MAX_N_FFT*2];
+//q31_t buffer_real[MAX_N_FFT*2];
+//q31_t buffer_complex[MAX_N_FFT*2];
+//float32_t buffer_real[MAX_N_FFT*2];
+float32_t buffer_complex[MAX_N_FFT*2];
+uint8_t ifftFlag = 0;
+uint8_t doBitReverse = 1;
+//arm_cfft_radix2_instance_q15 cfft_inst;
+arm_cfft_radix2_instance_q31 cfft_inst;
+//arm_cfft_radix4_instance_q15 cfft_inst;
+//arm_rfft_instance_q15 rfft_inst;
+//arm_cfft_radix2_instance_f32 cfft_inst;
+//arm_cfft_radix4_instance_f32 cfft_inst;
+//arm_rfft_instance_f32 rfft_inst;
+
+//#define ARM_FFT_INIT_FUNC arm_cfft_radix2_init_q15
+#define ARM_FFT_INIT_FUNC arm_cfft_radix2_init_q31
+//#define ARM_FFT_INIT_FUNC arm_cfft_radix4_init_q15
+//#define ARM_FFT_INIT_FUNC arm_cfft_radix4_init_q31
+//#define ARM_FFT_INIT_FUNC arm_cfft_radix4_init_q15
+//#define ARM_FFT_INIT_FUNC arm_rfft_init_q15
+//#define ARM_FFT_INIT_FUNC arm_cfft_radix4_init_q31
+//#define ARM_FFT_INIT_FUNC arm_rfft_init_q31
+//#define ARM_FFT_INIT_FUNC arm_cfft_radix2_init_f32
+//#define ARM_FFT_INIT_FUNC arm_cfft_radix4_init_f32
+//#define ARM_FFT_INIT_FUNC arm_rfft_init_f32
+
+int arm_fft_func(void) {
+	float dt_millis=0;
+
+		PRINTF("Start arm_fft_func\r\n");
+		for (;;) {  //loop forever
+
+			for (int I_N_FFT = 0; I_N_FFT < N_ALL_FFT; I_N_FFT++) {
+				N_FFT = ALL_N_FFT[I_N_FFT];
+				//PRINTF("Starting FFT %i\r\n", N_FFT);
+
+
+				//initialize the FFT function
+				ARM_FFT_INIT_FUNC(&cfft_inst, N_FFT, ifftFlag, doBitReverse);
+
+				count = 0;
+
+				start_tics = LPTMR_GetCurrentTimerCount(LPTMR0) + lptmrCounter*tics_per_loop;
+				//PRINTF("STARTING N_FFT_LOOP = %i\r\n", N_FFT_LOOP);
+				while (count < N_FFT_LOOP) {
+					count++;
+
+			        // prepare the data
+			        //for (int j=0; j < N_FFT; j++) buffer_real[j]=j%8;// 8 sample ramp
+			        for (int j=0; j < 2*N_FFT; j += 2) {
+			          //first sample is real
+			          buffer_complex[j] = j % 8;  // 8 sample ramp
+
+			          //second sample is imaginary
+			          buffer_complex[j+1] = 0;  // always use a real signal
+			        }
+
+			        /* Process the data through the CFFT/CIFFT module */
+			        // //arm_cfft_f32(&arm_cfft_sR_f32_len1024, testInput_f32_10khz, ifftFlag, doBitReverse);
+			        // //arm_cfft_radix2_q15(fft_instance,input_data)
+			        // //arm_cfft_q31(fft_instance,input_complex_Q31,ifftFlag,bitReverseFlag);
+			        // //if (window) apply_window_to_fft_buffer(buffer, window);
+			        // //arm_cfft_radix4_q15(&fft_inst, buffer_complex_Q15);
+			        //arm_cfft_radix2_q15(&cfft_inst, buffer_complex);
+			        arm_cfft_radix2_q31(&cfft_inst, buffer_complex);
+			        //arm_cfft_radix4_q15(&cfft_inst, buffer_complex);
+			        //arm_cfft_radix4_q31(&cfft_inst, buffer_complex);
+			        //arm_rfft_q15(&rfft_inst, buffer_real, buffer_complex);
+			        //arm_rfft_q31(&rfft_inst, buffer_real, buffer_complex);
+			        //arm_cfft_radix2_f32(&cfft_inst, buffer_complex);
+			        //arm_cfft_radix4_f32(&cfft_inst, buffer_complex);
+			        //arm_rfft_f32(&rfft_inst, buffer_real, buffer_complex);
+
+				}
+
+				//end_millis = millis();
+				end_tics = LPTMR_GetCurrentTimerCount(LPTMR0) + lptmrCounter*tics_per_loop;
+
+				// print message saying during
+				//float dt_millis = ((end_tics-start_tics) + lptmrCounter*tics_per_loop)*millis_per_tic ;
+				dt_millis = (end_tics-start_tics)*millis_per_tic;
+				PRINTF("%i point FFT in %4.2f usec per FFT\r\n",N_FFT,1000.0*(dt_millis/((float)N_FFT_LOOP)));
+
+			}
+		}
+		return 0;
+}
+
+#else
+	int arm_fft_func(void);
 #endif
 
 int main(void) {
@@ -249,10 +355,12 @@ int main(void) {
 	//PRINTF("  : ticks per interrupt = %i\r\n", tics_per_interrupt);
 	PRINTF("  : micros per tick = %4.1f\r\n", millis_per_tic*1000);
 
-#if 0
+#if OPERATION_TO_DO == DO_FIR
 	naive_fir_func();
-#else
+#elif OPERATION_TO_DO == DO_FFT
 	kiss_fft_func();
+#elif OPERATION_TO_DO == DO_FFT_CMSIS
+	arm_fft_func();
 #endif
 
 	return 0;

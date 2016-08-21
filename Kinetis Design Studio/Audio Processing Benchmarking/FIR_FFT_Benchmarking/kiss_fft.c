@@ -287,7 +287,7 @@ void kf_work(
             // p instances of smaller DFTs of size m, 
             // each one takes a decimated version of the input
         	count[0] = count[0]+1;
-        	PRINTF("kiss_fft: count %i, p %i, m %i, st %i\r\n",count[0], p, m, st);
+        	//PRINTF("kiss_fft: count %i, p %i, m %i, st %i\r\n",count[0], p, m, st);
             kf_work( Fout , f, fstride*p, in_stride, factors,st,count);
             f += fstride*in_stride;
         }while( (Fout += m) != Fout_end );
@@ -353,7 +353,7 @@ kiss_fft_cfg kiss_fft_alloc(int nfft,int inverse_fft,void * mem,size_t * lenmem 
             st = (kiss_fft_cfg)mem;
         *lenmem = memneeded;
     }
-    if (st) {
+    if (st != NULL) {
         int i;
         st->nfft=nfft;
         st->inverse = inverse_fft;
@@ -367,6 +367,8 @@ kiss_fft_cfg kiss_fft_alloc(int nfft,int inverse_fft,void * mem,size_t * lenmem 
         }
 
         kf_factor(nfft,st->factors);
+    } else {
+    	PRINTF("kiss_fft.c: st came back null.");
     }
     return st;
 }
@@ -378,14 +380,14 @@ void kiss_fft_stride(kiss_fft_cfg st,const kiss_fft_cpx *fin,kiss_fft_cpx *fout,
         //NOTE: this is not really an in-place FFT algorithm.
         //It just performs an out-of-place FFT into a temp buffer
         kiss_fft_cpx * tmpbuf = (kiss_fft_cpx*)KISS_FFT_TMP_ALLOC( sizeof(kiss_fft_cpx)*st->nfft);
-    	PRINTF("kiss_fft_stride: calling kf_work (2)\r\n");
+    	//PRINTF("kiss_fft_stride: calling kf_work (2)\r\n");
         kf_work(tmpbuf,fin,1,in_stride, st->factors,st,&count);
         memcpy(fout,tmpbuf,sizeof(kiss_fft_cpx)*st->nfft);
         KISS_FFT_TMP_FREE(tmpbuf);
     }else{
-    	PRINTF("kiss_fft_stride: calling kf_work (2)\r\n");
+    	//PRINTF("kiss_fft_stride: calling kf_work (2)\r\n");
         kf_work( fout, fin, 1,in_stride, st->factors,st,&count);
-    	PRINTF("kiss_fft_stride: completed call to kf_work (2)\r\n");
+    	//PRINTF("kiss_fft_stride: completed call to kf_work (2)\r\n");
     }
 }
 

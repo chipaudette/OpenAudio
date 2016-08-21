@@ -65,9 +65,44 @@ Created a new project with KDS PRoject generator.  Once created, couldn't use KD
 it compiles.  it runs!  It works!  I get timing info!  Weird thing is that it rebuilds all (as if cleaned) every time.  That's annoying.
 
 
-After getting all of my FI.R results.  I fought some more with cleaning up the timing code.  It's amazing how long it's taking me.
+>>>>>>>>>>>>>>>> FFT can't run due to HEAP_SIZE too small
 
-I got the FFT code working, though I seem to be short on memory.  I can only get up to N=64 to run.  Anything higher than that and it hangs.  And the debugger won't work in those cases, giving the "arm-none-eabi-gdb.exe has stopped working" error.  That's not helpful.  Since the FFT code uses dynamic memory allocation (I think), how do I check the memroy when running?
+Traced FFT problem to MALLOC returnning null when requesting something like 1200 bytes.  Googled.  Found these two helpful links:
+
+* This one says that the HEAP is pre-limited to too small a value.  They say that theirs was limitd to zero bytes.  Mine was limited to 0x0400, which is 1024 bytes.  https://community.nxp.com/thread/395784.  My file was:  MK66FN2M0xxx18_flash.ld
+
+* This one offers some help on malloc when used inside printf().  It talks about changing how the variable HEAP_LIMIT is used.  May be helpful some day.  https://answers.launchpad.net/gcc-arm-embedded/+question/271410, which points to: https://mcuoneclipse.com/2015/07/26/using-kinetis-design-studio-v3-0-0-with-the-launchad-4-9-2015-q2-release/
+
+On the topic of changing the heap size, I see this forum question, where he changes it manually in the file that I found.  Alternatively, the person answering says that it could be done in the linker.  https://community.nxp.com/thread/390125
+
+After increasing th HEAP_SIZE to 0x1400, I got N_FFT = 128 to work.  It also the fT 512!  Turned HEAP_SIZE to 0x4400, I got N_FFT = 2048 to work!
+
+
+
+>>>>>>>>>>>>> Try to get CMSIS DSP functions working for the first time
+
+In main.c, you have to tell it which ARM you have, via:
+#define ARM_MATH_CM4
+
+Linker can't seem to find the functions that I want.  Googling suggested that I need to tell the IDE where the DSP libraries are.  https://mcuoneclipse.com/2013/02/14/tutorial-using-the-arm-cmsis-library/
+
+Following the page above, I went under the "Project" menu and selected "properties".  In the left pane i selected "C/C++ Build" and then "Settings".  Under "Cross ARM C Linker", I selected "Libraries".  In the pane on the upper right, I pressed the + icon to add a library and added arm_cortextM4lf_math.  In the lower-right pane, I pressed the + icon and added the path to the pre-compiled library:  C:\Users\T410\Documents\Kinetis Design Studio\SDK_2\CMSIS\Lib\GCC\
+
+Compiling, it now finds the missing functions but it still fails to complete the build.  It turns out that you canno have the trailing backslash!  And, if the path has spaces, it has to be in quotes!  So, this is what worked...
+
+"C:\Users\T410\Documents\Kinetis Design Studio\SDK_2\CMSIS\Lib\GCC"
+
+Complied for DEBUG.  It runs!!!  Success!!!
+
+Doesn't compile for RELEASE.  Ah, in Porject -> C/C++ Build -> Settings -> Libraries, I should have (at the top) done Configurion "All".  Now it works.
+
+
+
+
+
+
+
+
 
 
 

@@ -48,7 +48,8 @@
 /* Entry Point */
 ENTRY(Reset_Handler)
 
-HEAP_SIZE  = DEFINED(__heap_size__)  ? __heap_size__  : 0x0400;
+/* HEAP_SIZE  = DEFINED(__heap_size__)  ? __heap_size__  : 0x0400; //original */
+HEAP_SIZE  = DEFINED(__heap_size__)  ? __heap_size__  : 0x4400; /* WEA 2016-08-20 */
 STACK_SIZE = DEFINED(__stack_size__) ? __stack_size__ : 0x0400;
 M_VECTOR_RAM_SIZE = DEFINED(__ram_vector_table__) ? 0x0400 : 0x0;
 
