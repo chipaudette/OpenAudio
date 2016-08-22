@@ -39,8 +39,7 @@ int naive_fir_func(void) {
 
 	//initialize filter coefficients
 	for (int i = 0; i < N_FIR_MAX; i++) {
-		//make a running average filter
-		//b[i]=1.0/N_FIR;  //assume that they are
+		//define the filter coefficients
 		b[i] = 23.1+(float)i;
 
 		//initialize filter states to zero
@@ -55,11 +54,11 @@ int naive_fir_func(void) {
 
 		//do each filter five times
 		for (int I_loop = 0; I_loop < 1; I_loop++) { //run multiple times?  or not.
-			count = 0;
 			z_ind=0;
 
 			start_micros = micros();
-			while (count < N_TRIALS) {
+			for (count=0; count < N_TRIALS; count++) {
+
 				//pretend a new value came in
 				input_val = 1194.23; //some unusual value
 				//input_val = 1194.23+(float)count; //adding the (float)count slows things down quite a bit!
@@ -77,14 +76,11 @@ int naive_fir_func(void) {
 					//foo_z_ind = (z_ind-i) % N_FIR;  //modulo.  Slow on Uno.  Not bad on M0 Pro.
 					out_val += b[i]*z[foo_z_ind];
 				}
-
-				//increment loop counter
-				count++;
 			}
 
 			// print message regarding timing
 			dt_micros = micros() - start_micros;
-			PRINTF("%i point NAIVE FIR in %4.1f usec per FIR\r\n",N_FIR,((float)dt_micros)/((float)N_TRIALS));
+			PRINTF("%i point NAIVE FIR in %4.2f usec per FIR\r\n",N_FIR,((float)dt_micros)/((float)N_TRIALS));
 		}
 	}
 

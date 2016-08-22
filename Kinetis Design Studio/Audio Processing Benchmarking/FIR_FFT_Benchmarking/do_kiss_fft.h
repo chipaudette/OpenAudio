@@ -18,26 +18,30 @@ int kiss_fft_func(void) {
 	uint32_t start_micros = 0;
 	uint32_t dt_micros=0;
 	int count=0;
-	int is_ifft=0;
-
+	int is_ifft=0; //change this to 1 to run an IFFT instead of an FFT
 	PRINTF("Start kiss_fft_func\r\n");
+
+	// KISS_FFT uses malloc() to dynamically allocate memroy.  This can cause memory
+	// fragmentation which can quickly make a microcontroller run out of RAM.  To
+	// reduce the chances of this, let's grab enough memory for biggest possible run.
+	if (my_fft_cfg) KISS_FFT_FREE(my_fft_cfg); //de-allocate the memory prior to making new allocations
+	my_fft_cfg = kiss_fft_alloc(MAX_N_FFT,is_ifft,NULL, NULL);
+
+	//start looping to do all of the trials
 	for (;;) {  //loop forever
 
 		for (int I_N_FFT = 0; I_N_FFT < N_ALL_FFT; I_N_FFT++) {
 			N_FFT = ALL_N_FFT[I_N_FFT];
 			//PRINTF("Starting FFT %i\r\n", N_FFT);
 
-			//Serial << "Allocating memory for N = " << N_FFT << '\n';
-			is_ifft = 0;
+			//Allocate memory for this trial
 			if (my_fft_cfg) KISS_FFT_FREE(my_fft_cfg); //de-allocate the memory prior to making new allocations
 			my_fft_cfg = kiss_fft_alloc(N_FFT,is_ifft,NULL, NULL);
 
 
 			//PRINTF("STARTING N_FFT_LOOP = %i\r\n", N_FFT_LOOP);
 			start_micros = micros();
-			count = 0;
-			while (count < N_FFT_LOOP) {
-				count++;
+			for (count=0; count < N_FFT_LOOP; count++) {
 
 				//prepare input data
 				for (int i = 0; i < N_FFT; i++) {
@@ -51,7 +55,7 @@ int kiss_fft_func(void) {
 
 			// print message regarding timing
 			dt_micros = micros() - start_micros;
-			PRINTF("%i point KISS FFT in %4.2f usec per FFT\r\n",N_FFT,((float)dt_micros)/((float)N_FFT_LOOP));
+			PRINTF("%i point KISS FFT in %4.1f usec per FFT\r\n",N_FFT,((float)dt_micros)/((float)N_FFT_LOOP));
 		}
 	}
 	return 0;

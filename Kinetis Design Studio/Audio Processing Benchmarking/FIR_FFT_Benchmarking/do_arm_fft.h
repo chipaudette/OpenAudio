@@ -67,9 +67,7 @@ int arm_fft_func(void) {
 
 			//PRINTF("STARTING N_FFT_LOOP = %i\r\n", N_FFT_LOOP);
 			start_micros = micros();
-			count = 0;
-			while (count < N_FFT_LOOP) {
-				count++;
+			for (count=0; count < N_FFT_LOOP; count++) {
 
 				// prepare the data
 				for (int j=0; j < 2*N_FFT; j += 2) {
@@ -86,7 +84,7 @@ int arm_fft_func(void) {
 
 			// print message regarding timing
 			dt_micros = micros() - start_micros;
-			PRINTF("%i point ARM FFT in %4.2f usec per FFT\r\n",N_FFT,((float)dt_micros)/((float)N_FFT_LOOP));
+			PRINTF("%i point ARM FFT in %4.1f usec per FFT\r\n",N_FFT,((float)dt_micros)/((float)N_FFT_LOOP));
 
 		}
 	}

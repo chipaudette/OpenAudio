@@ -41,7 +41,7 @@
 #define DO_NAIVE_FIR 0
 #define DO_KISS_FFT 1
 #define DO_ARM_FFT 2
-#define OPERATION_TO_DO DO_NAIVE_FIR  //change this to select which function to run
+#define OPERATION_TO_DO DO_KISS_FFT  //change this to select which function to run
 
 // For millis()
 #define LPTMR_CLOCK_HZ CLOCK_GetFreq(kCLOCK_LpoClk)  /* Get source clock for LPTMR driver */
