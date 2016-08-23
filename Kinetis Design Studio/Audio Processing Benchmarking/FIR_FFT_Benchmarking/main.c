@@ -38,74 +38,71 @@
 #include "fsl_lptmr.h"
 #include "fsl_gpio.h"
 
+#include "..\..\Utilities\arm_timing.h" //my own functions for micros() on ARM
+
 #define DO_NAIVE_FIR 0
 #define DO_KISS_FFT 1
 #define DO_ARM_FFT 2
-#define OPERATION_TO_DO DO_KISS_FFT  //change this to select which function to run
-
-// For millis()
-#define LPTMR_CLOCK_HZ CLOCK_GetFreq(kCLOCK_LpoClk)  /* Get source clock for LPTMR driver */
-volatile uint32_t lptmrCounter = 0U;
-void LPTMR0_IRQHandler(void) {
-	LPTMR_ClearStatusFlags(LPTMR0, kLPTMR_TimerCompareFlag);
-	lptmrCounter++;
-}
-float millis_per_tic;
-float micros_per_tic;
-uint16_t tics_per_loop = 30000;//must be less than 32768
-void initMicros() {
-	//configure the timer
-	lptmr_config_t lptmrConfig;
-	LPTMR_GetDefaultConfig(&lptmrConfig);
-	LPTMR_Init(LPTMR0, &lptmrConfig);  /* Initialize the LPTMR */
-
-	//now define how the timer relates to the real world
-	//millis_per_tic = 1000.0/((float)LPTMR_CLOCK_HZ); //the 1000 is because we're in milliseconds
-	micros_per_tic = 1000000.0/((float)LPTMR_CLOCK_HZ); //the 1000000 is because we're in microseconds
-	LPTMR_SetTimerPeriod(LPTMR0, tics_per_loop);  // Set timer period...this is when it'll wrap around to zero
-
-	//finish configuring how the processor will work with the timer
-	LPTMR_EnableInterrupts(LPTMR0, kLPTMR_TimerInterruptEnable);  ///it'll call its interupt when it hits wraps around, per the setting above
-	EnableIRQ(LPTMR0_IRQn);  /* Enable at the NVIC */
-	LPTMR_StartTimer(LPTMR0);   /* Start counting */
-}
-uint32_t micros() {	return (uint32_t)((uint32_t)LPTMR_GetCurrentTimerCount(LPTMR0) + (lptmrCounter*(uint32_t)tics_per_loop))*micros_per_tic; };
-
+#define OPERATION_TO_DO DO_ARM_FFT  //change this to select which function to run
 
 #if OPERATION_TO_DO == DO_NAIVE_FIR
 #include "do_naive_fir.h"
+char *alg_name = "NAIVE FIR";
+#define N_TRIALS 10000   // how many times to repeat the operation
 #endif
 
 #if (OPERATION_TO_DO == DO_KISS_FFT)
 #include "do_kiss_fft.h"
+char *alg_name = "KISS FFT";
+#define N_TRIALS 1000   // how many times to repeat the operation
 #endif
 
 #if (OPERATION_TO_DO == DO_ARM_FFT)
 #include "do_arm_fft.h"
+char *alg_name = "ARM FFT";
+#define N_TRIALS 1000   // how many times to repeat the operation
 #endif
 
+// parameters for stepping through different FFT lengths
+#define MAX_N 2048
+#define LEN_ALL_N 8
+//int ALL_N[LEN_ALL_N] = {MAX_N, MAX_N/2, MAX_N/4, MAX_N/8, MAX_N/16, MAX_N/32, MAX_N/64, MAX_N/128};
+int ALL_N[LEN_ALL_N] = {MAX_N, MAX_N/2, MAX_N/4, MAX_N/8, MAX_N/16, MAX_N/32, MAX_N/64, MAX_N/128};
+
 int main(void) {
+	int N;
+	int32_t dt_micros=0;
 
 	BOARD_InitPins();
 	//BOARD_BootClockRUN();   //120 MHz
-	BOARD_BootClockHSRUN(); //180MHz
+	BOARD_BootClockHSRUN();   //180MHz
 	BOARD_InitDebugConsole();
 
 	initMicros();
 
 	PRINTF("FIR/FFT Benchmarking...\r\n");
 	PRINTF("  : System Clock = %i Hz\r\n",CLOCK_GetFreq(kCLOCK_CoreSysClk));
-	PRINTF("  : LPTMR Source Clock = %i Hz\r\n", LPTMR_CLOCK_HZ);
-	//PRINTF("  : ticks per interrupt = %i\r\n", tics_per_interrupt);
-	PRINTF("  : micros per tick = %4.1f\r\n", millis_per_tic*1000);
+	//PRINTF("  : LPTMR Source Clock = %i Hz\r\n", LPTMR_CLOCK_HZ);
+	//PRINTF("  : micros per tick = %4.1f\r\n", millis_per_tic*1000);
 
-#if (OPERATION_TO_DO == DO_NAIVE_FIR)
-	naive_fir_func();
-#elif (OPERATION_TO_DO == DO_KISS_FFT)
-	kiss_fft_func();
-#elif (OPERATION_TO_DO == DO_ARM_FFT)
-	arm_fft_func();
-#endif
+	 //loop forever
+	for (;;) {
+		//step trough each N
+		for (int I_N = 0; I_N < LEN_ALL_N;  I_N++) {
+			N = ALL_N[I_N];
 
+			//do the processing
+			#if (OPERATION_TO_DO == DO_NAIVE_FIR)
+				dt_micros = naive_fir_func(N,N_TRIALS);
+			#elif (OPERATION_TO_DO == DO_KISS_FFT)
+				dt_micros = kiss_fft_func(N,N_TRIALS);
+			#elif (OPERATION_TO_DO == DO_ARM_FFT)
+				dt_micros = arm_fft_func(N,N_TRIALS);
+			#endif
+
+			//report the timing
+			PRINTF("%s: N = %i\tin %6.1f usec per operation\r\n",alg_name,N,((float)dt_micros)/((float)N_TRIALS));
+		}
+	}
 	return 0;
 }

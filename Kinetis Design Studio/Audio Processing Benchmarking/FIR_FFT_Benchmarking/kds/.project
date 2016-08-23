@@ -606,6 +606,11 @@
 			<locationURI>PARENT-1-PROJECT_LOC/_kiss_fft_guts.h</locationURI>
 		</link>
 		<link>
+			<name>sources/arm_timing.h</name>
+			<type>1</type>
+			<locationURI>PARENT-3-PROJECT_LOC/Utilities/arm_timing.h</locationURI>
+		</link>
+		<link>
 			<name>sources/do_arm_fft.h</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/do_arm_fft.h</locationURI>

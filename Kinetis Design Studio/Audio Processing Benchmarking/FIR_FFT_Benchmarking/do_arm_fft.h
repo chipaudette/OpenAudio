@@ -50,45 +50,35 @@ arm_cfft_radix2_instance_f32 cfft_inst;
 //#define ARM_FFT_FUNC arm_cfft_radix4_f32
 
 
-int arm_fft_func(void) {
-	int N_FFT;
+int32_t arm_fft_func(const int N_FFT, const int N_LOOP) {
 	uint32_t start_micros = 0;
 	uint32_t dt_micros=0;
-	int count=0;
 
-	PRINTF("Start arm_fft_func\r\n");
-	for (;;) {  //loop forever
-		for (int I_N_FFT = 0; I_N_FFT < N_ALL_FFT; I_N_FFT++) {
-			N_FFT = ALL_N_FFT[I_N_FFT];
-			//PRINTF("Starting FFT %i\r\n", N_FFT);
+	//initialize the FFT function
+	ARM_FFT_INIT_FUNC(&cfft_inst, N_FFT, ifftFlag, doBitReverse);
 
-			//initialize the FFT function
-			ARM_FFT_INIT_FUNC(&cfft_inst, N_FFT, ifftFlag, doBitReverse);
+	//PRINTF("STARTING N_FFT_LOOP = %i\r\n", N_FFT_LOOP);
+	start_micros = micros();
+	for (int count=0; count < N_LOOP; count++) {
 
-			//PRINTF("STARTING N_FFT_LOOP = %i\r\n", N_FFT_LOOP);
-			start_micros = micros();
-			for (count=0; count < N_FFT_LOOP; count++) {
+		// prepare the data
+		for (int j=0; j < 2*N_FFT; j += 2) {
+			//first sample is real
+			buffer_complex[j] = j % 8;  // 8 sample ramp
 
-				// prepare the data
-				for (int j=0; j < 2*N_FFT; j += 2) {
-					//first sample is real
-					buffer_complex[j] = j % 8;  // 8 sample ramp
-
-					//second sample is imaginary
-					buffer_complex[j+1] = 0;  // always use a real signal
-				}
-
-				/* Process the data through the CFFT/CIFFT module */
-				ARM_FFT_FUNC(&cfft_inst, buffer_complex);
-			}
-
-			// print message regarding timing
-			dt_micros = micros() - start_micros;
-			PRINTF("%i point ARM FFT in %4.1f usec per FFT\r\n",N_FFT,((float)dt_micros)/((float)N_FFT_LOOP));
-
+			//second sample is imaginary
+			buffer_complex[j+1] = 0;  // always use a real signal
 		}
+
+		/* Process the data through the CFFT/CIFFT module */
+		ARM_FFT_FUNC(&cfft_inst, buffer_complex);
 	}
-	return 0;
+
+	// print message regarding timing
+	dt_micros = micros() - start_micros;
+	//PRINTF("%i point ARM FFT in %4.1f usec per FFT\r\n",N_FFT,((float)dt_micros)/((float)N_FFT_LOOP));
+
+	return dt_micros;
 }
 
 
