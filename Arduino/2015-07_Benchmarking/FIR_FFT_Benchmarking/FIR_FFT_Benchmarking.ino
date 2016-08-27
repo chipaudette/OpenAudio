@@ -11,7 +11,7 @@ Created: OpenAudio (Chip Audette)
 #define DO_NAIVE_FIR 0
 #define DO_KISS_FFT 1
 #define DO_ARM_FFT 2
-#define OPERATION_TO_DO DO_NAIVE_FIR  //change this to select which function to run
+#define OPERATION_TO_DO DO_KISS_FFT  //change this to select which function to run
 
 
 //In this header file is the definition for things like DataType (int16, int32, float) and MAX_N
@@ -46,12 +46,15 @@ char *alg_name = "KISS FFT";
   int ALL_N[LEN_ALL_N] = {MAX_N, MAX_N/2, MAX_N/4, MAX_N/8, MAX_N/16, MAX_N/32, MAX_N/64, MAX_N/128};
 #endif
 
-
+#ifdef IS_ARDUINO_UNO
 int freeRam(void) {
   extern int __heap_start, *__brkval; 
   int v; 
   return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval); 
 }
+#else
+int freeRam(void) { return -1; }
+#endif
 
 void setup() {
   Serial.begin(115200);  
@@ -74,27 +77,31 @@ void loop() {
 		//step trough each N
 		for (int I_N = 0; I_N < LEN_ALL_N;  I_N++) {
 			N = ALL_N[I_N];
-
-			//do the processing
-			#if (OPERATION_TO_DO == DO_NAIVE_FIR)
-				dt_micros = naive_fir_func(N,N_TRIALS);
-			#elif (OPERATION_TO_DO == DO_KISS_FFT)
-				dt_micros = kiss_fft_func(N,N_TRIALS);
-			#elif (OPERATION_TO_DO == DO_ARM_FFT)
-				dt_micros = arm_fft_func(N,N_TRIALS);
-			#endif
-
-			//report the timing
-      //PRINTF("%s: N = %i\tin %6.1f usec per operation\r\n",alg_name,N,((float)dt_micros)/((float)N_TRIALS));
-      Serial.print(alg_name); Serial.print(F(": N = ")); Serial.print(N); Serial.print(F(" in ")); 
-      if (dt_micros < 1) {
-        Serial.print(F(" *** NOT ENOUGH TEMP MEMORY *** "));
-      } else {
-        Serial.print(((float)dt_micros)/((float)N_TRIALS));
-        Serial.print(F(" usec per operation"));  
+      if (N >= 4) {
+        
+  			//do the processing
+  			#if (OPERATION_TO_DO == DO_NAIVE_FIR)
+  				dt_micros = naive_fir_func(N,N_TRIALS);
+  			#elif (OPERATION_TO_DO == DO_KISS_FFT)
+  				dt_micros = kiss_fft_func(N,N_TRIALS);
+  			#elif (OPERATION_TO_DO == DO_ARM_FFT)
+  				dt_micros = arm_fft_func(N,N_TRIALS);
+  			#endif
+  
+  			//report the timing
+        //PRINTF("%s: N = %i\tin %6.1f usec per operation\r\n",alg_name,N,((float)dt_micros)/((float)N_TRIALS));
+        Serial.print(alg_name); Serial.print(F(": N = ")); Serial.print(N); Serial.print(F(" in ")); 
+        if (dt_micros < 1) {
+          Serial.print(F(" *** NOT ENOUGH TEMP MEMORY *** "));
+        } else {
+          Serial.print(((float)dt_micros)/((float)N_TRIALS));
+          Serial.print(F(" usec per operation"));  
+        }
+        #ifdef IS_ARDUINO_UNO
+          Serial.print(F(", Free RAM = ")); Serial.print(freeRam());
+        #endif
+        Serial.println();
       }
-      Serial.print(F(", Free RAM = ")); Serial.print(freeRam());
-      Serial.println();
 		}
 	}
 }
