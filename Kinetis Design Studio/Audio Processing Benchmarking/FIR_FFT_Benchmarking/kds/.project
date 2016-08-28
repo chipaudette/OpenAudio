@@ -601,6 +601,11 @@
 			<locationURI>PARENT-1-PROJECT_LOC/devices/MK66F18/drivers/fsl_wdog.h</locationURI>
 		</link>
 		<link>
+			<name>sources/FFT_FIR_Const.h</name>
+			<type>1</type>
+			<locationURI>PARENT-4-PROJECT_LOC/Arduino/2015-07_Benchmarking/FIR_FFT_Benchmarking/FFT_FIR_Const.h</locationURI>
+		</link>
+		<link>
 			<name>sources/_kiss_fft_guts.h</name>
 			<type>1</type>
 			<locationURI>PARENT-4-PROJECT_LOC/Arduino/2015-07_Benchmarking/FIR_FFT_Benchmarking/_kiss_fft_guts.h</locationURI>
@@ -624,11 +629,6 @@
 			<name>sources/do_naive_fir.h</name>
 			<type>1</type>
 			<locationURI>PARENT-4-PROJECT_LOC/Arduino/2015-07_Benchmarking/FIR_FFT_Benchmarking/do_naive_fir.h</locationURI>
-		</link>
-		<link>
-			<name>sources/fftsettings.h</name>
-			<type>1</type>
-			<locationURI>PARENT-4-PROJECT_LOC/Arduino/2015-07_Benchmarking/FIR_FFT_Benchmarking/fftsettings.h</locationURI>
 		</link>
 		<link>
 			<name>sources/kiss_fft.c</name>
