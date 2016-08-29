@@ -2,25 +2,19 @@
 #ifndef _DO_NAIVE_FIR
 #define _DO_NAIVE_FIR
 
-
-// Define data type
-//typedef double filt_t;
-typedef float filt_t;
-//typedef long filt_t;
-//typedef int filt_t;
+#include "fft_fir_const.h"
 
 
 filt_t out_val;  //must be outside the function to prevent optimizer from removing the meat of the function
-int32_t naive_fir_func(const int N_FIR, const int N_LOOP) {
+filt_t b[MAX_N],z[MAX_N];
+uint32_t naive_fir_func(const int N_FIR, const int N_LOOP) {
 	uint32_t start_micros = 0;
 	uint32_t dt_micros=0;
 	filt_t input_val;
 
 	// define filter size
-	filt_t b[N_FIR],z[N_FIR];;
 	int z_ind = -1;
 	int foo_z_ind = 0;
-
 
 	//initialize filter coefficients
 	for (int i = 0; i < N_FIR; i++) {

@@ -40,34 +40,48 @@
 
 #include "..\..\Utilities\arm_timing.h" //my own functions for micros() on ARM
 
+//In this header file is the definition for things like DataType (int16, int32, float) and MAX_N
+#include "..\..\..\Arduino\Audio Processing Benchmarking\FIR_FFT_Benchmarking\fft_fir_const.h"
+//#include "fft_fir_const.h"
+
+// Choose the operation that you want to do
 #define DO_NAIVE_FIR 0
 #define DO_KISS_FFT 1
 #define DO_ARM_FFT 2
 #define OPERATION_TO_DO DO_ARM_FFT  //change this to select which function to run
 
+
 #if OPERATION_TO_DO == DO_NAIVE_FIR
-#include "do_naive_fir.h"
+#include "..\..\..\Arduino\Audio Processing Benchmarking\FIR_FFT_Benchmarking\do_naive_fir.h"
 char *alg_name = "NAIVE FIR";
 #define N_TRIALS 10000   // how many times to repeat the operation
 #endif
 
 #if (OPERATION_TO_DO == DO_KISS_FFT)
-#include "do_kiss_fft.h"
+//in Kinetis Design Studio, be sure to increase the HEAP size!
+//Under settings/MK66FN2M0xxx18_flash.ld make this change:
+//    HEAP_SIZE  = DEFINED(__heap_size__)  ? __heap_size__  : 0x4400; /* WEA 2016-08-20 */
+#include "..\..\..\Arduino\Audio Processing Benchmarking\FIR_FFT_Benchmarking\do_kiss_fft.h"
 char *alg_name = "KISS FFT";
 #define N_TRIALS 1000   // how many times to repeat the operation
 #endif
 
 #if (OPERATION_TO_DO == DO_ARM_FFT)
-#include "do_arm_fft.h"
+#include "..\..\..\Arduino\Audio Processing Benchmarking\FIR_FFT_Benchmarking\do_arm_fft.h"
 char *alg_name = "ARM FFT";
 #define N_TRIALS 1000   // how many times to repeat the operation
 #endif
 
-// parameters for stepping through different FFT lengths
-#define MAX_N 2048
-#define LEN_ALL_N 8
-//int ALL_N[LEN_ALL_N] = {MAX_N, MAX_N/2, MAX_N/4, MAX_N/8, MAX_N/16, MAX_N/32, MAX_N/64, MAX_N/128};
-int ALL_N[LEN_ALL_N] = {MAX_N, MAX_N/2, MAX_N/4, MAX_N/8, MAX_N/16, MAX_N/32, MAX_N/64, MAX_N/128};
+
+#ifdef IS_ARDUINO_UNO
+int freeRam(void) {
+	extern int __heap_start, *__brkval;
+	int v;
+	return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
+}
+#else
+int freeRam(void) { return -1; }
+#endif
 
 int main(void) {
 	int N;
@@ -85,23 +99,31 @@ int main(void) {
 	//PRINTF("  : LPTMR Source Clock = %i Hz\r\n", LPTMR_CLOCK_HZ);
 	//PRINTF("  : micros per tick = %4.1f\r\n", millis_per_tic*1000);
 
-	 //loop forever
+	//loop forever
+	N = MAX_N;
+	int N_LOOP = 0;
 	for (;;) {
-		//step trough each N
-		for (int I_N = 0; I_N < LEN_ALL_N;  I_N++) {
-			N = ALL_N[I_N];
+		if (N_LOOP < 4) {
 
 			//do the processing
 			#if (OPERATION_TO_DO == DO_NAIVE_FIR)
-				dt_micros = naive_fir_func(N,N_TRIALS);
+			  dt_micros = naive_fir_func(N,N_TRIALS);
 			#elif (OPERATION_TO_DO == DO_KISS_FFT)
-				dt_micros = kiss_fft_func(N,N_TRIALS);
+			  dt_micros = kiss_fft_func(N,N_TRIALS);
 			#elif (OPERATION_TO_DO == DO_ARM_FFT)
-				dt_micros = arm_fft_func(N,N_TRIALS);
+			  dt_micros = arm_fft_func(N,N_TRIALS);
 			#endif
 
 			//report the timing
 			PRINTF("%s: N = %i\tin %6.1f usec per operation\r\n",alg_name,N,((float)dt_micros)/((float)N_TRIALS));
+
+			//prepare for next step
+			N = N/2;
+			if (N < 8) {
+				N = MAX_N;
+				N_LOOP++;
+			}
+
 		}
 	}
 	return 0;

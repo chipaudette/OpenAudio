@@ -5,7 +5,7 @@
 #define ARM_MATH_CM4
 #include "arm_math.h"
 //include "arm_const_structs.h" //from CMSIS example.  Is it needed?
-#include "FFT_FIR_Const.h"
+#include "fft_fir_const.h"
 
 //// parameters for stepping through different FFT lengths
 //#define MAX_N_FFT 2048
@@ -17,43 +17,51 @@
 uint8_t ifftFlag = 0;
 uint8_t doBitReverse = 1;
 
-
 // ///// Choose what type of FFT to do...integer/float, radix2 or radix4
 
-#if (DATA_TYPE == USE_INT16)
-//q15_t buffer_complex[MAX_N*2];
-//arm_cfft_radix2_instance_q15 cfft_inst;
-//#define ARM_FFT_INIT_FUNC arm_cfft_radix2_init_q15
-//#define ARM_FFT_FUNC arm_cfft_radix2_q15
+//#define DO_RADIX2 //comment this out to do RADIX4.  RADIX4 is usually faster
 
-q15_t buffer_complex[MAX_N*2];
-arm_cfft_radix4_instance_q15 cfft_inst;
-#define ARM_FFT_INIT_FUNC arm_cfft_radix4_init_q15
-#define ARM_FFT_FUNC arm_cfft_radix4_q15
+#if (DATA_TYPE == USE_INT16)
+
+#ifdef DO_RADIX2
+	q15_t buffer_complex[MAX_N*2];
+	arm_cfft_radix2_instance_q15 cfft_inst;
+	#define ARM_FFT_INIT_FUNC arm_cfft_radix2_init_q15
+	#define ARM_FFT_FUNC arm_cfft_radix2_q15
+#else
+	q15_t buffer_complex[MAX_N*2];
+	arm_cfft_radix4_instance_q15 cfft_inst;
+	#define ARM_FFT_INIT_FUNC arm_cfft_radix4_init_q15
+	#define ARM_FFT_FUNC arm_cfft_radix4_q15
+#endif
 
 #elif (DATA_TYPE == USE_INT32)
 
-//q31_t buffer_complex[MAX_N*2];
-//arm_cfft_radix2_instance_q31 cfft_inst;
-//#define ARM_FFT_INIT_FUNC arm_cfft_radix2_init_q31
-//#define ARM_FFT_FUNC arm_cfft_radix2_q31
-
-q31_t buffer_complex[MAX_N*2];
-arm_cfft_radix4_instance_q31 cfft_inst;
-#define ARM_FFT_INIT_FUNC arm_cfft_radix4_init_q31
-#define ARM_FFT_FUNC arm_cfft_radix4_q31
+#ifdef DO_RADIX2
+	q31_t buffer_complex[MAX_N*2];
+	arm_cfft_radix2_instance_q31 cfft_inst;
+	#define ARM_FFT_INIT_FUNC arm_cfft_radix2_init_q31
+	#define ARM_FFT_FUNC arm_cfft_radix2_q31
+#else
+	q31_t buffer_complex[MAX_N*2];
+	arm_cfft_radix4_instance_q31 cfft_inst;
+	#define ARM_FFT_INIT_FUNC arm_cfft_radix4_init_q31
+	#define ARM_FFT_FUNC arm_cfft_radix4_q31
+#endif
 
 #elif (DATA_TYPE == USE_FLOAT)
 
-//float32_t buffer_complex[MAX_N*2];
-//arm_cfft_radix2_instance_f32 cfft_inst;
-//#define ARM_FFT_INIT_FUNC arm_cfft_radix2_init_f32
-//#define ARM_FFT_FUNC arm_cfft_radix2_f32
-
-float32_t buffer_complex[MAX_N*2];
-arm_cfft_radix4_instance_f32 cfft_inst;
-#define ARM_FFT_INIT_FUNC arm_cfft_radix4_init_f32
-#define ARM_FFT_FUNC arm_cfft_radix4_f32
+#ifdef DO_RADIX2
+	float32_t buffer_complex[MAX_N*2];
+	arm_cfft_radix2_instance_f32 cfft_inst;
+	#define ARM_FFT_INIT_FUNC arm_cfft_radix2_init_f32
+	#define ARM_FFT_FUNC arm_cfft_radix2_f32
+#else
+	float32_t buffer_complex[MAX_N*2];
+	arm_cfft_radix4_instance_f32 cfft_inst;
+	#define ARM_FFT_INIT_FUNC arm_cfft_radix4_init_f32
+	#define ARM_FFT_FUNC arm_cfft_radix4_f32
+#endif
 
 #endif
 

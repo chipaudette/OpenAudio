@@ -8,15 +8,16 @@
 //int ALL_N_FFT[N_ALL_FFT] = {MAX_N_FFT/64, MAX_N_FFT/32, MAX_N_FFT/16, MAX_N_FFT/8, MAX_N_FFT/4, MAX_N_FFT/2, MAX_N_FFT};
 //#define N_FFT_LOOP 1000
 
-#include "FFT_FIR_Const.h"
+#include "fft_fir_const.h"
 #include "kiss_fft.h"
 #include "_kiss_fft_guts.h"
 
 //int len_mem = sizeof(kiss_fft_state_t) + sizeof(kiss_fft_cpx)*(MAX_N-1); /* twiddle factors*/
-//#define MAX_N 64
-const int const_len_mem = sizeof(kiss_fft_state_t) + sizeof(kiss_fft_cpx)*(MAX_N-1); /* twiddle factors*/
-size_t len_mem = (size_t)const_len_mem;
-char fft_twiddle[const_len_mem];  //holds the twiddle factors
+#define CONST_LEN_MEM (sizeof(kiss_fft_state_t) + sizeof(kiss_fft_cpx)*(MAX_N-1)) /* twiddle factors*/
+size_t len_mem = (size_t)CONST_LEN_MEM;
+char fft_twiddle[CONST_LEN_MEM];  //holds the twiddle factors
+
+
 kiss_fft_cpx in_buffer[MAX_N];
 kiss_fft_cpx out_buffer[MAX_N];
 kiss_fft_cfg my_fft_cfg;

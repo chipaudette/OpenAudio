@@ -6,7 +6,7 @@
 #include <math.h>
 #include <string.h>
 
-#include "FFT_FIR_Const.h"
+#include "fft_fir_const.h"
 
 
 #ifdef __cplusplus
