@@ -12,7 +12,7 @@
 #define USE_INT16 0  //you don't need to change this
 #define USE_INT32 1  //you don't need to change this
 #define USE_FLOAT 2  //you don't need to change this
-#define DATA_TYPE  USE_FLOAT  //THIS is the one to change...copy-paste one of the three types above
+#define DATA_TYPE  USE_INT16  //THIS is the one to change...copy-paste one of the three types above
 
 
 #ifdef IS_ARDUINO_IDE
@@ -41,7 +41,16 @@
     #endif
   #endif
 #else
-  #define MAX_N 1024  //All other platforms have more memory so you can do more
+  #ifdef IS_MAPLE
+    #if (OPERATION_TO_DO == DO_NAIVE_FIR)
+        #define MAX_N 1024
+    #else
+        #define MAX_N 256   //limit for KissFFT
+    #endif
+  #else
+    //Arduino M0, Due (?), Teensy
+    #define MAX_N 1024  //All other platforms have more memory so you can do more
+  #endif
 #endif
 
 // ///////////// Below is code that responds to your choices above

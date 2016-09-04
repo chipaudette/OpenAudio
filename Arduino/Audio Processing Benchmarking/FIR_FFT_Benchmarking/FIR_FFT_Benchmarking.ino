@@ -11,7 +11,7 @@ Created: OpenAudio (Chip Audette)
 #define DO_NAIVE_FIR 0
 #define DO_KISS_FFT 1
 #define DO_ARM_FFT 2
-#define OPERATION_TO_DO DO_NAIVE_FIR  //change this to select which function to run
+#define OPERATION_TO_DO DO_KISS_FFT  //change this to select which function to run
 
 
 //In this header file is the definition for things like DataType (int16, int32, float) and MAX_N
