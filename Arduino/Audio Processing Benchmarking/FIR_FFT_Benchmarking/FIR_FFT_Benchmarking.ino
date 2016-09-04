@@ -11,7 +11,7 @@ Created: OpenAudio (Chip Audette)
 #define DO_NAIVE_FIR 0
 #define DO_KISS_FFT 1
 #define DO_ARM_FFT 2
-#define OPERATION_TO_DO DO_KISS_FFT  //change this to select which function to run
+#define OPERATION_TO_DO DO_NAIVE_FIR  //change this to select which function to run
 
 
 //In this header file is the definition for things like DataType (int16, int32, float) and MAX_N
@@ -20,14 +20,12 @@ Created: OpenAudio (Chip Audette)
 #if OPERATION_TO_DO == DO_NAIVE_FIR
 #include "do_naive_fir.h"
 char *alg_name = "NAIVE FIR";
-//define MAX_N 128
 #define N_TRIALS 500   // how many times to repeat the operation
 #endif
 
 #if (OPERATION_TO_DO == DO_KISS_FFT)
 #include "do_kiss_fft.h"
 char *alg_name = "KISS FFT";
-//define MAX_N 64
 #define N_TRIALS 5   // how many times to repeat the operation
 #endif
 

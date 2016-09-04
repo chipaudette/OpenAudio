@@ -5,18 +5,24 @@
 
 // Define the platform that you're using
 //#define IS_ARDUINO_UNO  //unless you're using an UNO, comment this out for Teensy or for NXP Freedom board
-//#define IS_ARDUINO_IDE  //if you're outside of the Arduino IDE, comment this out
+#define IS_ARDUINO_IDE  //if you're outside of the Arduino IDE, comment this out
+#define IS_MAPLE   //Maple via Arduino IDE from: https://github.com/rogerclarkmelbourne/Arduino_STM32/wiki/Installation
 
 // Define the data type that you'd like
-#define USE_INT16 0  //don't need to change this
-#define USE_INT32 1  //don't need to change this
-#define USE_FLOAT 2  //don't need to change this
-#define DATA_TYPE  USE_FLOAT  //Change this to one of the choices above
+#define USE_INT16 0  //you don't need to change this
+#define USE_INT32 1  //you don't need to change this
+#define USE_FLOAT 2  //you don't need to change this
+#define DATA_TYPE  USE_FLOAT  //THIS is the one to change...copy-paste one of the three types above
+
 
 #ifdef IS_ARDUINO_IDE
-#include <arduino.h> //for micros() and whatnot
+  #ifdef IS_MAPLE
+    #include <stdlib.h> //does some of the datatypes for Maple
+  #else
+    #include <arduino.h> //for micros() and whatnot for arduino.  Don't do this for Maples
+  #endif
 #else
-#include "board.h"
+  #include "board.h" //for Kinetis IDE
 #endif
 
 // Define the maximum size of the FFT/FIR that you want to do
@@ -44,6 +50,17 @@
 typedef int int16_t;
 typedef long int32_t;  
 typedef unsigned long uint32_t;
+#endif
+
+#ifdef IS_MAPLE
+//define data types...http://docs.leaflabs.com/static.leaflabs.com/pub/leaflabs/maple-docs/0.0.11/lang/cpp/built-in-types.html
+typedef short int int16_t;
+//typedef int int32_t;  
+//typedef int __int32_t;
+typedef __INT32_TYPE__ __int32_t;
+typedef __int32_t int32_t;  
+typedef unsigned long uint32_t;
+typedef long long int64_t;
 #endif
 
 //for NAIVE_FIR
