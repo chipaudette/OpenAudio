@@ -4,9 +4,9 @@
 
 
 // Define the platform that you're using
-//#define IS_ARDUINO_UNO  //unless you're using an UNO, comment this out for Teensy or for NXP Freedom board
+#define IS_ARDUINO_UNO  //unless you're using an UNO, comment this out for Teensy or Maple or for NXP Freedom board
 #define IS_ARDUINO_IDE  //if you're outside of the Arduino IDE, comment this out
-#define IS_MAPLE   //Maple via Arduino IDE from: https://github.com/rogerclarkmelbourne/Arduino_STM32/wiki/Installation
+//#define IS_MAPLE   //Maple via Arduino IDE from: https://github.com/rogerclarkmelbourne/Arduino_STM32/wiki/Installation
 
 // Define the data type that you'd like
 #define USE_INT16 0  //you don't need to change this
