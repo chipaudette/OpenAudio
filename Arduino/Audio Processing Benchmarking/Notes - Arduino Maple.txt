@@ -1,0 +1,24 @@
+
+2016-09-04
+
+Following install instructions from here: https://github.com/rogerclarkmelbourne/Arduino_STM32/wiki/Installation
+
+Following these instructions, I installed Arduino IDE 1.6.9, which required uninstalling my previous installation (1.6.5).  I fear that this destroyed my Teensy installation, but I'll deal with that later.
+
+Then I downloaded the Arduino_STM32 and put it into my new Arduino Hardware folder.  I ran the BAT file, as instructed in the installation page.
+
+I don't see any option for Maple under the tools->boards menu.  Error message to IDE console says "Could not find boards.txt in C:\Program Files (x86)\Arduino\hardware\Arduino_STM32\STM32F4.  is it pre-1.5?".
+
+Note that I already had the M0 drivers installed, so I should be good there.
+
+Unzip again.  Remove master from name (keep underscore).  Copy to Arduino/hardware again.  Start Arduino IDE again.  Now the Maple appears!
+
+Trying to compile and update blink program.  It took a while to compile (10-20sec?), but it works!
+
+Now trying to compile my FIR_FFT Benchmarking code
+ in NAIVe_FIR mode.  it doesn't like including arduino.h or board.h.  Also, needed to add a block of code to define my data types (int32_t and whatnot).  That took a lot of shenanigans.  For my int32 type, I needed to add this into fft_fir.const.h
+
+#include <stdlib.h>
+typedef __INT32_TYPE__ __int32_t;
+typedef __int32_t int32_t;  
+
