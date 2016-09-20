@@ -24,6 +24,8 @@ extern "C" {
 
 //assumes ADUIO_BLOCK_SAMPLES is 64 or 128.  Assumes 50% overlap
 #define N_FFT 256
+#define FFT_DATA_TYPE INT16
+//define FFT_DATA_TYPE INT32
 #if AUDIO_BLOCK_SAMPLES == 128
 #define N_BUFF_BLOCKS (2)
 #elif AUDIO_BLOCK_SAMPLES == 64
@@ -40,8 +42,13 @@ class AudioEffectFreqDomain : public AudioStream
       Serial.print("    : N_BUFF_BLOCKS = "); Serial.println(N_BUFF_BLOCKS);
 
       //initialize FFT and IFFT functions
-      arm_cfft_radix4_init_q15(&fft_inst, N_FFT, 0, 1); //FFT
-      arm_cfft_radix4_init_q15(&ifft_inst, N_FFT, 1, 1); //IFFT
+      #if FFT_DATA_TYPE == INT16
+        arm_cfft_radix4_init_q15(&fft_inst, N_FFT, 0, 1); //FFT
+        arm_cfft_radix4_init_q15(&ifft_inst, N_FFT, 1, 1); //IFFT
+      #elif FFT_DATA_TYPE == INT32
+        arm_cfft_radix4_init_q31(&fft_inst, N_FFT, 0, 1); //FFT
+        arm_cfft_radix4_init_q31(&ifft_inst, N_FFT, 1, 1); //IFFT   
+      #endif  
 
       //initialize the blocks for holding the previous data
       for (int i = 0; i < N_BUFF_BLOCKS; i++) {
@@ -65,15 +72,23 @@ class AudioEffectFreqDomain : public AudioStream
     }
 
   private:
+    audio_block_t *inputQueueArray[1];
     audio_block_t *input_buff_blocks[N_BUFF_BLOCKS];
     audio_block_t *output_buff_blocks[N_BUFF_BLOCKS];
-    int16_t buffer[2 * N_FFT] __attribute__ ((aligned (4)));
-    int16_t second_buffer[2 * N_FFT] __attribute__ ((aligned (4)));
     const int16_t *window;
 
-    audio_block_t *inputQueueArray[1];
-    arm_cfft_radix4_instance_q15 fft_inst;
-    arm_cfft_radix4_instance_q15 ifft_inst;
+    #if FFT_DATA_TYPE == INT16
+      arm_cfft_radix4_instance_q15 fft_inst;
+      arm_cfft_radix4_instance_q15 ifft_inst;
+      int16_t buffer[2 * N_FFT] __attribute__ ((aligned (4)));
+      int16_t second_buffer[2 * N_FFT] __attribute__ ((aligned (4)));
+    #elif FFT_DATA_TYPE == INT32
+      arm_cfft_radix4_instance_q31 fft_inst;
+      arm_cfft_radix4_instance_q31 ifft_inst;
+      int32_t buffer[2 * N_FFT] __attribute__ ((aligned (4)));
+      int32_t second_buffer[2 * N_FFT] __attribute__ ((aligned (4)));
+    #endif
+      
     void clear_audio_block(audio_block_t *block) {
       for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) block->data[i] = 0;
     }
@@ -111,7 +126,6 @@ void AudioEffectFreqDomain::update(void)
   block = receiveReadOnly();
   if (!block) return;
 
-
   //shuffle all of input data blocks in preperation for this latest processing
   release(input_buff_blocks[0]);  //release the oldest one
   for (int i = 1; i < N_BUFF_BLOCKS; i++) input_buff_blocks[i - 1] = input_buff_blocks[i];
@@ -128,8 +142,12 @@ void AudioEffectFreqDomain::update(void)
   if (window) apply_window_to_fft_buffer(buffer, window);
 
   //call the FFT
-  arm_cfft_radix4_q15(&fft_inst, buffer);
-
+  #if FFT_DATA_TYPE == INT16
+    arm_cfft_radix4_q15(&fft_inst, buffer);
+  #elif FFT_DATA_TYPE == INT32
+    arm_cfft_radix4_q31(&fft_inst, buffer);
+  #endif
+  
   //Manipulate the data in the frequency domain
   //my_freq_domain_processing();  //do operations in "buffer"
   #define SHIFT_BINS 2
@@ -156,7 +174,11 @@ void AudioEffectFreqDomain::update(void)
   }
 
   //call the IFFT
-  arm_cfft_radix4_q15(&ifft_inst, second_buffer);
+  #if FFT_DATA_TYPE == INT16
+    arm_cfft_radix4_q15(&ifft_inst, buffer);
+  #elif FFT_DATA_TYPE == INT32
+    arm_cfft_radix4_q31(&ifft_inst, buffer);
+  #endif
 
   //prepare for the overlap-and-add for the output
   audio_block_t *temp_buff = output_buff_blocks[0]; //hold onto this one for a moment
