@@ -32,16 +32,21 @@ extern "C" {
 class AudioEffectFreqDomain : public AudioStream
 {
   public:
-    AudioEffectFreqDomain(void) : AudioStream(1, inputQueueArray), window(AudioWindowHanning256) {
+    AudioEffectFreqDomain(void) : AudioStream(1, inputQueueArray), window(NULL) {
+    }
+    void setup(void) {
+      Serial.println("AudioEffectFreqDomain: setup...");
+      Serial.print("    : N_FFT = "); Serial.println(N_FFT);
+      Serial.print("    : N_BUFF_BLOCKS = "); Serial.println(N_BUFF_BLOCKS);
+
       //initialize FFT and IFFT functions
-      arm_cfft_radix4_init_q15(&fft_inst, N_FFT, 0, 1);
-      arm_cfft_radix4_init_q15(&ifft_inst, N_FFT, 1, 1);
+      arm_cfft_radix4_init_q15(&fft_inst, N_FFT, 0, 1); //FFT
+      arm_cfft_radix4_init_q15(&ifft_inst, N_FFT, 1, 1); //IFFT
 
       //initialize the blocks for holding the previous data
       for (int i = 0; i < N_BUFF_BLOCKS; i++) {
         input_buff_blocks[i] = allocate();
         clear_audio_block(input_buff_blocks[i]);
-
         output_buff_blocks[i] = allocate();
         clear_audio_block(output_buff_blocks[i]);
       }
@@ -54,8 +59,8 @@ class AudioEffectFreqDomain : public AudioStream
     ~AudioEffectFreqDomain(void) {
       //release allcoated memory
       for (int i = 0; i < N_BUFF_BLOCKS; i++) {
-        release(input_buff_blocks[i]);
-        release(output_buff_blocks[i]);
+        if (input_buff_blocks[i] != NULL) release(input_buff_blocks[i]);
+        if (output_buff_blocks[i] != NULL) release(output_buff_blocks[i]);
       }
     }
 
@@ -63,6 +68,7 @@ class AudioEffectFreqDomain : public AudioStream
     audio_block_t *input_buff_blocks[N_BUFF_BLOCKS];
     audio_block_t *output_buff_blocks[N_BUFF_BLOCKS];
     int16_t buffer[2 * N_FFT] __attribute__ ((aligned (4)));
+    int16_t second_buffer[2 * N_FFT] __attribute__ ((aligned (4)));
     const int16_t *window;
 
     audio_block_t *inputQueueArray[1];
@@ -103,11 +109,8 @@ void AudioEffectFreqDomain::update(void)
   //get a pointer to the latest data
   audio_block_t *block;
   block = receiveReadOnly();
-  if (!block) {
-    transmit(block);
-    release(block);
-    return;
-  }
+  if (!block) return;
+
 
   //shuffle all of input data blocks in preperation for this latest processing
   release(input_buff_blocks[0]);  //release the oldest one
@@ -129,9 +132,31 @@ void AudioEffectFreqDomain::update(void)
 
   //Manipulate the data in the frequency domain
   //my_freq_domain_processing();  //do operations in "buffer"
+  #define SHIFT_BINS 2
+  int source_ind, targ_ind;
+  #define POS_BINS (N_FFT/2+1)
+  for (targ_ind=0; targ_ind < SHIFT_BINS; targ_ind++) {//clear the early bins. The rest will be overwritten
+    second_buffer[2*targ_ind] = 0;  //real
+    second_buffer[2*targ_ind+1] = 0;  //imaginary
+  }
+  for (source_ind=0; source_ind < POS_BINS; source_ind++) {
+    targ_ind = source_ind + SHIFT_BINS;
+    if ((targ_ind >= 0) && (targ_ind < 2*POS_BINS-1)) {
+      second_buffer[2*targ_ind] = buffer[2*source_ind];//move everything up to higher frequency...real
+      second_buffer[2*targ_ind+1] = buffer[2*source_ind+1];//move everything up to higher frequency...imaginary
+    }
+  }
+
+  //create the negative frequency space via complex conjugate of the positive frequency space
+  targ_ind = POS_BINS;
+  for (source_ind=POS_BINS-1-1; source_ind > 0; source_ind--) {
+    second_buffer[2*targ_ind] = second_buffer[2*source_ind];  //real
+    second_buffer[2*targ_ind+1] = -second_buffer[2*source_ind+1]; //imaginary.  negative magkes it the complex conjugate
+    targ_ind++;
+  }
 
   //call the IFFT
-  arm_cfft_radix4_q15(&ifft_inst, buffer);
+  arm_cfft_radix4_q15(&ifft_inst, second_buffer);
 
   //prepare for the overlap-and-add for the output
   audio_block_t *temp_buff = output_buff_blocks[0]; //hold onto this one for a moment
@@ -143,20 +168,19 @@ void AudioEffectFreqDomain::update(void)
   int output_count = 0;
   for (int i = 0; i < N_BUFF_BLOCKS - 1; i++) { //Notice that this loop does NOT do the last block.  That's a special case after.
     for (int j = 0; j < AUDIO_BLOCK_SAMPLES; j++) {
-      output_buff_blocks[i]->data[j] +=  buffer[output_count]; 
+      output_buff_blocks[i]->data[j] +=  second_buffer[output_count];
       output_count += 2;  //buffer is [real, imaginary, real, imaginary,...] and we only want the reals.  so inrement by 2.
     }
   }
 
   //now write in the newest data into the last block, overwriting any garbage that might have existed there
   for (int j = 0; j < AUDIO_BLOCK_SAMPLES; j++) {
-    output_buff_blocks[N_BUFF_BLOCKS - 1]->data[j] =  buffer[output_count]; //overwrite with the newest data
+    output_buff_blocks[N_BUFF_BLOCKS - 1]->data[j] =  second_buffer[output_count]; //overwrite with the newest data
     output_count += 2;  //buffer is [real, imaginary, real, imaginary,...] and we only want the reals.  so inrement by 2.
   }
 
   //send the oldest data.  Don't issue the release command here because we will release it the next time through this routine
-  transmit(output_buff_blocks[0]);
+  transmit(output_buff_blocks[0]); //don't release this buffer because we re-use it every time this is called
   return;
-}
-
+};
 #endif

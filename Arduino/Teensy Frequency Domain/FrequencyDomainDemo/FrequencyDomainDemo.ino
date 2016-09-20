@@ -31,43 +31,51 @@ const int myInput = AUDIO_INPUT_LINEIN;
 //
 AudioInputI2S          audioInput;         // audio shield: mic or line-in
 AudioSynthWaveformSine sinewave;
-//AudioAnalyzeFFT256     myFFT;
 AudioEffectFreqDomain  audioEffectFD;
 AudioOutputI2S         audioOutput;        // audio shield: headphones & line-out
 
 // Connect either the live input or synthesized sine wave
-//AudioConnection patchCord1(audioInput, 0, myFFT, 0);
-//AudioConnection patchCord1(sinewave, 0, myFFT, 0);
+//AudioConnection patchCord1(sinewave, 0, audioOutput, 0);
 AudioConnection patchCord1(sinewave, 0, audioEffectFD, 0);
 AudioConnection patchCord2(audioEffectFD, 0, audioOutput, 0);
 
 AudioControlSGTL5000 audioShield;
 
 void setup() {
+  Serial.begin(115200);
+  delay(1000);
+  Serial.println("FrequencyDomainDemo: beginning...");
+  delay(500);
+  Serial.print("    :AUDIO_BLOCK_SAMPLES = "); Serial.println(AUDIO_BLOCK_SAMPLES);
+  delay(500);
+  
   // Audio connections require memory to work.  For more
   // detailed information, see the MemoryAndCpuUsage example
-  AudioMemory(12);
+  AudioMemory(24);
+
+  // Configure the frequency-domain algorithm
+  audioEffectFD.setup(); //do after AudioMemory();
+  audioEffectFD.windowFunction(AudioWindowHanning256);
+  //audioEffectFD.windowFunction(NULL);
+  
 
   // Enable the audio shield and set the output volume.
   audioShield.enable();
   audioShield.inputSelect(myInput);
   audioShield.volume(0.5);
 
-  // Configure the window algorithm to use
-  audioEffectFD.windowFunction(AudioWindowHanning256);
-  //audioEffectFD.windowFunction(NULL);
-
   // Create a synthetic sine wave, for testing
   // To use this, edit the connections above
-  sinewave.amplitude(0.8);
+  sinewave.amplitude(0.5);
   sinewave.frequency(1034.007);
 }
 
 void loop() {
-  float n;
-  int i;
+//  float n;
+//  int i;
 
-  delay(1);
+  delay(1000);
+  Serial.println("Tick");
 
 //  if (myFFT.available()) {
 //    // each time new FFT data is available
