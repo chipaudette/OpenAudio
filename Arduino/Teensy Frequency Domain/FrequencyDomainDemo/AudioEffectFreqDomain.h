@@ -42,13 +42,13 @@ class AudioEffectFreqDomain : public AudioStream
       Serial.print("    : N_BUFF_BLOCKS = "); Serial.println(N_BUFF_BLOCKS);
 
       //initialize FFT and IFFT functions
-      #if FFT_DATA_TYPE == INT16
+//      #if FFT_DATA_TYPE == INT16
         arm_cfft_radix4_init_q15(&fft_inst, N_FFT, 0, 1); //FFT
         arm_cfft_radix4_init_q15(&ifft_inst, N_FFT, 1, 1); //IFFT
-      #elif FFT_DATA_TYPE == INT32
-        arm_cfft_radix4_init_q31(&fft_inst, N_FFT, 0, 1); //FFT
-        arm_cfft_radix4_init_q31(&ifft_inst, N_FFT, 1, 1); //IFFT   
-      #endif  
+//      #elif FFT_DATA_TYPE == INT32
+//        arm_cfft_radix4_init_q31(&fft_inst, N_FFT, 0, 1); //FFT
+//        arm_cfft_radix4_init_q31(&ifft_inst, N_FFT, 1, 1); //IFFT   
+//      #endif  
 
       //initialize the blocks for holding the previous data
       for (int i = 0; i < N_BUFF_BLOCKS; i++) {
@@ -77,17 +77,17 @@ class AudioEffectFreqDomain : public AudioStream
     audio_block_t *output_buff_blocks[N_BUFF_BLOCKS];
     const int16_t *window;
 
-    #if FFT_DATA_TYPE == INT16
+//    #if FFT_DATA_TYPE == INT16
       arm_cfft_radix4_instance_q15 fft_inst;
       arm_cfft_radix4_instance_q15 ifft_inst;
       int16_t buffer[2 * N_FFT] __attribute__ ((aligned (4)));
       int16_t second_buffer[2 * N_FFT] __attribute__ ((aligned (4)));
-    #elif FFT_DATA_TYPE == INT32
-      arm_cfft_radix4_instance_q31 fft_inst;
-      arm_cfft_radix4_instance_q31 ifft_inst;
-      int32_t buffer[2 * N_FFT] __attribute__ ((aligned (4)));
-      int32_t second_buffer[2 * N_FFT] __attribute__ ((aligned (4)));
-    #endif
+//    #elif FFT_DATA_TYPE == INT32
+//      arm_cfft_radix4_instance_q31 fft_inst;
+//      arm_cfft_radix4_instance_q31 ifft_inst;
+//      int32_t buffer[2 * N_FFT] __attribute__ ((aligned (4)));
+//      int32_t second_buffer[2 * N_FFT] __attribute__ ((aligned (4)));
+//    #endif
       
     void clear_audio_block(audio_block_t *block) {
       for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) block->data[i] = 0;
@@ -135,22 +135,30 @@ void AudioEffectFreqDomain::update(void)
   int start_count = 0;
   for (int i = 0; i < N_BUFF_BLOCKS; i++) {
     copy_to_fft_buffer(buffer + start_count, input_buff_blocks[i]->data);
-    start_count += (2 * AUDIO_BLOCK_SAMPLES); //step size is 2*AUDIO_BLOCK_SAMPLES because "buffer" is for complex data (so 2 entries per Int16)
+    start_count += 2*N_FFT;
+//    for (int j = 0; j < AUDIO_BLOCK_SAMPLES; j++) {
+//      #if FFT_DATA_TYPE == INT16
+//        buffer[start_count++] = input_buff_blocks[i]->data[j];  //real
+//      #else
+//        buffer[start_count++] = ((int32_t)(input_buff_blocks[i]->data[j])) << 16;  //real
+//      #endif
+//      buffer[start_count++] = 0;  //imaginary
+//    }
   }
 
   //apply window to the data
   if (window) apply_window_to_fft_buffer(buffer, window);
 
   //call the FFT
-  #if FFT_DATA_TYPE == INT16
+//  #if FFT_DATA_TYPE == INT16
     arm_cfft_radix4_q15(&fft_inst, buffer);
-  #elif FFT_DATA_TYPE == INT32
-    arm_cfft_radix4_q31(&fft_inst, buffer);
-  #endif
+//  #elif FFT_DATA_TYPE == INT32
+//    arm_cfft_radix4_q31(&fft_inst, buffer);
+//  #endif
   
   //Manipulate the data in the frequency domain
   //my_freq_domain_processing();  //do operations in "buffer"
-  #define SHIFT_BINS 2
+  #define SHIFT_BINS 0
   int source_ind, targ_ind;
   #define POS_BINS (N_FFT/2+1)
   for (targ_ind=0; targ_ind < SHIFT_BINS; targ_ind++) {//clear the early bins. The rest will be overwritten
@@ -174,11 +182,11 @@ void AudioEffectFreqDomain::update(void)
   }
 
   //call the IFFT
-  #if FFT_DATA_TYPE == INT16
-    arm_cfft_radix4_q15(&ifft_inst, buffer);
-  #elif FFT_DATA_TYPE == INT32
-    arm_cfft_radix4_q31(&ifft_inst, buffer);
-  #endif
+//  #if FFT_DATA_TYPE == INT16
+    arm_cfft_radix4_q15(&ifft_inst, second_buffer);
+//  #elif FFT_DATA_TYPE == INT32
+//    arm_cfft_radix4_q31(&ifft_inst, second_buffer);
+//  #endif
 
   //prepare for the overlap-and-add for the output
   audio_block_t *temp_buff = output_buff_blocks[0]; //hold onto this one for a moment
