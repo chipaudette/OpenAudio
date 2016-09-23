@@ -175,33 +175,35 @@ void AudioEffectFreqDomain::update(void)
   #endif
 
   
-//  //Simplest.  Copy input buffer to output buffer.
-//  for (source_ind=0; source_ind < N_FFT; source_ind++) {
-//    if (source_ind < N_POS_BINS) {
-//      second_buffer[2*source_ind] = buffer[2*source_ind];
-//      second_buffer[2*source_ind+1] = buffer[2*source_ind+1];
-//    } else {
-//      second_buffer[2*source_ind] = 0;
-//      second_buffer[2*source_ind+1] = 0;
-//    }
-//  }
-
-  //More complex.  Let's manipulate the data in the frequency domain
-  #define SHIFT_BINS 0
-  if (SHIFT_BINS > 0) {
-    //for (targ_ind = 0; targ_ind < SHIFT_BINS; targ_ind++) { //clear the early bins. The rest will be overwritten
-    for (targ_ind = 0; targ_ind < N_FFT; targ_ind++) { //clear the early bins. The rest will be overwritten
-      second_buffer[2 * targ_ind] = 0; //real
-      second_buffer[2 * targ_ind + 1] = 0; //imaginary
-    }
-  }  
-  for (source_ind = 0+1; source_ind < N_POS_BINS; source_ind++) { //skip the DC bin
-    targ_ind = source_ind + SHIFT_BINS;
-    if ((targ_ind >= 0) && (targ_ind < N_POS_BINS)) {
-      second_buffer[2 * targ_ind] = buffer[2 * source_ind]; //move everything up to higher frequency...real
-      second_buffer[2 * targ_ind + 1] = buffer[2 * source_ind + 1]; //move everything up to higher frequency...imaginary
+  //Simplest.  Copy input buffer to output buffer.
+  for (source_ind=0; source_ind < N_FFT; source_ind++) {
+    if (source_ind < N_POS_BINS) {
+      //copy over the values for the positive frequency space
+      second_buffer[2*source_ind] = buffer[2*source_ind];
+      second_buffer[2*source_ind+1] = buffer[2*source_ind+1];
+    } else {
+      //for giggles, zero out the negative frequency space to make sure that they are properly recreated later
+      second_buffer[2*source_ind] = 0;
+      second_buffer[2*source_ind+1] = 0;
     }
   }
+
+  //More complex.  Let's manipulate the data in the frequency domain
+//  #define SHIFT_BINS 0
+//  if (SHIFT_BINS > 0) {
+//    //for (targ_ind = 0; targ_ind < SHIFT_BINS; targ_ind++) { //clear the early bins. The rest will be overwritten
+//    for (targ_ind = 0; targ_ind < N_FFT; targ_ind++) { //clear the early bins. The rest will be overwritten
+//      second_buffer[2 * targ_ind] = 0; //real
+//      second_buffer[2 * targ_ind + 1] = 0; //imaginary
+//    }
+//  }  
+//  for (source_ind = 0+1; source_ind < N_POS_BINS; source_ind++) { //skip the DC bin
+//    targ_ind = source_ind + SHIFT_BINS;
+//    if ((targ_ind >= 0) && (targ_ind < N_POS_BINS)) {
+//      second_buffer[2 * targ_ind] = buffer[2 * source_ind]; //move everything up to higher frequency...real
+//      second_buffer[2 * targ_ind + 1] = buffer[2 * source_ind + 1]; //move everything up to higher frequency...imaginary
+//    }
+//  }
 
 
   //create the negative frequency space via complex conjugate of the positive frequency space
