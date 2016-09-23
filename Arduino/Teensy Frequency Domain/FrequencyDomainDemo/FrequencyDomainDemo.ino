@@ -55,8 +55,8 @@ void setup() {
 
   // Configure the frequency-domain algorithm
   audioEffectFD.setup(); //do after AudioMemory();
-  audioEffectFD.windowFunction(AudioWindowHanning256);
-  //audioEffectFD.windowFunction(NULL);
+  //audioEffectFD.windowFunction(AudioWindowHanning256);
+  audioEffectFD.windowFunction(NULL);
   
 
   // Enable the audio shield and set the output volume.
@@ -66,8 +66,8 @@ void setup() {
 
   // Create a synthetic sine wave, for testing
   // To use this, edit the connections above
-  sinewave.amplitude(0.5);
-  sinewave.frequency(1034.007);
+  sinewave.amplitude(0.125);
+  sinewave.frequency(253.007);
 }
 
 void loop() {
