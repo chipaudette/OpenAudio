@@ -66,8 +66,9 @@ void setup() {
 
   // Create a synthetic sine wave, for testing
   // To use this, edit the connections above
-  sinewave.amplitude(0.125);
-  sinewave.frequency(253.007);
+  sinewave.amplitude(0.0625); //betweeon zero and one
+  //sinewave.frequency(2*253.007);
+  sinewave.frequency(((float)AUDIO_SAMPLE_RATE_EXACT)/256.0*4.0);
 }
 
 void loop() {
