@@ -69,7 +69,7 @@ int N;
 uint32_t dt_micros;
 void loop() {
  
-  if (I_loop < 4) {
+  if (I_loop < 3) {
      I_loop++;
 
 		//step trough each N
