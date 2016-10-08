@@ -33,12 +33,19 @@ extern "C" {
 #define N_BUFF_BLOCKS (4)
 #endif
 typedef struct complex_t {
+//  #if FFT_DATA_TYPE == 16
+//    q15_t re  __attribute__ ((aligned(2)));
+//    q15_t im  __attribute__ ((aligned(2)));
+//  #elif FFT_DATA_TYPE == 32
+//    q31_t re  __attribute__ ((aligned(4)));
+//    q31_t im  __attribute__ ((aligned(4)));
+//  #endif
   #if FFT_DATA_TYPE == 16
-    q15_t re  __attribute__ ((aligned(2)));
-    q15_t im  __attribute__ ((aligned(2)));
+    q15_t re;
+    q15_t im;
   #elif FFT_DATA_TYPE == 32
-    q31_t re  __attribute__ ((aligned(4)));
-    q31_t im  __attribute__ ((aligned(4)));
+    q31_t re;
+    q31_t im;
   #endif
 } complex_t;
 class AudioEffectFreqDomain : public AudioStream
@@ -86,6 +93,8 @@ class AudioEffectFreqDomain : public AudioStream
 
   private:
     int freqShift_bins;
+    int printFFTtoSerial = 4;  //how many FFT results to print before stopping
+    int flipSignOddBins = 1;
     audio_block_t *inputQueueArray[1];
     audio_block_t *input_buff_blocks[N_BUFF_BLOCKS];
     audio_block_t *output_buff_blocks[N_BUFF_BLOCKS];
@@ -117,6 +126,7 @@ static void apply_window_to_fft_q15_buffer(complex_t buff[], int16_t win[])
     buff[i].re = val >> 15;
   }
 }
+
 
 void AudioEffectFreqDomain::update(void)
 {
@@ -174,27 +184,47 @@ void AudioEffectFreqDomain::update(void)
     arm_cfft_radix4_q31(&fft_inst, (q31_t *)buffer);
   #endif
 
-  
+  //Clear the target bins.  Is this necessary in all cases?
+  for (targ_ind = 0; targ_ind < N_POS_BINS; targ_ind++) {
+    second_buffer[targ_ind].re = 0; //real
+    second_buffer[targ_ind].im = 0; //imaginary
+  }
+
   //Simplest.  Copy input buffer to output buffer.  No change to audio
   //for (source_ind=0; source_ind < N_FFT; source_ind++) second_buffer[source_ind] = buffer[source_ind]; //copies both real and imaginary parts
 
   //More complex.  Let's manipulate the data in the frequency domain
-  //define SHIFT_BINS 1
-  if (freqShift_bins > 0) {
-    //for (targ_ind = 0; targ_ind < SHIFT_BINS; targ_ind++) { //clear the early bins. The rest will be overwritten
-    for (targ_ind = 0; targ_ind < N_POS_BINS; targ_ind++) { //clear all of the bins.
-      second_buffer[targ_ind].re = 0; //real
-      second_buffer[targ_ind].im = 0; //imaginary
+  if ( (flipSignOddBins == 0) || ((freqShift_bins % 2) == 0) ) {
+    //regular copy
+    for (source_ind = 0; source_ind < N_POS_BINS; source_ind++) {
+      targ_ind = source_ind + freqShift_bins;
+      if ((targ_ind > 0) && (targ_ind < N_POS_BINS)) { //stay off DC
+        second_buffer[targ_ind].re = buffer[source_ind].re;  //copy both the real and imaginary parts
+        second_buffer[targ_ind].im = buffer[source_ind].im;  
+      }
     }
-  }  
-  for (source_ind = 0; source_ind < N_POS_BINS; source_ind++) {
-    targ_ind = source_ind + freqShift_bins;
-    if ((targ_ind > 0) && (targ_ind < N_POS_BINS-1)) { //stay off DC and off Nyquist
-      second_buffer[targ_ind].re=buffer[source_ind].re;  //copy both the real and imaginary parts (remove the divide by 4!!!)
-      second_buffer[targ_ind].im=buffer[source_ind].im;  //copy both the real and imaginary parts (remove the divide by 4!!!)
-    }
+  } else {
+    //for odd (not even) shits, and for the correct alternate call, flip the signs
+    for (source_ind = 0; source_ind < N_POS_BINS; source_ind++) {
+      targ_ind = source_ind + freqShift_bins;
+      if ((targ_ind > 0) && (targ_ind < N_POS_BINS)) { //stay off DC
+        second_buffer[targ_ind].re = -buffer[source_ind].re;  //copy both the real and imaginary parts
+        second_buffer[targ_ind].im = -buffer[source_ind].im;  
+      }
+    }    
   }
+  flipSignOddBins = !flipSignOddBins;  //toggle this flag so that it alternates which block is used
 
+//  //Pure synthesis
+//  second_buffer[freqShift_bins].re = 33552631;
+//  second_buffer[freqShift_bins].im = 0;
+//  if (flipSignOddBins) {
+//    if ((freqShift_bins % 2) == 1) {
+//      second_buffer[freqShift_bins].re = -1*second_buffer[freqShift_bins].re;
+//      second_buffer[freqShift_bins].im = -1*second_buffer[freqShift_bins].im;
+//    }
+//  }
+//  flipSignOddBins = !flipSignOddBins;
 
   //create the negative frequency space via complex conjugate of the positive frequency space
   int ind_nyquist_bin = N_POS_BINS-1;
@@ -204,6 +234,36 @@ void AudioEffectFreqDomain::update(void)
     second_buffer[targ_ind].im = -second_buffer[source_ind].im; //imaginary.  negative makes it the complex conjugate, which is what we want for the neg freq space
     targ_ind++;
   }
+
+   if (printFFTtoSerial) {
+    int printThisOne=0;
+    for (int i=0; i < N_FFT; i++) {
+      if (abs(buffer[i].re) > 0) {
+        printThisOne = 1;
+      }
+    }
+    if (printThisOne > 0) {
+      Serial.print("FFT: ");
+      Serial.print(printFFTtoSerial);
+      Serial.print(".  Shifted ");
+      Serial.print(freqShift_bins);
+      Serial.println();
+      for (int i=0; i < N_FFT; i++) {
+        Serial.print(i);
+        Serial.print(": ");
+        Serial.print(buffer[i].re);
+        Serial.print(", ");
+        Serial.print(buffer[i].im);
+        Serial.print(", ");
+        Serial.print(second_buffer[i].re);
+        Serial.print(", ");
+        Serial.print(second_buffer[i].im);
+        Serial.println();
+      }
+      printFFTtoSerial--;
+    }
+  }
+  
 
   //call the IFFT
   #if FFT_DATA_TYPE == 16
