@@ -204,16 +204,18 @@ void AudioEffectFreqDomain::update(void)
       }
     }
   } else {
-    //for odd (not even) shits, and for the correct alternate call, flip the signs
+    //because of our 50% overlap, we need to evolve the phase by pi radians (180 deg)
+    //whenever we shift by an odd number of bins.  Fine.  But my experiments show that
+    //we must we must adjust the phase only every-other time, not every time.  Why?
     for (source_ind = 0; source_ind < N_POS_BINS; source_ind++) {
       targ_ind = source_ind + freqShift_bins;
       if ((targ_ind > 0) && (targ_ind < N_POS_BINS)) { //stay off DC
-        second_buffer[targ_ind].re = -buffer[source_ind].re;  //copy both the real and imaginary parts
+        second_buffer[targ_ind].re = -buffer[source_ind].re;  //shift phase by 180deg is to flip sign of both re and im
         second_buffer[targ_ind].im = -buffer[source_ind].im;  
       }
     }    
   }
-  flipSignOddBins = !flipSignOddBins;  //toggle this flag so that it alternates which block is used
+  flipSignOddBins = !flipSignOddBins;  //toggle this flag so that it alternates flip-sign/no-flip/sign
 
 //  //Pure synthesis
 //  second_buffer[freqShift_bins].re = 33552631;
