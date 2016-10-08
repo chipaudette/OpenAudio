@@ -44,7 +44,7 @@ typedef struct complex_t {
 class AudioEffectFreqDomain : public AudioStream
 {
   public:
-    AudioEffectFreqDomain(void) : AudioStream(1, inputQueueArray), window(AudioWindowHanning256) {
+    AudioEffectFreqDomain(void) : AudioStream(1, inputQueueArray), window(AudioWindowHanning256), freqShift_bins(0) {
     }
     void setup(void) {
       Serial.println("AudioEffectFreqDomain: setup...");
@@ -80,8 +80,12 @@ class AudioEffectFreqDomain : public AudioStream
         if (output_buff_blocks[i] != NULL) release(output_buff_blocks[i]);
       }
     }
+    void setFreqShiftBins(int value) {
+      freqShift_bins = min(max(0,value),N_POS_BINS);
+    }
 
   private:
+    int freqShift_bins;
     audio_block_t *inputQueueArray[1];
     audio_block_t *input_buff_blocks[N_BUFF_BLOCKS];
     audio_block_t *output_buff_blocks[N_BUFF_BLOCKS];
@@ -175,8 +179,8 @@ void AudioEffectFreqDomain::update(void)
   //for (source_ind=0; source_ind < N_FFT; source_ind++) second_buffer[source_ind] = buffer[source_ind]; //copies both real and imaginary parts
 
   //More complex.  Let's manipulate the data in the frequency domain
-  #define SHIFT_BINS 2
-  if (SHIFT_BINS > 0) {
+  //define SHIFT_BINS 1
+  if (freqShift_bins > 0) {
     //for (targ_ind = 0; targ_ind < SHIFT_BINS; targ_ind++) { //clear the early bins. The rest will be overwritten
     for (targ_ind = 0; targ_ind < N_POS_BINS; targ_ind++) { //clear all of the bins.
       second_buffer[targ_ind].re = 0; //real
@@ -184,7 +188,7 @@ void AudioEffectFreqDomain::update(void)
     }
   }  
   for (source_ind = 0; source_ind < N_POS_BINS; source_ind++) {
-    targ_ind = source_ind + SHIFT_BINS;
+    targ_ind = source_ind + freqShift_bins;
     if ((targ_ind > 0) && (targ_ind < N_POS_BINS-1)) { //stay off DC and off Nyquist
       second_buffer[targ_ind].re=buffer[source_ind].re;  //copy both the real and imaginary parts (remove the divide by 4!!!)
       second_buffer[targ_ind].im=buffer[source_ind].im;  //copy both the real and imaginary parts (remove the divide by 4!!!)

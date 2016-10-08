@@ -2,16 +2,18 @@
 //
 // Demonstrate audio procesing in the frequency domain.
 //
+// Created: Chip Audette  Sept-Oct 2016
+//
 // Approach:
 //    * Take samples in the time domain
 //    * Take FFT to convert to frequency domain
-//    * Manipulate the frequency bins (LP filter?  BP filter?  Formant shift?)
+//    * Manipulate the frequency bins as desired (LP filter?  BP filter?  Formant shift?)
 //    * Take IFFT to convert back to time domain
 //    * Send samples back to the audio interface
 //
 // Assumes the use of the Audio library from PJRC
 //
-// This example code is in the public domain.
+// This example code is in the public domain (MIT License)
 
 #include <Audio.h>
 #include <Wire.h>
@@ -37,9 +39,12 @@ AudioOutputI2S         audioOutput;        // audio shield: headphones & line-ou
 // Connect either the live input or synthesized sine wave
 //AudioConnection patchCord1(sinewave, 0, audioOutput, 0);
 AudioConnection patchCord1(sinewave, 0, audioEffectFD, 0);
-AudioConnection patchCord2(audioEffectFD, 0, audioOutput, 0);
+AudioConnection patchCord2(audioEffectFD, 0, audioOutput, 0); //send to left channel
+AudioConnection patchCord3(audioEffectFD, 0, audioOutput, 1); //also copy to right channel
 
 AudioControlSGTL5000 audioShield;
+
+#define POT_PIN A1  //potentiometer is tied to this pin
 
 void setup() {
   Serial.begin(115200);
@@ -75,24 +80,16 @@ void loop() {
 //  float n;
 //  int i;
 
-  delay(1000);
-  Serial.println("Tick");
-
-//  if (myFFT.available()) {
-//    // each time new FFT data is available
-//    // print it all to the Arduino Serial Monitor
-//    Serial.print("FFT: ");
-//    for (i=0; i<40; i++) {
-//      n = myFFT.read(i);
-//      if (n >= 0.01) {
-//        Serial.print(n);
-//        Serial.print(" ");
-//      } else {
-//        Serial.print("  -  "); // don't print "0.00"
-//      }
-//    }
-//    Serial.println();
-//  }
+  delay(250);
+  int val = analogRead(POT_PIN);
+  int new_shift = val / 20;
+  audioEffectFD.setFreqShiftBins(new_shift);
+  
+  Serial.print("Pot = "); 
+  Serial.print(val);
+  Serial.print(", new shift = ");
+  Serial.print(new_shift);
+  Serial.println();
 }
 
 
