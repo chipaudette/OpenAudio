@@ -32,12 +32,19 @@ const int myInput = AUDIO_INPUT_LINEIN;
 // order data flows, inputs/sources -> processing -> outputs
 //
 //AudioInputI2S          audioInput;         // audio shield: mic or line-in
-AudioSynthWaveformSine sinewave;
+AudioSynthWaveformSine  sinewave;
+AudioSynthWaveformSine  sinewave2;
+AudioSynthToneSweep     tonesweep1;     //xy=98,458
+AudioMixer4             mixer1;         //xy=266,407
 AudioEffectFreqDomain  audioEffectFD;
 
 // Connect either the live input or synthesized sine wave
 //AudioConnection patchCord1(sinewave, 0, audioOutput, 0);
-AudioConnection patchCord1(sinewave, 0, audioEffectFD, 0);
+//AudioConnection patchCord1(sinewave, 0, audioEffectFD, 0);
+AudioConnection patchCord10(sinewave, 0, mixer1, 0);
+//AudioConnection patchCord11(tonesweep1, 0, mixer1, 2);
+AudioConnection patchCord12(sinewave2, 0, mixer1, 1);
+AudioConnection patchCord1(mixer1, 0, audioEffectFD, 0);
 
 //Send audio out to Teensy Audio Board
 AudioOutputI2S         audioOutput;        // audio shield: headphones & line-out
@@ -45,9 +52,9 @@ AudioConnection patchCord2(audioEffectFD, 0, audioOutput, 0); //send to left cha
 AudioConnection patchCord3(audioEffectFD, 0, audioOutput, 1); //also copy to right channel
 
 //Send audio out over USB to the PC for PC-based audio recording?   must set Tools->USB Type->Audio
-AudioOutputUSB  audioOutput_usb;          //must set Tools->USB Type->Audio
-AudioConnection patchCord4(audioEffectFD, 0, audioOutput_usb, 0); //send to left channel
-AudioConnection patchCord5(audioEffectFD, 0, audioOutput_usb, 1); //also copy to right channel
+//AudioOutputUSB  audioOutput_usb;          //must set Tools->USB Type->Audio
+//AudioConnection patchCord4(audioEffectFD, 0, audioOutput_usb, 0); //send to left channel
+//AudioConnection patchCord5(audioEffectFD, 0, audioOutput_usb, 1); //also copy to right channel
 
 
 AudioControlSGTL5000 audioShield;
@@ -80,8 +87,10 @@ void setup() {
   // Create a synthetic sine wave, for testing
   // To use this, edit the connections above
   sinewave.amplitude(0.0625); //betweeon zero and one
-  //sinewave.frequency(2*253.007);
-  sinewave.frequency(((float)AUDIO_SAMPLE_RATE_EXACT)/256.0*3);
+  sinewave.frequency(((float)AUDIO_SAMPLE_RATE_EXACT)/256.0*4);
+
+  sinewave2.amplitude(0.0); //betweeon zero and one
+  sinewave2.frequency(((float)AUDIO_SAMPLE_RATE_EXACT)/256.0*7);
 }
 
 
