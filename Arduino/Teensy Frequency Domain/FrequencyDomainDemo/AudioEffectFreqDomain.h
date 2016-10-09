@@ -115,6 +115,7 @@ class AudioEffectFreqDomain : public AudioStream
     void clear_audio_block(audio_block_t *block) {
       for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) block->data[i] = 0;
     }
+    
 };
 
 static void apply_window_to_fft_q15_buffer(complex_t buff[], int16_t win[])
@@ -127,6 +128,66 @@ static void apply_window_to_fft_q15_buffer(complex_t buff[], int16_t win[])
   }
 }
 
+
+static int adjustPhaseOfBins( complex_t second_buffer[], const int freqShift_bins, const int n_overlap, int call_count) {
+  switch (n_overlap) {
+    case 1:
+      //0% overlap.  No phase shifting needed.
+      break;
+    case 2:
+      //50% overlap.  Every other bin gets shifted by 180 deg on every other call
+      if (call_count==1) {
+        if ((freqShift_bins % 2) == 1) {
+          for (int i=0; i < N_POS_BINS; i++) {
+            second_buffer[i].re = -second_buffer[i].re;  //shift by 180 deg
+            second_buffer[i].im = -second_buffer[i].im ;    //shift by 180 deg
+          }
+        }
+      }
+      call_count = !call_count;
+      break;
+   case 4:
+    //75% overlap.  Four call cycle
+    int bin_shift = (freqShift_bins % 4);
+    switch (call_count) {
+      case 0:
+        //no phase correction needed
+        break;    
+      case 1:
+        break;
+      case 2:
+        break;
+      case 3:
+        break;
+    }
+    call_count++;  if (call_count==4) call_count=0;
+  }
+  return call_count;
+}
+
+static int shiftByIntegerNumberOfBins(complex_t buffer[], complex_t second_buffer[], const int freqShift_bins, const int n_overlap, int call_count) {
+
+  //shift the bins
+  int targ_ind = 0;
+  for (int source_ind = 0; source_ind < N_POS_BINS; source_ind++) {
+    targ_ind = source_ind + freqShift_bins;
+    if ((targ_ind > 0) && (targ_ind < N_POS_BINS)) { //stay off DC
+      second_buffer[targ_ind].re = buffer[source_ind].re;  //copy both the real and imaginary parts
+      second_buffer[targ_ind].im = buffer[source_ind].im;  
+    }
+  }
+
+  //adjust the phase of the bins
+  call_count = adjustPhaseOfBins(second_buffer, freqShift_bins, n_overlap, call_count);
+
+//  Serial.print("completed shiftByIntegerNumberOfBins.");
+//  Serial.print(" freqShift_bins: "); Serial.print(freqShift_bins);
+//  Serial.print(" n_overlap: "); Serial.print(n_overlap);
+//  Serial.print(" call_count: "); Serial.print(call_count);
+//  Serial.println();
+  
+  return call_count;
+}
 
 void AudioEffectFreqDomain::update(void)
 {
@@ -193,29 +254,8 @@ void AudioEffectFreqDomain::update(void)
   //Simplest.  Copy input buffer to output buffer.  No change to audio
   //for (source_ind=0; source_ind < N_FFT; source_ind++) second_buffer[source_ind] = buffer[source_ind]; //copies both real and imaginary parts
 
-  //More complex.  Let's manipulate the data in the frequency domain
-  if ( (flipSignOddBins == 0) || ((freqShift_bins % 2) == 0) ) {
-    //regular copy
-    for (source_ind = 0; source_ind < N_POS_BINS; source_ind++) {
-      targ_ind = source_ind + freqShift_bins;
-      if ((targ_ind > 0) && (targ_ind < N_POS_BINS)) { //stay off DC
-        second_buffer[targ_ind].re = buffer[source_ind].re;  //copy both the real and imaginary parts
-        second_buffer[targ_ind].im = buffer[source_ind].im;  
-      }
-    }
-  } else {
-    //because of our 50% overlap, we need to evolve the phase by pi radians (180 deg)
-    //whenever we shift by an odd number of bins.  Fine.  But my experiments show that
-    //we must we must adjust the phase only every-other time, not every time.  Why?
-    for (source_ind = 0; source_ind < N_POS_BINS; source_ind++) {
-      targ_ind = source_ind + freqShift_bins;
-      if ((targ_ind > 0) && (targ_ind < N_POS_BINS)) { //stay off DC
-        second_buffer[targ_ind].re = -buffer[source_ind].re;  //shift phase by 180deg is to flip sign of both re and im
-        second_buffer[targ_ind].im = -buffer[source_ind].im;  
-      }
-    }    
-  }
-  flipSignOddBins = !flipSignOddBins;  //toggle this flag so that it alternates flip-sign/no-flip/sign
+  //Do a frequency shift by a fixed number of bins
+  flipSignOddBins = shiftByIntegerNumberOfBins(buffer, second_buffer, freqShift_bins, N_BUFF_BLOCKS, flipSignOddBins);  
 
 //  //Pure synthesis
 //  second_buffer[freqShift_bins].re = 33552631;
@@ -237,34 +277,34 @@ void AudioEffectFreqDomain::update(void)
     targ_ind++;
   }
 
-   if (printFFTtoSerial) {
-    int printThisOne=0;
-    for (int i=0; i < N_FFT; i++) {
-      if (abs(buffer[i].re) > 0) {
-        printThisOne = 1;
-      }
-    }
-    if (printThisOne > 0) {
-      Serial.print("FFT: ");
-      Serial.print(printFFTtoSerial);
-      Serial.print(".  Shifted ");
-      Serial.print(freqShift_bins);
-      Serial.println();
-      for (int i=0; i < N_FFT; i++) {
-        Serial.print(i);
-        Serial.print(": ");
-        Serial.print(buffer[i].re);
-        Serial.print(", ");
-        Serial.print(buffer[i].im);
-        Serial.print(", ");
-        Serial.print(second_buffer[i].re);
-        Serial.print(", ");
-        Serial.print(second_buffer[i].im);
-        Serial.println();
-      }
-      printFFTtoSerial--;
-    }
-  }
+//   if (printFFTtoSerial) {
+//    int printThisOne=0;
+//    for (int i=0; i < N_FFT; i++) {
+//      if (abs(buffer[i].re) > 0) {
+//        printThisOne = 1;
+//      }
+//    }
+//    if (printThisOne > 0) {
+//      Serial.print("FFT: ");
+//      Serial.print(printFFTtoSerial);
+//      Serial.print(".  Shifted ");
+//      Serial.print(freqShift_bins);
+//      Serial.println();
+//      for (int i=0; i < N_FFT; i++) {
+//        Serial.print(i);
+//        Serial.print(": ");
+//        Serial.print(buffer[i].re);
+//        Serial.print(", ");
+//        Serial.print(buffer[i].im);
+//        Serial.print(", ");
+//        Serial.print(second_buffer[i].re);
+//        Serial.print(", ");
+//        Serial.print(second_buffer[i].im);
+//        Serial.println();
+//      }
+//      printFFTtoSerial--;
+//    }
+//  }
   
 
   //call the IFFT

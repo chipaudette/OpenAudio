@@ -47,7 +47,7 @@ AudioConnection patchCord12(sinewave2, 0, mixer1, 1);
 AudioConnection patchCord1(mixer1, 0, audioEffectFD, 0);
 
 //Send audio out to Teensy Audio Board
-AudioOutputI2S         audioOutput;        // audio shield: headphones & line-out
+AudioOutputI2S  audioOutput;        // audio shield: headphones & line-out
 AudioConnection patchCord2(audioEffectFD, 0, audioOutput, 0); //send to left channel
 AudioConnection patchCord3(audioEffectFD, 0, audioOutput, 1); //also copy to right channel
 
@@ -102,7 +102,7 @@ void loop() {
   int val = analogRead(POT_PIN);
   int new_shift = val / 20;
   audioEffectFD.setFreqShiftBins(new_shift);
-  delay(125);
+  delay(100);
   
 //  Serial.print("Pot = "); 
 //  Serial.print(val);
