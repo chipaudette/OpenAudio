@@ -7,20 +7,20 @@
 #include "arm_math.h"
 #include "utility/dspinst.h"  //copied from analyze_fft256.cpp.  Do we need this?
 
-// windows.c
-extern "C" {
-  extern const int16_t AudioWindowHanning256[];
-  extern const int16_t AudioWindowBartlett256[];
-  extern const int16_t AudioWindowBlackman256[];
-  extern const int16_t AudioWindowFlattop256[];
-  extern const int16_t AudioWindowBlackmanHarris256[];
-  extern const int16_t AudioWindowNuttall256[];
-  extern const int16_t AudioWindowBlackmanNuttall256[];
-  extern const int16_t AudioWindowWelch256[];
-  extern const int16_t AudioWindowHamming256[];
-  extern const int16_t AudioWindowCosine256[];
-  extern const int16_t AudioWindowTukey256[];
-}
+//// windows.c
+//extern "C" {
+//  extern const int16_t AudioWindowHanning256[];
+//  extern const int16_t AudioWindowBartlett256[];
+//  extern const int16_t AudioWindowBlackman256[];
+//  extern const int16_t AudioWindowFlattop256[];
+//  extern const int16_t AudioWindowBlackmanHarris256[];
+//  extern const int16_t AudioWindowNuttall256[];
+//  extern const int16_t AudioWindowBlackmanNuttall256[];
+//  extern const int16_t AudioWindowWelch256[];
+//  extern const int16_t AudioWindowHamming256[];
+//  extern const int16_t AudioWindowCosine256[];
+//  extern const int16_t AudioWindowTukey256[];
+//}
 
 //assumes ADUIO_BLOCK_SAMPLES is 64 or 128.  Assumes 50% overlap
 #define N_FFT 256
@@ -32,40 +32,37 @@ extern "C" {
 #elif AUDIO_BLOCK_SAMPLES == 64
 #define N_BUFF_BLOCKS (4)
 #endif
+#if FFT_DATA_TYPE == 16
+  typedef q15_t fft_data_t;
+#elif FFT_DATA_TYPE == 32
+  typedef q31_t fft_data_t;
+#endif
 typedef struct complex_t {
-//  #if FFT_DATA_TYPE == 16
-//    q15_t re  __attribute__ ((aligned(2)));
-//    q15_t im  __attribute__ ((aligned(2)));
-//  #elif FFT_DATA_TYPE == 32
-//    q31_t re  __attribute__ ((aligned(4)));
-//    q31_t im  __attribute__ ((aligned(4)));
-//  #endif
-  #if FFT_DATA_TYPE == 16
-    q15_t re;
-    q15_t im;
-  #elif FFT_DATA_TYPE == 32
-    q31_t re;
-    q31_t im;
-  #endif
+  fft_data_t re;
+  fft_data_t im;
 } complex_t;
 class AudioEffectFreqDomain : public AudioStream
 {
   public:
-    AudioEffectFreqDomain(void) : AudioStream(1, inputQueueArray), window(AudioWindowHanning256), freqShift_bins(0) {
-    }
+    AudioEffectFreqDomain(void) : AudioStream(1, inputQueueArray), freqShift_bins(0) { }
+    
     void setup(void) {
       Serial.println("AudioEffectFreqDomain: setup...");
       Serial.print("    : N_FFT = "); Serial.println(N_FFT);
       Serial.print("    : N_BUFF_BLOCKS = "); Serial.println(N_BUFF_BLOCKS);
 
       //initialize FFT and IFFT functions
-      #if FFT_DATA_TYPE == INT
+      #if FFT_DATA_TYPE == 16
         arm_cfft_radix4_init_q15(&fft_inst, N_FFT, 0, 1); //FFT
         arm_cfft_radix4_init_q15(&ifft_inst, N_FFT, 1, 1); //IFFT
       #elif FFT_DATA_TYPE == 32
         arm_cfft_radix4_init_q31(&fft_inst, N_FFT, 0, 1); //FFT
         arm_cfft_radix4_init_q31(&ifft_inst, N_FFT, 1, 1); //IFFT
       #endif
+
+      //define the default window
+      //setWindowRectangular();
+      setWindowHanning();
 
       //initialize the blocks for holding the previous data
       for (int i = 0; i < N_BUFF_BLOCKS; i++) {
@@ -75,8 +72,17 @@ class AudioEffectFreqDomain : public AudioStream
         clear_audio_block(output_buff_blocks[i]);
       }
     }
-    void windowFunction(const int16_t *w) {
-      window = w;
+    
+    //void windowFunction(const int16_t *w) {
+    //  window = w;
+    //}
+    void setWindowRectangular(void) {
+      //flag__useWindow = 1;
+      for (int i=0; i < N_FFT; i++) window[i] = (fft_data_t)(32767.0); //cast it to the right type
+    }
+    void setWindowHanning(void) {
+      //flag__useWindow = 1;
+      for (int i=0; i < N_FFT; i++) window[i] = (fft_data_t)(32767.0*(-0.5*cos(2.0*PI*i/N_FFT) + 0.5)); //cast it to the right type
     }
     virtual void update(void);
 
@@ -93,17 +99,18 @@ class AudioEffectFreqDomain : public AudioStream
 
   private:
     int freqShift_bins;
-    int printFFTtoSerial = 4;  //how many FFT results to print before stopping
+    //int printFFTtoSerial = 4;  //how many FFT results to print before stopping
     int flipSignOddBins = 1;
     audio_block_t *inputQueueArray[1];
     audio_block_t *input_buff_blocks[N_BUFF_BLOCKS];
     audio_block_t *output_buff_blocks[N_BUFF_BLOCKS];
-    const int16_t *window;
+    //const int16_t *window;
 
     //q31_t buffer[N_FFT] __attribute__ ((aligned (4)));
     //q31_t second_buffer[N_FFT] __attribute__ ((aligned(4)));
     complex_t buffer[N_FFT];
     complex_t second_buffer[N_FFT];
+    fft_data_t window[N_FFT];
     #if FFT_DATA_TYPE == 16
       arm_cfft_radix4_instance_q15 fft_inst;
       arm_cfft_radix4_instance_q15 ifft_inst;
@@ -118,24 +125,24 @@ class AudioEffectFreqDomain : public AudioStream
     
 };
 
-static void apply_window_to_fft_q15_buffer(complex_t buff[], int16_t win[])
-{
-  for (int i = 0; i < N_FFT; i++) {
-    //int32_t val = buff[i].re * win[i];
-    int32_t val = ((int32_t)buff[i].re) * ((int32_t)win[i]);
-    //*buf = signed_saturate_rshift(val, 16, 15);
-    buff[i].re = val >> 15;
-  }
-}
+//static void apply_window_to_fft_q15_buffer(complex_t buff[], int16_t win[])
+//{
+//  for (int i = 0; i < N_FFT; i++) {
+//    //int32_t val = buff[i].re * win[i];
+//    int32_t val = ((int32_t)buff[i].re) * ((int32_t)win[i]);
+//    //*buf = signed_saturate_rshift(val, 16, 15);
+//    buff[i].re = val >> 15;
+//  }
+//}
 
 
 static int adjustPhaseOfBins( complex_t second_buffer[], const int freqShift_bins, const int n_overlap, int call_count) {
+  fft_data_t foo_val;
   switch (n_overlap) {
-    case 1:
-      //0% overlap.  No phase shifting needed.
+    case 1:   //0% overlap.  No phase shifting needed.
       break;
-    case 2:
-      //50% overlap.  Every other bin gets shifted by 180 deg on every other call
+      
+    case 2:  //50% overlap.  Every other bin gets shifted by 180 deg on every other call
       if (call_count==1) {
         if ((freqShift_bins % 2) == 1) {
           for (int i=0; i < N_POS_BINS; i++) {
@@ -146,32 +153,45 @@ static int adjustPhaseOfBins( complex_t second_buffer[], const int freqShift_bin
       }
       call_count = !call_count;
       break;
-   case 4:
-    //75% overlap.  Four call cycle
-    int bin_shift = (freqShift_bins % 4);
-    switch (call_count) {
+      
+   case 4:     //75% overlap.  Four call cycle
+    int phase_shift_pi_2 = (freqShift_bins*call_count) % 4;  //multiples of pi/2
+    switch (phase_shift_pi_2) {
       case 0:
         //no phase correction needed
         break;    
       case 1:
+        for (int i=0; i < N_POS_BINS; i++) {
+          foo_val = second_buffer[i].re;
+          second_buffer[i].re = -second_buffer[i].im;  //shift by 90 deg
+          second_buffer[i].im = foo_val;    //shift by 90 deg
+        }     
         break;
       case 2:
+        for (int i=0; i < N_POS_BINS; i++) {
+          second_buffer[i].re = -second_buffer[i].re;  //shift by 180 deg
+          second_buffer[i].im = -second_buffer[i].im ;    //shift by 180 deg
+        }
         break;
       case 3:
+        for (int i=0; i < N_POS_BINS; i++) {
+          foo_val = second_buffer[i].re;
+          second_buffer[i].re = second_buffer[i].im;  //shift by 270 deg
+          second_buffer[i].im = -foo_val;    //shift by 270 deg    
+        }
         break;
     }
-    call_count++;  if (call_count==4) call_count=0;
+    call_count++;  if (call_count == 4) call_count=0;
   }
   return call_count;
 }
 
 static int shiftByIntegerNumberOfBins(complex_t buffer[], complex_t second_buffer[], const int freqShift_bins, const int n_overlap, int call_count) {
-
   //shift the bins
   int targ_ind = 0;
   for (int source_ind = 0; source_ind < N_POS_BINS; source_ind++) {
     targ_ind = source_ind + freqShift_bins;
-    if ((targ_ind > 0) && (targ_ind < N_POS_BINS)) { //stay off DC
+    if ((targ_ind > -1) && (targ_ind < N_POS_BINS)) {
       second_buffer[targ_ind].re = buffer[source_ind].re;  //copy both the real and imaginary parts
       second_buffer[targ_ind].im = buffer[source_ind].im;  
     }
@@ -179,12 +199,6 @@ static int shiftByIntegerNumberOfBins(complex_t buffer[], complex_t second_buffe
 
   //adjust the phase of the bins
   call_count = adjustPhaseOfBins(second_buffer, freqShift_bins, n_overlap, call_count);
-
-//  Serial.print("completed shiftByIntegerNumberOfBins.");
-//  Serial.print(" freqShift_bins: "); Serial.print(freqShift_bins);
-//  Serial.print(" n_overlap: "); Serial.print(n_overlap);
-//  Serial.print(" call_count: "); Serial.print(call_count);
-//  Serial.println();
   
   return call_count;
 }
@@ -221,21 +235,21 @@ void AudioEffectFreqDomain::update(void)
   }
 
   //apply window to the data
-  if (window) {
-    #if FFT_DATA_TYPE == 16
-      apply_window_to_fft_q15_buffer(buffer, window);
-    #else
+  //if (flag__useWindow) {
+    //#if FFT_DATA_TYPE == 16
+    //  apply_window_to_fft_q15_buffer(buffer, window);
+    //#else
       for (source_ind = 0; source_ind < N_FFT; source_ind++) {
         buffer[source_ind].re = buffer[source_ind].re * window[source_ind];
       }
-    #endif
-  } else {
-    #if FFT_DATA_TYPE == 32
-      for (source_ind = 0; source_ind < N_FFT; source_ind++) {
-        buffer[source_ind].re = buffer[source_ind].re * 32767;  //max window value is 32767, which is same as a 15 bit shift
-      }
-    #endif
-  }
+    //#endif
+  //} else {
+    //#if FFT_DATA_TYPE == 32
+    //  for (source_ind = 0; source_ind < N_FFT; source_ind++) {
+    //    buffer[source_ind].re = buffer[source_ind].re * 32767;  //max window value is 32767, which is same as a 15 bit shift
+    //  }
+    //#endif
+  //}
   
 
   //call the FFT
@@ -251,22 +265,29 @@ void AudioEffectFreqDomain::update(void)
     second_buffer[targ_ind].im = 0; //imaginary
   }
 
-  //Simplest.  Copy input buffer to output buffer.  No change to audio
-  //for (source_ind=0; source_ind < N_FFT; source_ind++) second_buffer[source_ind] = buffer[source_ind]; //copies both real and imaginary parts
-
-  //Do a frequency shift by a fixed number of bins
-  flipSignOddBins = shiftByIntegerNumberOfBins(buffer, second_buffer, freqShift_bins, N_BUFF_BLOCKS, flipSignOddBins);  
-
-//  //Pure synthesis
-//  second_buffer[freqShift_bins].re = 33552631;
-//  second_buffer[freqShift_bins].im = 0;
-//  if (flipSignOddBins) {
-//    if ((freqShift_bins % 2) == 1) {
-//      second_buffer[freqShift_bins].re = -1*second_buffer[freqShift_bins].re;
-//      second_buffer[freqShift_bins].im = -1*second_buffer[freqShift_bins].im;
-//    }
-//  }
-//  flipSignOddBins = !flipSignOddBins;
+  //apply the frequency domain processing algorithm that you care about
+  switch (1) {
+    case 0:
+      //Simplest.  Copy input buffer to output buffer.  No change to audio
+      for (source_ind=0; source_ind < N_POS_BINS; source_ind++) second_buffer[source_ind] = buffer[source_ind]; //copies both real and imaginary parts
+      break;
+    case 1:
+      //Do a frequency shift by a fixed number of bins
+      flipSignOddBins = shiftByIntegerNumberOfBins(buffer, second_buffer, freqShift_bins, N_BUFF_BLOCKS, flipSignOddBins);  
+      break;
+    case 10:
+      //Pure synthesis
+      second_buffer[freqShift_bins].re = 33552631;
+      second_buffer[freqShift_bins].im = 0;
+      if (flipSignOddBins) {
+        if ((freqShift_bins % 2) == 1) {  //only for 50% overlap
+          second_buffer[freqShift_bins].re = -1*second_buffer[freqShift_bins].re;
+          second_buffer[freqShift_bins].im = -1*second_buffer[freqShift_bins].im;
+        }
+      }
+      flipSignOddBins = !flipSignOddBins;
+      break;
+  }
 
   //create the negative frequency space via complex conjugate of the positive frequency space
   int ind_nyquist_bin = N_POS_BINS-1;
@@ -314,15 +335,21 @@ void AudioEffectFreqDomain::update(void)
     arm_cfft_radix4_q31(&ifft_inst, (q31_t *)second_buffer);
   #endif
 
-//   //window again
-//  //if (window) {
-//    #if FFT_DATA_TYPE == 16
-//  //    apply_window_to_fft_q15_buffer(second_buffer, window);
-//    #else
+//  //apply window to the data
+//  //if (flag__useWindow) {
+//    //#if FFT_DATA_TYPE == 16
+//    //  apply_window_to_fft_q15_buffer(second_buffer, window);
+//    //#else
 //      for (source_ind = 0; source_ind < N_FFT; source_ind++) {
-//        second_buffer[source_ind].re = (second_buffer[source_ind].re >> 16) * window[source_ind]; //shift by 16 so that multiplying by 16 keeps within q31
+//        second_buffer[source_ind].re = second_buffer[source_ind].re * window[source_ind];
 //      }
-//    #endif
+//    //#endif
+//  //} else {
+//    //#if FFT_DATA_TYPE == 32
+//    //  for (source_ind = 0; source_ind < N_FFT; source_ind++) {
+//    //    second_buffer[source_ind].re = second_buffer[source_ind].re * 32767;  //max window value is 32767, which is same as a 15 bit shift
+//    //  }
+//    //#endif
 //  //}
   
   //prepare for the overlap-and-add for the output
@@ -338,7 +365,7 @@ void AudioEffectFreqDomain::update(void)
       #if FFT_DATA_TYPE == 16
         output_buff_blocks[i]->data[j] +=  second_buffer[output_count].re; //get just the real component
       #elif FFT_DATA_TYPE == 32
-        output_buff_blocks[i]->data[j] +=  (q15_t)(second_buffer[output_count].re >> 15); //get the real and down shift to q15_t
+        output_buff_blocks[i]->data[j] +=  (q15_t)(second_buffer[output_count].re >> (15-8)); //get the real and down shift to q15_t
       #endif
       output_count++;  //buffer is [real, imaginary, real, imaginary,...] and we only want the reals.  so inrement by 2.
     }
