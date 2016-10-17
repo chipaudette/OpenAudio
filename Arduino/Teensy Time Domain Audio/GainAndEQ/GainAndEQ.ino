@@ -23,14 +23,23 @@
 AudioInputI2S            i2s1;           //xy=233,191
 AudioFilterBiquad        biquad2;        //xy=408,208
 AudioFilterBiquad        biquad1;        //xy=410,161
-//AudioOutputUSB           usb1;           //xy=587,258
+AudioOutputUSB           usb1;           //xy=587,258
 AudioOutputI2S           i2s2;           //xy=612,188
+#if 1
+//do EQ processing
 AudioConnection          patchCord1(i2s1, 0, biquad1, 0);
 AudioConnection          patchCord2(i2s1, 1, biquad2, 0);
 AudioConnection          patchCord3(biquad2, 0, i2s2, 1);
-//AudioConnection          patchCord4(biquad2, 0, usb1, 1);
+AudioConnection          patchCord4(biquad2, 0, usb1, 1);
 AudioConnection          patchCord5(biquad1, 0, i2s2, 0);
-//AudioConnection          patchCord6(biquad1, 0, usb1, 0);
+AudioConnection          patchCord6(biquad1, 0, usb1, 0);
+#else
+//pass through the audio
+AudioConnection          patchCord1(i2s1, 0, i2s2, 0);
+AudioConnection          patchCord2(i2s1, 1, i2s2, 1);
+AudioConnection          patchCord4(i2s1, 0, usb1, 0);
+AudioConnection          patchCord6(i2s1, 1, usb1, 1);
+#endif
 AudioControlSGTL5000     audioShield;     //xy=360,498
 // GUItool: end automatically generated code
 
