@@ -11,55 +11,103 @@
  * 
  */
 
-
-
 #include <Audio.h>
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
 #include <SerialFlash.h>
 
+class AudioFilterGain : public AudioStream
+{
+  public:
+    AudioFilterGain(void) : AudioStream(1, inputQueueArray) {}
+    void update(void)
+    {
+      audio_block_t *block;
+      block = receiveWritable();
+      if (!block) return;
+
+      //apply the gain
+      for (int i=0; i < AUDIO_BLOCK_SAMPLES; i++) block->data[i]=gain*(block->data[i]);
+      
+      transmit(block);
+      release(block);
+    }
+
+    void setGain(int g) { gain = min(g,100); } //limit the gain to 40 dB
+  private:
+    audio_block_t *inputQueueArray[1];
+    int gain=1;
+};
+
 // GUItool: begin automatically generated code
-AudioInputI2S            i2s1;           //xy=233,191
-AudioFilterBiquad        biquad2;        //xy=408,208
-AudioFilterBiquad        biquad1;        //xy=410,161
-AudioOutputUSB           usb1;           //xy=587,258
-AudioOutputI2S           i2s2;           //xy=612,188
-#if 1
-//do EQ processing
-AudioConnection          patchCord1(i2s1, 0, biquad1, 0);
-AudioConnection          patchCord2(i2s1, 1, biquad2, 0);
-AudioConnection          patchCord3(biquad2, 0, i2s2, 1);
-AudioConnection          patchCord4(biquad2, 0, usb1, 1);
-AudioConnection          patchCord5(biquad1, 0, i2s2, 0);
-AudioConnection          patchCord6(biquad1, 0, usb1, 0);
-#else
-//pass through the audio
-AudioConnection          patchCord1(i2s1, 0, i2s2, 0);
-AudioConnection          patchCord2(i2s1, 1, i2s2, 1);
-AudioConnection          patchCord4(i2s1, 0, usb1, 0);
-AudioConnection          patchCord6(i2s1, 1, usb1, 1);
-#endif
 AudioControlSGTL5000     audioShield;     //xy=360,498
-// GUItool: end automatically generated code
+AudioInputI2S            i2s1;           //xy=233,191
+AudioFilterBiquad        biquad1;        //xy=410,161
+AudioFilterBiquad        biquad2;        //xy=408,208
+AudioOutputI2S           i2s2;           //xy=612,188
+AudioFilterGain          gain1;
+AudioFilterGain          gain2;
+
+
+#define PROCESSING_TYPE 0
+#define DO_USB_OUT  0
+
+#if PROCESSING_TYPE == 0
+  //pass through the audio
+  AudioConnection          patchCord1(i2s1, 0, i2s2, 0);
+  AudioConnection          patchCord2(i2s1, 1, i2s2, 1);
+  #if DO_USB_OUT
+    AudioOutputUSB           usb1;  
+    AudioConnection          patchCord12(i2s1, 0, usb1, 0);
+    AudioConnection          patchCord13(i2s1, 1, usb1, 1);
+  #endif
+#elif PROCESSING_TYPE == 1
+  //gain only
+  AudioConnection         patchCord1(i2s1,0, gain1, 0);
+  AudioConnection         patchCord2(i2s1,0, gain2, 0);
+  AudioConnection          patchCord10(gain1, 0, i2s2, 0);
+  AudioConnection          patchCord11(gain2, 0, i2s2, 1);
+  #if DO_USB_OUT
+    AudioOutputUSB           usb1;  
+    AudioConnection          patchCord12(gain1, 0, usb1, 0);
+    AudioConnection          patchCord13(gain2, 1, usb1, 1);
+  #endif  
+#elif PROCESSING_TYPE == 2
+  //do gain and EQ processing
+  AudioConnection          patchCord1(i2s1,0, gain1, 0);
+  AudioConnection          patchCord2(i2s1,0, gain2, 0);  
+  AudioConnection          patchCord3(gain1, 0, biquad1, 0);
+  AudioConnection          patchCord4(gain2, 1, biquad2, 0);
+  AudioConnection          patchCord10(biquad1, 0, i2s2, 0);
+  AudioConnection          patchCord11(biquad2, 0, i2s2, 1);
+  #if DO_USB_OUT
+    AudioOutputUSB           usb1;           
+    AudioConnection          patchCord12(biquad1, 0, usb1, 0);
+    AudioConnection          patchCord13(biquad2, 0, usb1, 1);
+  #endif
+#endif
+
+
 
 #define POT_PIN A1  //potentiometer is tied to this pin
 const int myInput = AUDIO_INPUT_LINEIN;
 //const int myInput = AUDIO_INPUT_MIC;
 
-float gain_dB = 20.0;
+float gain_dB = 14.0;
 typedef struct {
-  int stage = 0;
-  float freq_Hz = 2000.0;
+  uint32_t  stage = 0;
+  float freq_Hz = 6000.0;
   float gain = pow(10.0,gain_dB/20.0); //linear gain, not dB
   float slope = 1.0;
 } biquad_shelf_t;
 biquad_shelf_t highshelf;
+biquad_shelf_t lowshelf;
 
 void setup() {
   // Start the serial debugging
  Serial.begin(115200);
-  delay(250);
+  delay(500);
   Serial.println("Teensy Aduio: Gain and EQ");
   delay(500);
 
@@ -71,7 +119,7 @@ void setup() {
   audioShield.enable();
   audioShield.inputSelect(myInput);
   audioShield.volume(0.5); //headphone volume
-  audioShield.lineInLevel(11,11); //max is 15, default is 5
+  audioShield.lineInLevel(5,5); //max is 15, default is 5
  // audioShield.audioPreProcessorEnable();
 
 
@@ -93,29 +141,68 @@ void setup() {
   //configure the biquads (set the same for stereo)
   biquad1.setHighShelf(highshelf.stage,highshelf.freq_Hz,highshelf.gain,highshelf.slope);
   biquad2.setHighShelf(highshelf.stage,highshelf.freq_Hz,highshelf.gain,highshelf.slope);
+  biquad1.setHighShelf(highshelf.stage+1,highshelf.freq_Hz,highshelf.gain,highshelf.slope);
+  biquad2.setHighShelf(highshelf.stage+1,highshelf.freq_Hz,highshelf.gain,highshelf.slope);
 
+  lowshelf.stage = 2;
+  lowshelf.gain = 1.0/highshelf.gain;
+  biquad1.setLowShelf(lowshelf.stage,lowshelf.freq_Hz,lowshelf.gain,lowshelf.slope);
+  biquad2.setLowShelf(lowshelf.stage,lowshelf.freq_Hz,lowshelf.gain,lowshelf.slope);
+  biquad1.setLowShelf(lowshelf.stage+1,lowshelf.freq_Hz,lowshelf.gain,lowshelf.slope);
+  biquad2.setLowShelf(lowshelf.stage+1,lowshelf.freq_Hz,lowshelf.gain,lowshelf.slope);
 }
 
 void loop() {
   //read potentiometer
   float val = float(analogRead(POT_PIN)) / 1024.0; //0.0 to 1.0
+  int gain;
+  float gain_dB;
 
   //decide what to do with the pot value
-  switch (1) {
+  switch (0) {
     case 0:
+      gain_dB = (float)(int)(val * 20.0);  //scale 0.0 to 20.0 dB.  Truncate to a whole number of dB.
+      gain = ((int)(pow(10.0,gain_dB/20.0) + 0.5)); //round to nearest integer
+      gain = max(gain,1);  //keep it to positive gain
+      gain1.setGain(gain); gain2.setGain(gain);
+      Serial.print("Gain: "); Serial.print(gain); Serial.print(", dB = "); Serial.println(20.0*log10(gain));
+      break;
+    case 10:
       gain_dB = (float)(int)(val * 20.0); //scale 0.0 to 20.0 dB.  Truncate to a whole number of dB.
       highshelf.gain = pow(10.0,gain_dB/20.0);
+      lowshelf.gain = 1.0; //disable the lowshelf
       Serial.print("highshelf gain (dB): "); Serial.println(20.0*log10(highshelf.gain));
       break;
-    case 1:
+    case 11:
       highshelf.freq_Hz = (float)(100*((int)(0.01*(val * 12000.0 + 500.0))));  //round to the nearest 100
+      lowshelf.gain = 1.0; //disable the lowshelf
       Serial.print("highshelf freq (Hz): "); Serial.println(highshelf.freq_Hz);
       break;
+    case 20:
+      gain_dB = (float)(int)(val * 20.0); //scale 0.0 to 20.0 dB.  Truncate to a whole number of dB.
+      highshelf.gain = pow(10.0,gain_dB/20.0);
+      lowshelf.gain = 1.0/highshelf.gain;
+      Serial.print("highshelf/lowshelf gain (dB): "); Serial.println(-20.0*log10(lowshelf.gain));
+      break;
+    case 21:
+      highshelf.freq_Hz = (float)(100*((int)(0.01*(val * 12000.0 + 500.0))));  //round to the nearest 100
+      lowshelf.freq_Hz = highshelf.freq_Hz;
+      Serial.print("highshelf/lowhself freq (Hz): "); Serial.println(highshelf.freq_Hz);
+      break;
+      
   };
   
   //re-configure the biquads (set the same for stereo)
   biquad1.setHighShelf(highshelf.stage,highshelf.freq_Hz,highshelf.gain,highshelf.slope);
   biquad2.setHighShelf(highshelf.stage,highshelf.freq_Hz,highshelf.gain,highshelf.slope);
+  biquad1.setHighShelf(highshelf.stage+1,highshelf.freq_Hz,highshelf.gain,highshelf.slope);
+  biquad2.setHighShelf(highshelf.stage+1,highshelf.freq_Hz,highshelf.gain,highshelf.slope);
+
+  lowshelf.gain = 1.0/highshelf.gain;
+  biquad1.setLowShelf(lowshelf.stage,lowshelf.freq_Hz,lowshelf.gain,lowshelf.slope);
+  biquad2.setLowShelf(lowshelf.stage,lowshelf.freq_Hz,lowshelf.gain,lowshelf.slope);
+  biquad1.setLowShelf(lowshelf.stage+1,lowshelf.freq_Hz,lowshelf.gain,lowshelf.slope);
+  biquad2.setLowShelf(lowshelf.stage+1,lowshelf.freq_Hz,lowshelf.gain,lowshelf.slope);
 
   delay(200);
 }
