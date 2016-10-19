@@ -6,55 +6,33 @@
  * 
  * Uses Teensy Audio Board.
  */
-
 #include <Audio.h>
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
 #include <SerialFlash.h>
 
-class AudioFilterEmpty : public AudioStream
-{
-  public:
-    AudioFilterEmpty(char *foo_txt) : AudioStream(1, inputQueueArray) {myName = foo_txt; }
-    char* myName;
-    void update(void)
-    {
-      audio_block_t *block;
-      block = receiveWritable();
-      if (!block) {
-        return;
-      }
-      transmit(block);
-      release(block);
-    }
-
-  private:
-    audio_block_t *inputQueueArray[1];
-};
-
+AudioControlSGTL5000     sgtl5000_1;    
 AudioInputI2S            i2s1;         
-AudioOutputI2S           i2s2;        
-AudioFilterEmpty         filter1("Filter1");
-AudioFilterEmpty         filter2("Filter2");
-AudioConnection          patchCord1(i2s1, 0, filter1, 0);
-AudioConnection          patchCord2(i2s1, 1, filter2, 0);
-AudioConnection          patchCord3(filter1, 0, i2s2, 1);
-AudioConnection          patchCord4(filter2, 0, i2s2, 0);
-AudioControlSGTL5000     sgtl5000_1;     //xy=392,522
+AudioOutputI2S           i2s2;
+
+//simplest pass-through  (On Teensy 3.6: works at 96 MHz and 120MHz.  Not at 144, 168, or 180 MHz)
+AudioConnection          patchCord1(i2s1, 0, i2s2, 0);
+AudioConnection          patchCord2(i2s1, 1, i2s2, 1);
 
 void setup() {
   Serial.begin(115200);
-  delay(250);
-  Serial.println("PassThrough_LineIn...");
+  delay(500);
+  Serial.println("Pass-Through Line-In to Headphone...");
   
   AudioMemory(20);
-  delay(500);
+  delay(250);
 
   // Enable the audio shield and set the output volume.
   sgtl5000_1.enable();
   sgtl5000_1.inputSelect(AUDIO_INPUT_LINEIN);
   sgtl5000_1.volume(0.45); //headphone volume
+  //sgtl5000_1.lineInLevel(11, 11); //max is 15, default is 5
 }
 
 void loop() {
