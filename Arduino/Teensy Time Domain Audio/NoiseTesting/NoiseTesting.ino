@@ -63,14 +63,16 @@ void loop() {
       Serial.print("Line In Setting: "); Serial.println(line_in_setting);
       break;
     case 1:
-      line_in_setting = 5;  //default
-      if (val > 0.666) {
+      line_in_setting = 0;  //default
+      if (val > 0.75) {
         line_in_setting = 15;
-      } else if (val > 0.333) {
-        line_in_setting = 10;   
+      } else if (val > 0.5) {
+        line_in_setting = 10;
+      } else if (val > 0.25) {
+        line_in_setting = 5;   
       }
       sgtl5000_1.lineInLevel(line_in_setting, line_in_setting); //max is 15, default is 5
-      //Serial.print("Line In Setting: "); Serial.println(line_in_setting);
+      Serial.print("Line In Setting: "); Serial.println(line_in_setting);
       break;
   }
   delay(200);
