@@ -4,86 +4,48 @@
 #include <SD.h>
 #include <SerialFlash.h>
 
-class AudioFilterEmpty : public AudioStream
-{
-  public:
-    AudioFilterEmpty(char *foo_txt) : AudioStream(1, inputQueueArray) {myName = foo_txt; }
-    char* myName;
-    void update(void)
-    {
-      audio_block_t *block;
-      block = receiveWritable();
-      if (!block) {
-        //Serial.print("AudioFilterEmpty: ");
-        //Serial.print(myName);
-        //Serial.println(": Empty Block...");
-        return;
-      }
-      transmit(block);
-      release(block);
-    }
+AudioControlSGTL5000     sgtl5000_1;   
+AudioInputI2S            i2s_in;          
+AudioOutputI2S           i2s_out;         
+AudioConnection          patchCord1(i2s_in, 0, i2s_out, 0);
+AudioConnection          patchCord2(i2s_in, 1, i2s_out, 1);
 
-  private:
-    //int32_t definition[32];  // up to 4 cascaded biquads
-    audio_block_t *inputQueueArray[1];
-};
-
-// GUItool: begin automatically generated code
-//AudioSynthToneSweep   sine1;    //xy=204,361
-AudioInputI2S            i2s1;           //xy=214,285
-AudioOutputI2S           i2s2;           //xy=583,413
-//AudioConnection          patchCord1(sine1, 0, filter1, 0);
-#if 1
-AudioFilterEmpty         filter1("Filter1");
-AudioFilterEmpty         filter2("Filter2");
-AudioConnection          patchCord1(i2s1, 0, filter1, 0);
-AudioConnection          patchCord2(i2s1, 1, filter2, 0);
-AudioConnection          patchCord3(filter1, 0, i2s2, 0);
-AudioConnection          patchCord4(filter2, 0, i2s2, 1);
-#else
-AudioConnection          patchCord1(i2s1, 0, i2s2, 0);
-AudioConnection          patchCord2(i2s1, 1, i2s2, 1);
+#define DO_USB_OUT 1   //if activating this, be sure to choose USB->Audio under "Tools" in the Arduino IDE
+#if DO_USB_OUT
+  AudioOutputUSB           usb_out;   
+  AudioConnection          patchCord20(i2s_in, 0, usb_out, 0);
+  AudioConnection          patchCord21(i2s_in, 1, usb_out, 1);
 #endif
-//AudioOutputUSB           usb1;           //xy=593,466
-//AudioConnection          patchCord5(filter1, 0, usb1, 1);
-//AudioConnection          patchCord6(filter2, 0, usb1, 0);
-AudioControlSGTL5000     sgtl5000_1;     //xy=392,522
-// GUItool: end automatically generated code
+
+//AudioSynthWaveformSine   sine1;  
+//AudioConnection          patchCord10(sine1, 0, i2s_out, 1);
+//#if DO_USB_OUT
+//  AudioConnection          patchCord21(sine1, 0, usb_out, 1);
+//#endif
+
 
 #define POT_PIN A1  //potentiometer is tied to this pin
 const int myInput = AUDIO_INPUT_LINEIN;
 //const int myInput = AUDIO_INPUT_MIC;
 
-
 void setup() {
   // Start the serial debugging
   Serial.begin(115200);
-  delay(750);
+  delay(500);
   Serial.println("Teensy Aduio: NoiseTesting");
 
   // Audio connections require memory to work.  For more
   // detailed information, see the MemoryAndCpuUsage example
-  AudioMemory(20);
+  AudioMemory(10);
 
   // Enable the audio shield and set the output volume.
   sgtl5000_1.enable();
   sgtl5000_1.inputSelect(myInput);
-  sgtl5000_1.volume(0.45); //headphone volume
-  sgtl5000_1.lineInLevel(11, 11); //max is 15, default is 5
+  sgtl5000_1.volume(0.5); //headphone volume
+  sgtl5000_1.lineInLevel(5, 5); //max is 15, default is 5
 
-  //setup the sine wave
-  //sine1.amplitude(0.1);  //0 is off
-  //sine1.frequency(2490.0);
-  Serial.println("Finished With Setup");
-
-  //start the tone sweep
-  delay(1000);
-  float ampx = 0.1;
-  int f_lox = 200;
-  int f_hix = 4000;
-  // Length of time for the sweep in seconds
-  float t_timex = 10;
-  //if (!sine1.play(ampx, f_lox, f_hix, t_timex)) { Serial.println("AudioSynthToneSweep - begin failed");  while (1); }
+  //sine1.amplitude(0.9);
+  //sine1.frequency(555.0);
 
 }
 
