@@ -25,8 +25,12 @@ AudioConnection          patchCord2(i2s_in, 1, i2s_out, 1);
 
 
 #define POT_PIN A1  //potentiometer is tied to this pin
-const int myInput = AUDIO_INPUT_LINEIN;
-//const int myInput = AUDIO_INPUT_MIC;
+#define USE_MIC 0
+#if USE_MIC > 0
+  const int myInput = AUDIO_INPUT_MIC;
+#else
+  const int myInput = AUDIO_INPUT_LINEIN;
+#endif
 
 void setup() {
   // Start the serial debugging
@@ -42,19 +46,27 @@ void setup() {
   sgtl5000_1.enable();
   sgtl5000_1.inputSelect(myInput);
   sgtl5000_1.volume(0.5); //headphone volume
-  sgtl5000_1.lineInLevel(5, 5); //max is 15, default is 5
+  //sgtl5000_1.lineInLevel(5, 5); //max is 15, default is 5
 
   //sine1.amplitude(0.9);
   //sine1.frequency(555.0);
 
 }
 
-unsigned long last_time = millis();
-void loop() {
-  //read potentiometer
-  float val = float(analogRead(POT_PIN)) / 1024.0; //0.0 to 1.0
+void setMicGainFromPot(float val) {
+  int mic_gain_dB = 0; //default
+  if (val > 0.75) {
+    mic_gain_dB = 30;
+  } else if (val > 0.5) {
+    mic_gain_dB = 20;
+  } else if (val > 0.25) {
+    mic_gain_dB = 10;
+  }
+  sgtl5000_1.micGain(mic_gain_dB); //default is zero?
+  Serial.print("Mic Setting, dB: "); Serial.println(mic_gain_dB);  
+}
 
-  //decide what to do with the POT value
+void setLineInLevelFromPot(float val) {
   int line_in_setting;
   switch (1) {
     case 0:
@@ -75,6 +87,18 @@ void loop() {
       Serial.print("Line In Setting: "); Serial.println(line_in_setting);
       break;
   }
+}
+unsigned long last_time = millis();
+void loop() {
+  //read potentiometer
+  float val = float(analogRead(POT_PIN)) / 1024.0; //0.0 to 1.0
+
+  //decide what to do with the POT value
+  #if USE_MIC > 0
+    setMicGainFromPot(val);
+  #else
+    setLineInLevelFromPot(val);
+  #endif
   delay(200);
 
   // print processor and memory usage
