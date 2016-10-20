@@ -37,7 +37,7 @@ class AudioFilterGain : public AudioStream
     void setGain(int g) { gain = min(g,100); } //limit the gain to 40 dB
   private:
     audio_block_t *inputQueueArray[1];
-    int gain=1;
+    int gain=1; //default value
 };
 
 // GUItool: begin automatically generated code
@@ -65,7 +65,7 @@ AudioFilterGain          gain2;
 #elif PROCESSING_TYPE == 1
   //gain only
   AudioConnection         patchCord1(i2s1,0, gain1, 0);
-  AudioConnection         patchCord2(i2s1,0, gain2, 0);
+  AudioConnection         patchCord2(i2s1,1, gain2, 0);
   AudioConnection          patchCord10(gain1, 0, i2s2, 0);
   AudioConnection          patchCord11(gain2, 0, i2s2, 1);
   #if DO_USB_OUT
@@ -76,9 +76,9 @@ AudioFilterGain          gain2;
 #elif PROCESSING_TYPE == 2
   //do gain and EQ processing
   AudioConnection          patchCord1(i2s1,0, gain1, 0);
-  AudioConnection          patchCord2(i2s1,0, gain2, 0);  
+  AudioConnection          patchCord2(i2s1,1, gain2, 0);  
   AudioConnection          patchCord3(gain1, 0, biquad1, 0);
-  AudioConnection          patchCord4(gain2, 1, biquad2, 0);
+  AudioConnection          patchCord4(gain2, 0, biquad2, 0);
   AudioConnection          patchCord10(biquad1, 0, i2s2, 0);
   AudioConnection          patchCord11(biquad2, 0, i2s2, 1);
   #if DO_USB_OUT
@@ -109,7 +109,7 @@ void setup() {
  Serial.begin(115200);
   delay(500);
   Serial.println("Teensy Aduio: Gain and EQ");
-  delay(500);
+  delay(250);
 
  // Audio connections require memory to work.  For more
   // detailed information, see the MemoryAndCpuUsage example
@@ -118,12 +118,11 @@ void setup() {
   // Enable the audio shield and set the output volume.
   audioShield.enable();
   audioShield.inputSelect(myInput);
-  audioShield.volume(0.5); //headphone volume
+  audioShield.volume(0.5); //headphone volume (default to 0.5...sounds really bad at 1.0)
   audioShield.lineInLevel(5,5); //max is 15, default is 5
- // audioShield.audioPreProcessorEnable();
-
 
 //  Enable and configure the AGC that is part of the Audio shield
+ // audioShield.audioPreProcessorEnable();
 //  int maxGain = 2;  //can be 0 (0dB), 1 (6dB), or 2 (12 dB).
 //  int response = 3;  //can be 0 (0ms), 1 (25ms), 2 (50 ms) or 3 (100ms);
 //  int hardLimit = 0;  //1 or 0 for true or false
@@ -138,71 +137,74 @@ void setup() {
 //  float treble = 1.0; //-1.0 to +1.0 is -11.75 dB to +12 dB
 //  audioShield.eqBands(bass,treble);
 
-  //configure the biquads (set the same for stereo)
-  biquad1.setHighShelf(highshelf.stage,highshelf.freq_Hz,highshelf.gain,highshelf.slope);
-  biquad2.setHighShelf(highshelf.stage,highshelf.freq_Hz,highshelf.gain,highshelf.slope);
-  biquad1.setHighShelf(highshelf.stage+1,highshelf.freq_Hz,highshelf.gain,highshelf.slope);
-  biquad2.setHighShelf(highshelf.stage+1,highshelf.freq_Hz,highshelf.gain,highshelf.slope);
+  lowshelf.stage =  highshelf.stage+2;  //there are two lowshelf and two highshelf
+  lowshelf.gain = 1.0/highshelf.gain; //invert the gain so that the lows drop as the highs increase
+  #if PROCESSING_TYPE > 0
+    configureMultipleHighShelfFilters(&highshelf);
+    configureMultipleLowShelfFilters(&lowshelf);
+  #endif
+}
 
-  lowshelf.stage = 2;
-  lowshelf.gain = 1.0/highshelf.gain;
-  biquad1.setLowShelf(lowshelf.stage,lowshelf.freq_Hz,lowshelf.gain,lowshelf.slope);
-  biquad2.setLowShelf(lowshelf.stage,lowshelf.freq_Hz,lowshelf.gain,lowshelf.slope);
-  biquad1.setLowShelf(lowshelf.stage+1,lowshelf.freq_Hz,lowshelf.gain,lowshelf.slope);
-  biquad2.setLowShelf(lowshelf.stage+1,lowshelf.freq_Hz,lowshelf.gain,lowshelf.slope);
+void configureMultipleHighShelfFilters(biquad_shelf_t *myshelf) {
+  biquad1.setHighShelf(myshelf->stage, myshelf->freq_Hz, myshelf->gain, myshelf->slope);
+  biquad2.setHighShelf(myshelf->stage, myshelf->freq_Hz, myshelf->gain, myshelf->slope);
+  biquad1.setHighShelf(myshelf->stage+1, myshelf->freq_Hz, myshelf->gain, myshelf->slope);
+  biquad2.setHighShelf(myshelf->stage+1, myshelf->freq_Hz, myshelf->gain, myshelf->slope);
+}
+
+void configureMultipleLowShelfFilters(biquad_shelf_t *myshelf) {
+  biquad1.setLowShelf(myshelf->stage, myshelf->freq_Hz, myshelf->gain, myshelf->slope);
+  biquad2.setLowShelf(myshelf->stage, myshelf->freq_Hz, myshelf->gain, myshelf->slope);
+  biquad1.setLowShelf(myshelf->stage+1, myshelf->freq_Hz, myshelf->gain, myshelf->slope);
+  biquad2.setLowShelf(myshelf->stage+1, myshelf->freq_Hz, myshelf->gain, myshelf->slope);
 }
 
 void loop() {
-  //read potentiometer
-  float val = float(analogRead(POT_PIN)) / 1024.0; //0.0 to 1.0
-  int gain;
-  float gain_dB;
+  #if PROCESSING_TYPE > 0 //skip it if there is no processing happening
+    //read potentiometer
+    float val = float(analogRead(POT_PIN)) / 1024.0; //0.0 to 1.0
+    int gain;
+    float gain_dB;
 
-  //decide what to do with the pot value
-  switch (0) {
-    case 0:
-      gain_dB = (float)(int)(val * 20.0);  //scale 0.0 to 20.0 dB.  Truncate to a whole number of dB.
-      gain = ((int)(pow(10.0,gain_dB/20.0) + 0.5)); //round to nearest integer
-      gain = max(gain,1);  //keep it to positive gain
-      gain1.setGain(gain); gain2.setGain(gain);
-      Serial.print("Gain: "); Serial.print(gain); Serial.print(", dB = "); Serial.println(20.0*log10(gain));
-      break;
-    case 10:
-      gain_dB = (float)(int)(val * 20.0); //scale 0.0 to 20.0 dB.  Truncate to a whole number of dB.
-      highshelf.gain = pow(10.0,gain_dB/20.0);
-      lowshelf.gain = 1.0; //disable the lowshelf
-      Serial.print("highshelf gain (dB): "); Serial.println(20.0*log10(highshelf.gain));
-      break;
-    case 11:
-      highshelf.freq_Hz = (float)(100*((int)(0.01*(val * 12000.0 + 500.0))));  //round to the nearest 100
-      lowshelf.gain = 1.0; //disable the lowshelf
-      Serial.print("highshelf freq (Hz): "); Serial.println(highshelf.freq_Hz);
-      break;
-    case 20:
-      gain_dB = (float)(int)(val * 20.0); //scale 0.0 to 20.0 dB.  Truncate to a whole number of dB.
-      highshelf.gain = pow(10.0,gain_dB/20.0);
-      lowshelf.gain = 1.0/highshelf.gain;
-      Serial.print("highshelf/lowshelf gain (dB): "); Serial.println(-20.0*log10(lowshelf.gain));
-      break;
-    case 21:
-      highshelf.freq_Hz = (float)(100*((int)(0.01*(val * 12000.0 + 500.0))));  //round to the nearest 100
-      lowshelf.freq_Hz = highshelf.freq_Hz;
-      Serial.print("highshelf/lowhself freq (Hz): "); Serial.println(highshelf.freq_Hz);
-      break;
-      
-  };
-  
-  //re-configure the biquads (set the same for stereo)
-  biquad1.setHighShelf(highshelf.stage,highshelf.freq_Hz,highshelf.gain,highshelf.slope);
-  biquad2.setHighShelf(highshelf.stage,highshelf.freq_Hz,highshelf.gain,highshelf.slope);
-  biquad1.setHighShelf(highshelf.stage+1,highshelf.freq_Hz,highshelf.gain,highshelf.slope);
-  biquad2.setHighShelf(highshelf.stage+1,highshelf.freq_Hz,highshelf.gain,highshelf.slope);
-
-  lowshelf.gain = 1.0/highshelf.gain;
-  biquad1.setLowShelf(lowshelf.stage,lowshelf.freq_Hz,lowshelf.gain,lowshelf.slope);
-  biquad2.setLowShelf(lowshelf.stage,lowshelf.freq_Hz,lowshelf.gain,lowshelf.slope);
-  biquad1.setLowShelf(lowshelf.stage+1,lowshelf.freq_Hz,lowshelf.gain,lowshelf.slope);
-  biquad2.setLowShelf(lowshelf.stage+1,lowshelf.freq_Hz,lowshelf.gain,lowshelf.slope);
+    //decide what to do with the pot value
+    switch (21) {
+      case 0:
+        gain_dB = (float)(int)(val * 20.0);  //scale 0.0 to 20.0 dB.  Truncate to a whole number of dB.
+        gain = ((int)(pow(10.0,gain_dB/20.0) + 0.5)); //round to nearest integer
+        gain = max(gain,1);  //keep it to positive gain
+        gain1.setGain(gain); gain2.setGain(gain);
+        Serial.print("Gain: "); Serial.print(gain); Serial.print(", dB = "); Serial.println(20.0*log10(gain));
+        break;
+      case 10:
+        gain_dB = (float)(int)(val * 20.0); //scale 0.0 to 20.0 dB.  Truncate to a whole number of dB.
+        highshelf.gain = pow(10.0,gain_dB/20.0);
+        lowshelf.gain = 1.0; //disable the lowshelf
+        Serial.print("highshelf gain (dB): "); Serial.println(20.0*log10(highshelf.gain));
+        break;
+      case 11:
+        highshelf.freq_Hz = (float)(100*((int)(0.01*(val * 12000.0 + 500.0))));  //round to the nearest 100
+        lowshelf.gain = 1.0; //disable the lowshelf
+        Serial.print("highshelf freq (Hz): "); Serial.println(highshelf.freq_Hz);
+        break;
+      case 20:
+        gain_dB = (float)(int)(val * 20.0); //scale 0.0 to 20.0 dB.  Truncate to a whole number of dB.
+        highshelf.gain = pow(10.0,gain_dB/20.0);
+        lowshelf.gain = 1.0/highshelf.gain;
+        Serial.print("highshelf/lowshelf gain (dB): "); Serial.println(-20.0*log10(lowshelf.gain));
+        break;
+      case 21:
+        highshelf.freq_Hz = (float)(100*((int)(0.01*(val * 12000.0 + 500.0))));  //round to the nearest 100
+        lowshelf.freq_Hz = highshelf.freq_Hz;
+        Serial.print("highshelf/lowhself freq (Hz): "); Serial.println(highshelf.freq_Hz);
+        break;
+        
+    };
+    
+    //re-configure the biquads (set the same for stereo)
+    lowshelf.gain = 1.0/highshelf.gain; //invert the gain so that the lows drop as the highs increase
+    configureMultipleHighShelfFilters(&highshelf);
+    configureMultipleLowShelfFilters(&lowshelf);
+  #endif 
 
   delay(200);
 }
