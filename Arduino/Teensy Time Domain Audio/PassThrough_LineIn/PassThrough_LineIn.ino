@@ -16,7 +16,7 @@ AudioControlSGTL5000     sgtl5000_1;
 AudioInputI2S            i2s1;         
 AudioOutputI2S           i2s2;
 
-//simplest pass-through  (On Teensy 3.6: works at 96 MHz and 120MHz.  Not at 144, 168, or 180 MHz)
+//simplest pass-through  (On Teensy 3.6: works at 96 MHz and 120MHz.  Not at 144/180/192/216/240MHz.
 AudioConnection          patchCord1(i2s1, 0, i2s2, 0);
 AudioConnection          patchCord2(i2s1, 1, i2s2, 1);
 
