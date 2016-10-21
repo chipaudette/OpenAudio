@@ -50,8 +50,8 @@ AudioFilterGain          gain1;
 AudioFilterGain          gain2;
 
 
-#define PROCESSING_TYPE 0
-#define DO_USB_OUT  0
+#define PROCESSING_TYPE 1
+#define DO_USB_OUT  1
 
 #if PROCESSING_TYPE == 0
   //pass through the audio
@@ -94,7 +94,7 @@ AudioFilterGain          gain2;
 const int myInput = AUDIO_INPUT_LINEIN;
 //const int myInput = AUDIO_INPUT_MIC;
 
-float gain_dB = 14.0;
+float gain_dB = 20.0;
 typedef struct {
   uint32_t  stage = 0;
   float freq_Hz = 6000.0;
@@ -120,6 +120,7 @@ void setup() {
   audioShield.inputSelect(myInput);
   audioShield.volume(0.5); //headphone volume (default to 0.5...sounds really bad at 1.0)
   audioShield.lineInLevel(5,5); //max is 15, default is 5
+  audioShield.adcHighPassFilterDisable();  //reduce noise?  https://forum.pjrc.com/threads/27215-24-bit-audio-boards?p=78831&viewfull=1#post78831
 
 //  Enable and configure the AGC that is part of the Audio shield
  // audioShield.audioPreProcessorEnable();
@@ -159,6 +160,8 @@ void configureMultipleLowShelfFilters(biquad_shelf_t *myshelf) {
   biquad2.setLowShelf(myshelf->stage+1, myshelf->freq_Hz, myshelf->gain, myshelf->slope);
 }
 
+long lastTime = millis();
+boolean ADCHighPassEnabled = true;
 void loop() {
   #if PROCESSING_TYPE > 0 //skip it if there is no processing happening
     //read potentiometer
@@ -167,7 +170,11 @@ void loop() {
     float gain_dB;
 
     //decide what to do with the pot value
-    switch (21) {
+    int control_type = 21;
+    #if PROCESSING_TYPE == 1
+      control_type = 0;
+    #endif
+    switch (control_type) {
       case 0:
         gain_dB = (float)(int)(val * 20.0);  //scale 0.0 to 20.0 dB.  Truncate to a whole number of dB.
         gain = ((int)(pow(10.0,gain_dB/20.0) + 0.5)); //round to nearest integer
@@ -199,12 +206,25 @@ void loop() {
         break;
         
     };
-    
+
     //re-configure the biquads (set the same for stereo)
     lowshelf.gain = 1.0/highshelf.gain; //invert the gain so that the lows drop as the highs increase
     configureMultipleHighShelfFilters(&highshelf);
     configureMultipleLowShelfFilters(&lowshelf);
   #endif 
+
+//  if ((millis() - lastTime) > 3000) {
+//    ADCHighPassEnabled = !ADCHighPassEnabled;
+//    if (ADCHighPassEnabled) {
+//      Serial.println("Enabling ADC HighPass Filter...");
+//      audioShield.adcHighPassFilterEnable();
+//    } else {
+//      Serial.println("Disabling ADC HighPass Filter...");
+//      audioShield.adcHighPassFilterDisable();
+//    }
+//    lastTime = millis();
+//    
+//  }
 
   delay(200);
 }
