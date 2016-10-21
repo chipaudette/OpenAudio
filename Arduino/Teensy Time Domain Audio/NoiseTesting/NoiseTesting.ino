@@ -23,8 +23,8 @@ AudioConnection          patchCord2(i2s_in, 1, i2s_out, 1);
 //  AudioConnection          patchCord21(sine1, 0, usb_out, 1);
 //#endif
 
-
 #define POT_PIN A1  //potentiometer is tied to this pin
+
 #define USE_MIC 0
 #if USE_MIC > 0
   const int myInput = AUDIO_INPUT_MIC;
@@ -47,6 +47,8 @@ void setup() {
   sgtl5000_1.inputSelect(myInput);
   sgtl5000_1.volume(0.5); //headphone volume
   //sgtl5000_1.lineInLevel(5, 5); //max is 15, default is 5
+  sgtl5000_1.adcHighPassFilterDisable();  //reduce noise?  https://forum.pjrc.com/threads/27215-24-bit-audio-boards?p=78831&viewfull=1#post78831
+  
 
   //sine1.amplitude(0.9);
   //sine1.frequency(555.0);
