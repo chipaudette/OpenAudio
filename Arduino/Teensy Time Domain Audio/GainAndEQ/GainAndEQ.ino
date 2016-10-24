@@ -51,7 +51,7 @@ AudioFilterGain          gain2;
 
 
 #define PROCESSING_TYPE 1
-#define DO_USB_OUT  1
+#define DO_USB_OUT  0
 
 #if PROCESSING_TYPE == 0
   //pass through the audio
@@ -168,6 +168,7 @@ void loop() {
     float val = float(analogRead(POT_PIN)) / 1024.0; //0.0 to 1.0
     int gain;
     float gain_dB;
+    int round_factor;
 
     //decide what to do with the pot value
     int control_type = 21;
@@ -176,7 +177,9 @@ void loop() {
     #endif
     switch (control_type) {
       case 0:
-        gain_dB = (float)(int)(val * 20.0);  //scale 0.0 to 20.0 dB.  Truncate to a whole number of dB.
+        gain_dB = (float)(int)(val * 40.0);  //scale 0.0 to 20.0 dB.  Truncate to a whole number of dB.
+        round_factor = 3;  //round to this nearest value
+        gain_dB = round_factor*(int)((float)gain_dB/((float)round_factor) + 0.5); //round to nearest value (reduce chatter)
         gain = ((int)(pow(10.0,gain_dB/20.0) + 0.5)); //round to nearest integer
         gain = max(gain,1);  //keep it to positive gain
         gain1.setGain(gain); gain2.setGain(gain);
