@@ -51,7 +51,7 @@ AudioFilterGain          gain2;
 
 
 #define PROCESSING_TYPE 1
-#define DO_USB_OUT  1
+#define DO_USB_OUT  0
 
 #if PROCESSING_TYPE == 0
   //pass through the audio
@@ -118,7 +118,7 @@ void setup() {
   // Enable the audio shield and set the output volume.
   audioShield.enable();
   audioShield.inputSelect(myInput);
-  audioShield.volume(0.5); //headphone volume (default to 0.5...sounds really bad at 1.0)
+  audioShield.volume(0.8); //headphone volume, max linear is about 0.85
   audioShield.lineInLevel(5,5); //max is 15, default is 5
   audioShield.adcHighPassFilterDisable();  //reduce noise?  https://forum.pjrc.com/threads/27215-24-bit-audio-boards?p=78831&viewfull=1#post78831
 
@@ -166,7 +166,7 @@ void loop() {
   #if PROCESSING_TYPE > 0 //skip it if there is no processing happening
     //read potentiometer
     float val = float(analogRead(POT_PIN)) / 1024.0; //0.0 to 1.0
-    int gain;
+    float gain;
     float gain_dB;
     float max_gain_dB;
     int round_factor;
@@ -174,7 +174,7 @@ void loop() {
     //decide what to do with the pot value
     int control_type = 21;
     #if PROCESSING_TYPE == 1
-      control_type = 0;
+      control_type = 1;
     #endif
     switch (control_type) {
       case 0:
@@ -186,6 +186,19 @@ void loop() {
         gain = max(gain,1);  //keep it to positive gain
         gain1.setGain(gain); gain2.setGain(gain);
         Serial.print("Gain: "); Serial.print(gain); Serial.print(", dB = "); Serial.println(20.0*log10(gain));
+        break;
+     case 1:
+        gain_dB = 0.0;
+        if (val > 0.8) {
+          gain_dB = 30.0;
+        } else if (val > 0.5) {
+          gain_dB = 20.0;
+        } else if (val > 0.2) {
+          gain_dB = 10.0;
+        }
+        gain = pow(10.0,gain_dB/20.0);
+        gain1.setGain(gain); gain2.setGain(gain);
+        Serial.print("Quantized Gain: "); Serial.print(gain); Serial.print(", dB = "); Serial.println(20.0*log10(gain));
         break;
       case 10:
         gain_dB = (float)(int)(val * 20.0); //scale 0.0 to 20.0 dB.  Truncate to a whole number of dB.

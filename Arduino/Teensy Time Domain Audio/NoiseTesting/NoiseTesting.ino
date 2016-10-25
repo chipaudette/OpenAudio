@@ -45,7 +45,7 @@ void setup() {
   // Enable the audio shield and set the output volume.
   sgtl5000_1.enable();
   sgtl5000_1.inputSelect(myInput);
-  sgtl5000_1.volume(0.5); //headphone volume
+  sgtl5000_1.volume(0.8); //headphone volume (max linear is about 0.85)
   //sgtl5000_1.lineInLevel(5, 5); //max is 15, default is 5
   sgtl5000_1.adcHighPassFilterDisable();  //reduce noise?  https://forum.pjrc.com/threads/27215-24-bit-audio-boards?p=78831&viewfull=1#post78831
   
