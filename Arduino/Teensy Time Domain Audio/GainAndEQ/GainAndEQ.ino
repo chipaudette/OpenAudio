@@ -51,7 +51,7 @@ AudioFilterGain          gain2;
 
 
 #define PROCESSING_TYPE 1
-#define DO_USB_OUT  0
+#define DO_USB_OUT  1
 
 #if PROCESSING_TYPE == 0
   //pass through the audio

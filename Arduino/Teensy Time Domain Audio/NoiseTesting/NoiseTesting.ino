@@ -50,7 +50,7 @@ AudioOutputI2S           i2s_out;
 AudioConnection          patchCord1(i2s_in, 0, i2s_out, 0);
 AudioConnection          patchCord2(i2s_in, 1, i2s_out, 1);
 
-#define DO_USB_OUT 0   //if activating this, be sure to choose USB->Audio under "Tools" in the Arduino IDE
+#define DO_USB_OUT 1   //if activating this, be sure to choose USB->Audio under "Tools" in the Arduino IDE
 #if DO_USB_OUT
   AudioOutputUSB           usb_out;   
   AudioConnection          patchCord20(i2s_in, 0, usb_out, 0);

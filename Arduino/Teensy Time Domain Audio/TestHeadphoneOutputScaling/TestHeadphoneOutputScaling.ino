@@ -5,7 +5,7 @@
 #include <SD.h>
 #include <SerialFlash.h>
 
-#define USE_USB 0
+#define USE_USB 1
 
 // GUItool: begin automatically generated code
 AudioControlSGTL5000     sgtl5000_1;     //xy=227.727294921875,127.72727966308594
@@ -45,9 +45,9 @@ void loop() {
 
   //set headphone volume
   val = ((int)(20.0*val + 0.5))/20.0; //round to nearest 0.1
-  sgtl5000_1.volume(val); //headphone volume
+  //sgtl5000_1.volume(val); //headphone volume
 
-  Serial.print("Headphone Volume = "); Serial.println(val);
+  //Serial.print("Headphone Volume = "); Serial.println(val);
 
   delay(200);
 }
