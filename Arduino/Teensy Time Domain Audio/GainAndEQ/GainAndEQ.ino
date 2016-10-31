@@ -110,7 +110,7 @@ typedef struct {
 biquad_shelf_t highshelf;
 biquad_shelf_t lowshelf;
 
-#define PEAKHOLD_SEC (0.5)
+#define PEAKHOLD_SEC (1.0)
 #define N_PEAKHOLD (((int)(PEAKHOLD_SEC*44100.0/AUDIO_BLOCK_SAMPLES))+1)
 class PeakHold {
   public:
@@ -146,7 +146,7 @@ PeakHold peakHold[2];  //left and right
 void setup() {
   // Start the serial debugging
   Serial.begin(115200);
-  Serial1.begin(115200); //2*115200 for BT Classic, 9600 for adafruit bluefruit BLE
+  Serial1.begin(9600); //2*115200 for BT Classic, 9600 for adafruit bluefruit BLE
   delay(500);
   Serial.println("USB: Teensy Aduio: Gain and EQ");
   Serial1.println("BT: Teensy Aduio: Gain and EQ");
@@ -207,11 +207,15 @@ void updateSignalTracking(void) {
 long lastTime = millis();
 boolean ADCHighPassEnabled = true;
 int count=0;
-unsigned long updatePeriod_millis = 500;
+unsigned long updatePeriod_millis = 1000;
 unsigned long lastUpdate_millis = 0;
 unsigned long curTime_millis=0;
 int prev_gain_setting = -1;  //negative value says to update the next time through
 void loop() {
+  while (Serial1.available()) {
+    Serial.write(Serial1.read());
+  }
+  
   delay(5);
   updateSignalTracking();
 
@@ -220,8 +224,8 @@ void loop() {
   if (curTime_millis < lastUpdate_millis) lastUpdate_millis=0;
   if ((curTime_millis - lastUpdate_millis) > updatePeriod_millis) {   
     //display peak hold
-    Serial.print("USB "); Serial.print(count); Serial.print(": peak dBFS: "); Serial.print(peakHold[0].getMaxAbsDB());Serial.print(" ,"); Serial.println(peakHold[1].getMaxAbsDB());
-    Serial1.print("BT "); Serial1.print(count); Serial1.print(": peak dBFS "); Serial1.print(peakHold[0].getMaxAbsDB());Serial1.print(" ,"); Serial1.println(peakHold[1].getMaxAbsDB());
+    Serial.print("USB "); Serial.print(count % 100); Serial.print(": Peak dBFS: "); Serial.print(peakHold[0].getMaxAbsDB());Serial.print(", "); Serial.println(peakHold[1].getMaxAbsDB());
+    Serial1.print("BT "); Serial1.print(count % 100); Serial1.print(": Peak dBFS: "); Serial1.print(peakHold[0].getMaxAbsDB());Serial1.print(", "); Serial1.println(peakHold[1].getMaxAbsDB());
 
     //service the user interface
     #if PROCESSING_TYPE > 0 //skip it if there is no processing happening
