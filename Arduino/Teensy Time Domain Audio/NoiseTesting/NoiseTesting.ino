@@ -4,7 +4,47 @@
 #include <SD.h>
 #include <SerialFlash.h>
 
-AudioControlSGTL5000     sgtl5000_1;   
+class AudioControlSGTL500_wStates : public AudioControlSGTL5000 {
+  public:
+    AudioControlSGTL500_wStates(void) {
+      inputSelect(AUDIO_INPUT_MIC); //also sets initial gain levels
+      volume(volume_setting);
+    }
+
+    int getLineInLevel(void) { return line_in_setting[0]; }
+    void getLineInLevel(int vals[]) { vals[0] = line_in_setting[0]; vals[1] = line_in_setting[1]; return; };
+    int getMicGain(void) { return mic_gain_dB; };
+    float getVolume(void) { return volume_setting; }
+    
+    bool inputSelect(int n) {
+      bool val = AudioControlSGTL5000::inputSelect(n);
+      if (n == AUDIO_INPUT_LINEIN) {
+        micGain(mic_gain_dB);
+      } else if (n == AUDIO_INPUT_LINEIN) {
+        lineInLevel(line_in_setting[0],line_in_setting[1]);
+      }
+      return val;
+    }
+    bool lineInLevel(int n) { return lineInLevel(n,n); };
+    bool lineInLevel(int n1, int n2) {
+      line_in_setting[0] = n1; line_in_setting[1] = n2;
+      return AudioControlSGTL5000::lineInLevel(line_in_setting[0],line_in_setting[1]);
+    }
+    bool micGain(int gain_dB) {
+      mic_gain_dB = gain_dB;
+      return AudioControlSGTL5000::micGain(mic_gain_dB);
+    }
+    bool volume(float vol) {
+      volume_setting = vol;
+      return AudioControlSGTL5000::volume(volume_setting);
+    }
+  private:
+    int mic_gain_dB = 52;
+    int line_in_setting[2] = {5, 5};
+    float volume_setting = 0.8;
+};
+
+AudioControlSGTL500_wStates     sgtl5000_1;   
 AudioInputI2S            i2s_in;          
 AudioOutputI2S           i2s_out;         
 AudioConnection          patchCord1(i2s_in, 0, i2s_out, 0);
