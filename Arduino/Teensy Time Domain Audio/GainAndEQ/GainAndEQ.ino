@@ -35,14 +35,31 @@ class AudioFilterGain : public AudioStream
       release(block);
     }
 
-    void setGain(int g) { gain = min(g,100); } //limit the gain to 40 dB
+    void setGain(int g) { gain = min(g,1000); } //limit the gain to 60 dB
   private:
     audio_block_t *inputQueueArray[1];
     int gain=1; //default value
 };
 
+
+class AudioControlSGTL5000_Extended : public AudioControlSGTL5000
+{
+  public:
+    AudioControlSGTL5000_Extended(void) {};
+    bool micBiasEnable(void) {
+      return micBiasEnable(3.0);
+    }
+    bool micBiasEnable(float volt) {
+      uint16_t bias_resistor_setting = 1 << 8;  //2kOhm
+      uint16_t  bias_voltage_setting = ((uint16_t)((volt - 1.25)/0.250 + 0.5)) << 4;
+      return write(0x002A, bias_voltage_setting | bias_resistor_setting);
+    }
+     
+};
+
+
 // GUItool: begin automatically generated code
-AudioControlSGTL5000     audioShield;     //xy=360,498
+AudioControlSGTL5000_Extended     audioShield;     //xy=360,498
 AudioInputI2S            i2s1;           //xy=233,191
 AudioAnalyzePeak     peak_L;
 AudioAnalyzePeak     peak_R;
@@ -54,7 +71,7 @@ AudioFilterGain          gain2;
 
 
 #define PROCESSING_TYPE 1
-#define DO_USB_OUT  0
+#define DO_USB_OUT  1
 
 AudioConnection patchCord101(i2s1, 0, peak_L, 0);  //use these in all configurations
 AudioConnection patchCord102(i2s1, 1, peak_R, 0);  //use these in all configurations
@@ -77,7 +94,7 @@ AudioConnection patchCord102(i2s1, 1, peak_R, 0);  //use these in all configurat
   #if DO_USB_OUT
     AudioOutputUSB           usb1;  
     AudioConnection          patchCord12(gain1, 0, usb1, 0);
-    AudioConnection          patchCord13(gain2, 1, usb1, 1);
+    AudioConnection          patchCord13(gain2, 0, usb1, 1);
   #endif  
 #elif PROCESSING_TYPE == 2
   //do gain and EQ processing
@@ -141,12 +158,12 @@ class PeakHold {
 };
 
 float headphone_val = 0.8;
-int lineIn_val = 5;
+int lineIn_val = 10;
 PeakHold peakHold[2];  //left and right
 void setup() {
   // Start the serial debugging
   Serial.begin(115200);
-  Serial1.begin(9600); //2*115200 for BT Classic, 9600 for adafruit bluefruit BLE
+  Serial1.begin(2*115200); //2*115200 for BT Classic, 9600 for adafruit bluefruit BLE
   delay(500);
   Serial.println("USB: Teensy Aduio: Gain and EQ");
   Serial1.println("BT: Teensy Aduio: Gain and EQ");
@@ -173,6 +190,7 @@ void setup() {
   Serial.print("USB: LineInLevel setting: "); Serial.println(lineIn_val);
   Serial1.print("BT: LineInLevel setting: "); Serial1.println(lineIn_val);
   audioShield.lineInLevel(lineIn_val,lineIn_val); //max is 15, default is 5
+  audioShield.micBiasEnable(3.0); //set the mic bias voltage
 
   //let the ADC highpass filter do its thing
   audioShield.adcHighPassFilterDisable();  //reduce noise?  https://forum.pjrc.com/threads/27215-24-bit-audio-boards?p=78831&viewfull=1#post78831
@@ -207,7 +225,7 @@ void updateSignalTracking(void) {
 long lastTime = millis();
 boolean ADCHighPassEnabled = true;
 int count=0;
-unsigned long updatePeriod_millis = 1000;
+unsigned long updatePeriod_millis = 500;
 unsigned long lastUpdate_millis = 0;
 unsigned long curTime_millis=0;
 int prev_gain_setting = -1;  //negative value says to update the next time through
