@@ -71,7 +71,7 @@ AudioFilterGain          gain2;
 
 
 #define PROCESSING_TYPE 1
-#define DO_USB_OUT  1
+#define DO_USB_OUT  0
 
 AudioConnection patchCord101(i2s1, 0, peak_L, 0);  //use these in all configurations
 AudioConnection patchCord102(i2s1, 1, peak_R, 0);  //use these in all configurations
@@ -190,7 +190,7 @@ void setup() {
   Serial.print("USB: LineInLevel setting: "); Serial.println(lineIn_val);
   Serial1.print("BT: LineInLevel setting: "); Serial1.println(lineIn_val);
   audioShield.lineInLevel(lineIn_val,lineIn_val); //max is 15, default is 5
-  audioShield.micBiasEnable(3.0); //set the mic bias voltage
+  //audioShield.micBiasEnable(3.0); //set the mic bias voltage
 
   //let the ADC highpass filter do its thing
   audioShield.adcHighPassFilterDisable();  //reduce noise?  https://forum.pjrc.com/threads/27215-24-bit-audio-boards?p=78831&viewfull=1#post78831
@@ -271,8 +271,8 @@ void loop() {
           gain = ((int)(pow(10.0,gain_dB/20.0) + 0.5)); //round to nearest integer
           gain = max(gain,1);  //keep it to positive gain
           gain1.setGain(gain); gain2.setGain(gain);
-          Serial.print("USB "); Serial.print(count); Serial.print(": Gain dB = "); Serial.println(20.0*log10(gain));
-          Serial1.print("BT "); Serial1.print(count); Serial1.print(": Gain dB = "); Serial1.println(20.0*log10(gain));
+          Serial.print("USB "); Serial.print(count); Serial.print(": Digital Gain dB = "); Serial.println(20.0*log10(gain));
+          Serial1.print("BT "); Serial1.print(count); Serial1.print(": Digital Gain dB = "); Serial1.println(20.0*log10(gain));
           break;
        case 1:
           cur_gain_setting = 0;
@@ -288,8 +288,8 @@ void loop() {
             gain_dB = all_gain_dB[cur_gain_setting];
             gain = pow(10.0,gain_dB/20.0);
             gain1.setGain(gain); gain2.setGain(gain);
-            Serial.print("USB "); Serial.print(count); Serial.print(": Gain dB = "); Serial.println(20.0*log10(gain));
-            Serial1.print("BT "); Serial1.print(count); Serial1.print(": Gain dB = "); Serial1.println(20.0*log10(gain));
+            Serial.print("USB "); Serial.print(count); Serial.print(": Digital Gain dB = "); Serial.println(20.0*log10(gain));
+            Serial1.print("BT "); Serial1.print(count); Serial1.print(": Digital Gain dB = "); Serial1.println(20.0*log10(gain));
           }
           break;
         case 10:
@@ -344,3 +344,26 @@ void loop() {
   }
   
 }
+
+//void incrementGain(void) {
+//  
+//}
+//
+//void serialEvent() {
+//  while (Serial.available()) {
+//    // get the new byte:
+//    char inChar = (char)Serial.read();
+//    switch (inChar) {
+//      case '+':
+//        incrementGain();
+//        break;
+//      case '-';
+//        decrementGain();
+//        break;
+//      case 'b';
+//        toggleBias();
+//        break
+//      
+//    }
+//  }
+//}
