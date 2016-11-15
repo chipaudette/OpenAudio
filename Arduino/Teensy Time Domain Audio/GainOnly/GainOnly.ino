@@ -101,6 +101,9 @@ class AudioControlSGTL5000_Extended : public AudioControlSGTL5000
       uint16_t  bias_voltage_setting = ((uint16_t)((volt - 1.25) / 0.250 + 0.5)) << 4;
       return write(0x002A, bias_voltage_setting | bias_resistor_setting);
     }
+    bool micBiasDisable(void) {
+      return write(0x002A, 0x00);
+    }
 };
 
 
@@ -137,6 +140,8 @@ int lineIn_val = 10;
 PeakHold peakHold[2];  //left and right
 boolean ADCHighPassEnabled = false;
 GainManager digitalGain;
+const float targetMicBiasValue_V = 3.0;
+float micBiasValue_V = targetMicBiasValue_V;
 void setup() {
   // Start the serial debugging
   Serial.begin(115200);
@@ -160,7 +165,16 @@ void setup() {
   Serial.print("USB: LineInLevel setting: "); Serial.println(lineIn_val);
   Serial1.print("BT: LineInLevel setting: "); Serial1.println(lineIn_val);
   audioShield.lineInLevel(lineIn_val, lineIn_val); //max is 15, default is 5
-  audioShield.micBiasEnable(3.0); //set the mic bias voltage
+
+  if (micBiasValue_V > 0.1) {
+    audioShield.micBiasEnable(micBiasValue_V); //set the mic bias voltage
+    Serial.print("MicBias Enabled at ");Serial.println(micBiasValue_V);
+    Serial1.print("MicBias Enabled at ");Serial1.println(micBiasValue_V);
+  } else { 
+    audioShield.micBiasDisable();
+    Serial.println("MicBias Disabled.");
+    Serial1.println("MicBias Disabled.");
+  }
 
   //let the ADC highpass filter do its thing (or not)
   if (ADCHighPassEnabled) {
@@ -299,6 +313,19 @@ void changeGain2_dB(float changeInGain_dB) {
   setDigitalGain_dB(digitalGain.getTotalGain_dB(), true);
 }
 void toggleBias(void) {
+  if (micBiasValue_V < 1.0) {
+    //it is currently off.  turn it on;
+    micBiasValue_V = targetMicBiasValue_V;
+    audioShield.micBiasEnable(micBiasValue_V); //set the mic bias voltage
+    Serial.print("MicBias Enabled at ");Serial.println(micBiasValue_V);
+    Serial1.print("MicBias Enabled at ");Serial1.println(micBiasValue_V);
+  } else {
+    //it is currently on.  turn it off;
+    micBiasValue_V = 0.0;
+    audioShield.micBiasDisable();
+    Serial.println("MicBias Disabled.");
+    Serial1.println("MicBias Disabled.");
+  }
 }
 void printHelp(void) {
   Stream *s;
