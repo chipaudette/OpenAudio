@@ -1,8 +1,8 @@
 /*
-   GainAndEQ
+   GainOnly
 
-   Created: Chip Audette, Oct 2016
-   Purpose: Process audio by applying gain and frequency shaping (EQ)
+   Created: Chip Audette, Nov 2016
+   Purpose: Process audio by applying gain
 
    Uses Teensy Audio Adapter.
    Assumes microphones (or whatever) are attached to the LINE IN
@@ -142,13 +142,12 @@ void setup() {
   Serial.begin(115200);
   Serial1.begin(9600); //2*115200 for BT Classic, 9600 for adafruit bluefruit BLE
   delay(500);
-  Serial.println("USB: Teensy Aduio: Gain and EQ");
-  Serial1.println("BT: Teensy Aduio: Gain and EQ");
+  Serial.println("USB: Teensy Aduio: GainOnly");
+  Serial1.println("BT: Teensy Aduio: GainOnly");
   delay(250);
   printHelp();
 
-  // Audio connections require memory to work.  For more
-  // detailed information, see the MemoryAndCpuUsage example
+  // Allocate memory for the Teensy Audio Library functions
   AudioMemory(20);
 
   // Enable the audio shield and set the output volume.
@@ -161,7 +160,7 @@ void setup() {
   Serial.print("USB: LineInLevel setting: "); Serial.println(lineIn_val);
   Serial1.print("BT: LineInLevel setting: "); Serial1.println(lineIn_val);
   audioShield.lineInLevel(lineIn_val, lineIn_val); //max is 15, default is 5
-  //audioShield.micBiasEnable(3.0); //set the mic bias voltage
+  audioShield.micBiasEnable(3.0); //set the mic bias voltage
 
   //let the ADC highpass filter do its thing (or not)
   if (ADCHighPassEnabled) {
@@ -193,7 +192,7 @@ float setDigitalGain_dB(float gain_dB, boolean flag_printGain) {
   return gain_dB;
 }
 
-long lastTime = millis();
+
 int count = 0;
 unsigned long updatePeriod_millis = 1000;
 unsigned long lastUpdate_millis = 0;
@@ -202,7 +201,8 @@ int prev_gain_setting = -1;  //negative value says to update the next time throu
 void loop() {
   serviceSerial();
 
-  delay(5);
+  //delay(5);
+  asm(" WFI");  //"wait for interrupt".  saves power.  stays on this line until an interrupt is issued anywhere in the system.  The audio library (secretly) services an interrupt every 128 samples, so this is an easy way to save power.
   updateSignalTracking();
 
   //update the GUI and the print statements?
@@ -215,7 +215,7 @@ void loop() {
 
     //read potentiometer
     float val = float(analogRead(POT_PIN)) / 1024.0; //0.0 to 1.0
-    float gain;
+    //float gain;
     float gain_dB;
     float max_gain_dB;
     int round_factor;
