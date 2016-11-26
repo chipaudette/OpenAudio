@@ -119,10 +119,10 @@ AudioFilterGain          gain2;
 //gain only
 AudioConnection         patchCord1(i2s1, 0, gain1, 0);
 AudioConnection         patchCord2(i2s1, 1, gain2, 0);
-AudioConnection patchCord101(i2s1, 0, peak_L, 0);  //use these in all configurations
-AudioConnection patchCord102(i2s1, 1, peak_R, 0);  //use these in all configurations
-AudioConnection          patchCord10(gain1, 0, i2s2, 0);
-AudioConnection          patchCord11(gain2, 0, i2s2, 1);
+AudioConnection         patchCord101(i2s1, 0, peak_L, 0);  //use these in all configurations
+AudioConnection         patchCord102(i2s1, 1, peak_R, 0);  //use these in all configurations
+AudioConnection         patchCord10(gain1, 0, i2s2, 0);
+AudioConnection         patchCord11(gain2, 0, i2s2, 1);
 
 
 #define DO_USB_OUT  0
