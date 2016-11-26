@@ -29,12 +29,12 @@ class AudioFloatProcessing : public AudioStream
       //convert to float
       convertAudio_Int16toFloat(int_block, float_block, AUDIO_BLOCK_SAMPLES);
 
-      //execute all of the daughter processes
+      //execute all of the daughter processes...passing the audio block from process to process
       for (int i = 0; i < daughter_process_counter; i++) {
         daughter_processes[i]->update(float_block);
       }
 
-      //convert back to int
+      //convert back to int16
       convertAudio_FloatToInt16(float_block, int_block, AUDIO_BLOCK_SAMPLES);
 
       //return audio to the system
@@ -42,7 +42,7 @@ class AudioFloatProcessing : public AudioStream
       release(int_block);
     };
 
-    #define MAX_NUM_DAUGHTERS 16  //maximum number of processes that can be cascaded
+    #define MAX_NUM_DAUGHTERS 8  //maximum number of processes that can be cascaded
     int addProcessing(AudioStream_Float *process) {
       if (daughter_process_counter == (MAX_NUM_DAUGHTERS-1)) return 0;
       daughter_processes[daughter_process_counter] = process;

@@ -2,7 +2,8 @@
    BasicGain
 
    Created: Chip Audette, Nov 2016
-   Purpose: Process audio by applying gain
+   Purpose: Process audio by applying gain.
+            Demonstrates audio processing using floating point data type.
 
    Uses Teensy Audio Adapter.
    Assumes microphones (or whatever) are attached to the LINE IN
@@ -22,18 +23,16 @@
 
 //create audio library objects for handling the audio
 AudioControlSGTL5000     sgtl5000_1;    //controller for the Teensy Audio Board
-AudioInputI2S            i2s1;          //Stereo.  Digital audio from the Teensy Audio Board ADC
-AudioOutputI2S           i2s2;          //Stereo.  Digital audio to the Teensy Audio Board DAC
-AudioFloatProcessing     floatProc1;    //Left.  Will do some processing as floats (default is Int16)
-AudioFloatProcessing     floatProc2;    //Right  Will do some processing as floats (default is Int16)
+AudioInputI2S            i2s1;          //Stereo.  Digital audio from the Teensy Audio Board ADC.  Sends Int16.
+AudioOutputI2S           i2s2;          //Stereo.  Digital audio to the Teensy Audio Board DAC.  Expectes Int16.
+AudioFloatProcessing     floatProc1, floatProc2;    //Left and Right.  Will convert data between Int16->Float->Int16
 AudioConnection          patchCord1(i2s1, 0, floatProc1, 0);  //connect the Left input to the Left floating-point processor
 AudioConnection          patchCord2(i2s1, 1, floatProc2, 0);  //connect the Right input to the Right floating-point processor
 AudioConnection          patchCord10(floatProc1, 0, i2s2, 0); //connect the Left float processor to the Left output
 AudioConnection          patchCord11(floatProc2, 0, i2s2, 1); //connect the Right float processor to the Right output
 
 //Define the WEA custom floating-point processing objects
-AudioEffectGain_Float    gain1;         //Left.  used within AudioFloatProcessing
-AudioEffectGain_Float    gain2;         //Right.  used within AudioFloatProcessing
+AudioEffectGain_Float    gain1, gain2;         //Left and Right.  Called by AudioFloatProcessing
 
 // which input on the audio shield will be used?
 const int myInput = AUDIO_INPUT_LINEIN;
@@ -58,7 +57,7 @@ void setup() {
   sgtl5000_1.enable();
   sgtl5000_1.inputSelect(myInput);  //line-in or mic-in
   sgtl5000_1.volume(0.8);      //0.0 to 1.0.  0.5 seems to be the usual default.
-  sgtl5000_1.lineInLevel(10);  //0 to 15.  5 is the Teensy Audio Library's default
+  sgtl5000_1.lineInLevel(10,10);  //0 to 15.  5 is the Teensy Audio Library's default
   sgtl5000_1.adcHighPassFilterDisable();  //reduce noise.  https://forum.pjrc.com/threads/27215-24-bit-audio-boards?p=78831&viewfull=1#post78831
 
   // setup other features
