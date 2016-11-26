@@ -14,6 +14,8 @@ class AudioEffectGain_Float : public AudioStream_Float //AudioStream_Float is in
       float gain = pow(10.0, gain_dB / 20.0);
       setGain(gain);
     }
+    float getGain(void) { return gain; }
+    float getGain_dB(void) { return 20.0*log10(gain); }
   private:
     float gain = 1.0; //default value
 };
