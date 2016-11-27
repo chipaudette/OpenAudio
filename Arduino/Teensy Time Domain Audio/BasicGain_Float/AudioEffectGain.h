@@ -9,6 +9,7 @@ class AudioEffectGain_Float : public AudioStream_Float //AudioStream_Float is in
       //for (int i = 0; i < block->length; i++) block->data[i] = gain * (block->data[i]);
       arm_scale_f32(block->data, gain, block->data, block->length); //use ARM DSP for speed!
     }
+    void update(void) {}; //vestigal from AudioStream portion of AudioStream_Float
     void setGain(float g) { gain = g; }
     void setGain_dB(float gain_dB) {
       float gain = pow(10.0, gain_dB / 20.0);

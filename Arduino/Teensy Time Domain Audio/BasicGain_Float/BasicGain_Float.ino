@@ -18,6 +18,7 @@
 #include <SD.h>
 #include <SerialFlash.h>
 
+#include "AudioStream_Float.h" //here is WEA custom code to extend audio library streams for floating point values
 #include "AudioFloatProcessing.h" //here is WEA custom code to enable floating-point audio processing
 #include "AudioEffectGain.h" //here is the WEA custom audio processing module that does the gain
 
