@@ -19,30 +19,27 @@
 #include <SerialFlash.h>
 
 #include "AudioStream_Float.h" //here is WEA custom code to extend audio library streams for floating point values
-#include "AudioConvert_I16_F32.h" //here is WEA custom code to enable floating-point audio processing
 #include "AudioEffectGain.h" //here is the WEA custom audio processing module that does the gain
 
 //create audio library objects for handling the audio
-AudioControlSGTL5000     sgtl5000_1;    //controller for the Teensy Audio Board
-AudioInputI2S            i2s1;          //Stereo.  Digital audio from the Teensy Audio Board ADC.  Sends Int16.
-AudioOutputI2S           i2s2;          //Stereo.  Digital audio to the Teensy Audio Board DAC.  Expectes Int16.
-AudioConvert_I16toF32   int2Float1, int2Float2;    //Left and Right.  Will convert data Int16->Float
-AudioConvert_F32toI16    float2Int1, float2Int2;    //Left and Right.  Will convert data Float->Int16
-AudioEffectGain_F32    gain1, gain2;  //Left and Right.  
+AudioControlSGTL5000    sgtl5000_1;    //controller for the Teensy Audio Board
+AudioInputI2S           i2s1;          //Stereo.  Digital audio from the Teensy Audio Board ADC.  Sends Int16.
+AudioOutputI2S          i2s2;          //Stereo.  Digital audio to the Teensy Audio Board DAC.  Expects Int16.
+AudioConvert_I16toF32   int2Float1, int2Float2;    //Left and Right.  See AudioStream_Float.h
+AudioConvert_F32toI16   float2Int1, float2Int2;    //Left and Right.  See AudioStream_Float.h
+AudioEffectGain_F32     gain1, gain2;  //Left and Right.  
 
 //AudioConnection     patchCord100(i2s1, 0, i2s2, 0);
 //AudioConnection     patchCord101(i2s1, 1, i2s2, 1);
 
-AudioConnection          patchCord1(i2s1, 0, int2Float1, 0);  //connect the Left input to the Left Int->Float converter
-AudioConnection          patchCord2(i2s1, 1, int2Float2, 0);  //connect the Right input to the Right Int->Float converter
-//AudioConnection_Float    patchCord10(int2Float1, 0, float2Int1, 0);
-//AudioConnection_Float    patchCord11(int2Float2, 0, float2Int2, 0);
-AudioConnection_F32    patchCord10(int2Float1, 0, gain1, 0);
-AudioConnection_F32    patchCord11(int2Float2, 0, gain2, 0);
-AudioConnection_F32    patchCord12(gain1, 0, float2Int1, 0);
-AudioConnection_F32    patchCord13(gain2, 0, float2Int2, 0);
-AudioConnection          patchCord20(float2Int1, 0, i2s2, 0); //connect the Left float processor to the Left output
-AudioConnection          patchCord21(float2Int2, 0, i2s2, 1); //connect the Right float processor to the Right output
+AudioConnection         patchCord1(i2s1, 0, int2Float1, 0);  //connect the Left input to the Left Int->Float converter
+AudioConnection         patchCord2(i2s1, 1, int2Float2, 0);  //connect the Right input to the Right Int->Float converter
+AudioConnection_F32     patchCord10(int2Float1, 0, gain1, 0);  //Left.  makes Float connections between objects
+AudioConnection_F32     patchCord11(int2Float2, 0, gain2, 0);  //Right.  makes Float connections between objects
+AudioConnection_F32     patchCord12(gain1, 0, float2Int1, 0);  //Left.  makes Float connections between objects
+AudioConnection_F32     patchCord13(gain2, 0, float2Int2, 0);  //Right.  makes Float connections between objects
+AudioConnection         patchCord20(float2Int1, 0, i2s2, 0); //connect the Left float processor to the Left output
+AudioConnection         patchCord21(float2Int2, 0, i2s2, 1); //connect the Right float processor to the Right output
 
 
 // which input on the audio shield will be used?
