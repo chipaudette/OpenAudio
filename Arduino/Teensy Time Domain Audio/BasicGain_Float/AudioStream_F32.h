@@ -1,3 +1,15 @@
+/*
+ * AudioStream_F32
+ * 
+ * Created: Chip Audette, November 2016
+ * Purpose; Extend the Teensy Audio Library's "AudioStream" to permit floating-point audio data.
+ *          
+ * I modeled it directly on the Teensy code in "AudioStream.h" and "AudioStream.cpp", which are 
+ * available here: https://github.com/PaulStoffregen/cores/tree/master/teensy3
+ * 
+ * MIT License.  use at your own risk.
+*/
+
 #include <arm_math.h> //ARM DSP extensions.  for speed!
 
 class AudioStream_F32;

@@ -29,17 +29,15 @@ AudioConvert_I16toF32   int2Float1, int2Float2;    //Left and Right.  See AudioS
 AudioConvert_F32toI16   float2Int1, float2Int2;    //Left and Right.  See AudioStream_Float.h
 AudioEffectGain_F32     gain1, gain2;  //Left and Right.  
 
-//AudioConnection     patchCord100(i2s1, 0, i2s2, 0);
-//AudioConnection     patchCord101(i2s1, 1, i2s2, 1);
-
-AudioConnection         patchCord1(i2s1, 0, int2Float1, 0);  //connect the Left input to the Left Int->Float converter
-AudioConnection         patchCord2(i2s1, 1, int2Float2, 0);  //connect the Right input to the Right Int->Float converter
-AudioConnection_F32     patchCord10(int2Float1, 0, gain1, 0);  //Left.  makes Float connections between objects
-AudioConnection_F32     patchCord11(int2Float2, 0, gain2, 0);  //Right.  makes Float connections between objects
-AudioConnection_F32     patchCord12(gain1, 0, float2Int1, 0);  //Left.  makes Float connections between objects
-AudioConnection_F32     patchCord13(gain2, 0, float2Int2, 0);  //Right.  makes Float connections between objects
-AudioConnection         patchCord20(float2Int1, 0, i2s2, 0); //connect the Left float processor to the Left output
-AudioConnection         patchCord21(float2Int2, 0, i2s2, 1); //connect the Right float processor to the Right output
+//Make all of the audio connections
+AudioConnection         patchCord1(i2s1, 0, int2Float1, 0);   //connect the Left input to the Left Int->Float converter
+AudioConnection         patchCord2(i2s1, 1, int2Float2, 0);   //connect the Right input to the Right Int->Float converter
+AudioConnection_F32     patchCord10(int2Float1, 0, gain1, 0); //Left.  makes Float connections between objects
+AudioConnection_F32     patchCord11(int2Float2, 0, gain2, 0); //Right.  makes Float connections between objects
+AudioConnection_F32     patchCord12(gain1, 0, float2Int1, 0); //Left.  makes Float connections between objects
+AudioConnection_F32     patchCord13(gain2, 0, float2Int2, 0); //Right.  makes Float connections between objects
+AudioConnection         patchCord20(float2Int1, 0, i2s2, 0);  //connect the Left float processor to the Left output
+AudioConnection         patchCord21(float2Int2, 0, i2s2, 1);  //connect the Right float processor to the Right output
 
 
 // which input on the audio shield will be used?
@@ -48,7 +46,6 @@ const int myInput = AUDIO_INPUT_LINEIN;
 
 //I have a potentiometer on the Teensy Audio Board
 #define POT_PIN A1  //potentiometer is tied to this pin
-
 
 // define the setup() function, the function that is called once when
 // the device is booting

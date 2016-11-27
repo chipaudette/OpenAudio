@@ -1,3 +1,13 @@
+/*
+ * AudioEffectsGain
+ * 
+ * Created: Chip Audette, November 2016
+ * Purpose; Apply digital gain to the audio data.  Assumes floating-point data.
+ *          
+ * This processes a single stream fo audio data (ie, it is mono)       
+ *          
+ * MIT License.  use at your own risk.
+*/
 
 #include <arm_math.h> //ARM DSP extensions.  for speed!
 
