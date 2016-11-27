@@ -1,19 +1,97 @@
 #include <arm_math.h> //ARM DSP extensions.  for speed!
 
+class AudioStream_Float;
+class AudioConnection_Float;
+
 //create a new structure to hold audio as floating point values.
 //modeled on the existing teensy audio block struct, which uses Int16
 //https://github.com/PaulStoffregen/cores/blob/268848cdb0121f26b7ef6b82b4fb54abbe465427/teensy3/AudioStream.h
 typedef struct audio_float_block_struct {
+  unsigned char ref_count;
+  unsigned char memory_pool_index;
+  unsigned char reserved1;
+  unsigned char reserved2;  
   float data[AUDIO_BLOCK_SAMPLES]; // AUDIO_BLOCK_SAMPLES is 128, from AudioStream.h
   const int length = AUDIO_BLOCK_SAMPLES; // AUDIO_BLOCK_SAMPLES is 128, from AudioStream.h
   const float fs_Hz = AUDIO_SAMPLE_RATE; // AUDIO_SAMPLE_RATE is 44117.64706 from AudioStream.h
 } audio_float_block_t;
 
+class AudioConnection_Float
+{
+  public:
+    AudioConnection_Float(AudioStream_Float &source, AudioStream_Float &destination) :
+      src(source), dst(destination), src_index(0), dest_index(0),
+      next_dest(NULL)
+      { connect(); }
+    AudioConnection_Float(AudioStream_Float &source, unsigned char sourceOutput,
+      AudioStream_Float &destination, unsigned char destinationInput) :
+      src(source), dst(destination),
+      src_index(sourceOutput), dest_index(destinationInput),
+      next_dest(NULL)
+      { connect(); }
+    friend class AudioStream_Float;
+  protected:
+    void connect(void);
+    AudioStream_Float &src;
+    AudioStream_Float &dst;
+    unsigned char src_index;
+    unsigned char dest_index;
+    AudioConnection_Float *next_dest;
+};
+
+#define AudioMemory_Float(num) ({ \
+  static audio_float_block_t data[num]; \
+  AudioStream_Float::initialize_memory(data, num); \
+})
+
 class AudioStream_Float {
   public:
-    AudioStream_Float(void) {};
-    virtual void update(audio_float_block_t *) = 0;  
+    AudioStream_Float(unsigned char ninput, audio_float_block_t **iqueue) :
+        num_inputs(ninput), inputQueue(iqueue) {
+      active = false;
+      destination_list = NULL;
+    };
+    virtual void update(audio_float_block_t *) = 0; 
+  protected:
+    bool active;
+    unsigned char num_inputs;
+    void transmit(audio_float_block_t *block, unsigned char index = 0);
+    friend class AudioConnection_Float;
+  private:
+    AudioConnection_Float *destination_list;
+    audio_float_block_t **inputQueue;
 };
+
+
+
+void AudioStream_Float::transmit(audio_float_block_t *block, unsigned char index)
+{
+  for (AudioConnection_Float *c = destination_list; c != NULL; c = c->next_dest) {
+    if (c->src_index == index) {
+      if (c->dst.inputQueue[c->dest_index] == NULL) {
+        c->dst.inputQueue[c->dest_index] = block;
+        block->ref_count++;
+      }
+    }
+  }      
+}
+
+void AudioConnection_Float::connect(void) {
+  AudioConnection_Float *p;
+  if (dest_index > dst.num_inputs) return;
+  __disable_irq();
+  p = src.destination_list;
+  if (p == NULL) {
+    src.destination_list = this;
+  } else {
+    while (p->next_dest) p = p->next_dest;
+    p->next_dest = this;
+  }
+  src.active = true;
+  dst.active = true;
+  __enable_irq();
+}
+
 
 class AudioFloatProcessing : public AudioStream
 {
