@@ -23,11 +23,11 @@
 
 //create audio library objects for handling the audio
 AudioControlSGTL5000    sgtl5000_1;    //controller for the Teensy Audio Board
-AudioInputI2S           i2s1;          //Stereo.  Digital audio from the Teensy Audio Board ADC.  Sends Int16.
-AudioOutputI2S          i2s2;          //Stereo.  Digital audio to the Teensy Audio Board DAC.  Expects Int16.
-AudioConvert_I16toF32   int2Float1, int2Float2;    //Left and Right.  See AudioStream_Float.h
-AudioConvert_F32toI16   float2Int1, float2Int2;    //Left and Right.  See AudioStream_Float.h
-AudioEffectGain_F32     gain1, gain2;  //Left and Right.  
+AudioInputI2S           i2s1;          //Digital audio *from* the Teensy Audio Board ADC.  Sends Int16.  Stereo.
+AudioOutputI2S          i2s2;          //Digital audio *to* the Teensy Audio Board DAC.  Expects Int16.  Stereo
+AudioConvert_I16toF32   int2Float1, int2Float2;    //Converts Int16 to Float.  See class in AudioStream_Float.h
+AudioConvert_F32toI16   float2Int1, float2Int2;    //Converts Float to Int16.  See class in AudioStream_Float.h
+AudioEffectGain_F32     gain1, gain2;  //Applies digital gain to audio data.  Expected Float data.  
 
 //Make all of the audio connections
 AudioConnection         patchCord1(i2s1, 0, int2Float1, 0);   //connect the Left input to the Left Int->Float converter
@@ -39,7 +39,6 @@ AudioConnection_F32     patchCord13(gain2, 0, float2Int2, 0); //Right.  makes Fl
 AudioConnection         patchCord20(float2Int1, 0, i2s2, 0);  //connect the Left float processor to the Left output
 AudioConnection         patchCord21(float2Int2, 0, i2s2, 1);  //connect the Right float processor to the Right output
 
-
 // which input on the audio shield will be used?
 const int myInput = AUDIO_INPUT_LINEIN;
 //const int myInput = AUDIO_INPUT_MIC;
@@ -47,43 +46,43 @@ const int myInput = AUDIO_INPUT_LINEIN;
 //I have a potentiometer on the Teensy Audio Board
 #define POT_PIN A1  //potentiometer is tied to this pin
 
-// define the setup() function, the function that is called once when
-// the device is booting
+// define the setup() function, the function that is called once when the device is booting
 void setup() {
-  Serial.begin(115200);   //for debugging messages later
-  delay(500);
-  Serial.println("Teensy Hearing Aid: BasicGain_Float...");
+  Serial.begin(115200);   //open the USB serial link to enable debugging messages
+  delay(500);             //give the computer's USB serial system a moment to catch up.
+  Serial.println("Teensy Hearing Aid: BasicGain_Float..."); //identify myself over the USB serial
 
   // Audio connections require memory, and the record queue
   // uses this memory to buffer incoming audio.
-  AudioMemory(20);
-  AudioMemory_F32(20);
+  AudioMemory(10);  //allocate Int16 audio data blocks
+  AudioMemory_F32(10); //allocate Float32 audio data blocks
 
   // Enable the audio shield, select input, and enable output
-  sgtl5000_1.enable();
-  sgtl5000_1.inputSelect(myInput);  //line-in or mic-in
-  sgtl5000_1.volume(0.8);      //0.0 to 1.0.  0.5 seems to be the usual default.
-  sgtl5000_1.lineInLevel(10,10);  //0 to 15.  5 is the Teensy Audio Library's default
-  sgtl5000_1.adcHighPassFilterDisable();  //reduce noise.  https://forum.pjrc.com/threads/27215-24-bit-audio-boards?p=78831&viewfull=1#post78831
+  sgtl5000_1.enable();                   //start the audio board
+  sgtl5000_1.inputSelect(myInput);       //choose line-in or mic-in
+  sgtl5000_1.volume(0.8);                //volume can be 0.0 to 1.0.  0.5 seems to be the usual default.
+  sgtl5000_1.lineInLevel(10,10);         //level can be 0 to 15.  5 is the Teensy Audio Library's default
+  sgtl5000_1.adcHighPassFilterDisable(); //reduces noise.  https://forum.pjrc.com/threads/27215-24-bit-audio-boards?p=78831&viewfull=1#post78831
 
-  // setup other features
+  // setup any other other features
   pinMode(POT_PIN, INPUT); //set the potentiometer's input pin as an INPUT
 
-}
+} //end setup()
 
 
-// define the loop() function, the function that is repeated over and over
-// for the life of the device
+// define the loop() function, the function that is repeated over and over for the life of the device
 unsigned long updatePeriod_millis = 100; //how many milliseconds between updating gain reading?
 unsigned long lastUpdate_millis = 0;
 unsigned long curTime_millis = 0;
 int prev_gain_dB = 0;
 void loop() {
+  //choose to sleep ("wait for interrupt") instead of spinning our wheels doing nothing but consuming power
+  asm(" WFI");  //ARM-specific.  Will wake on next interrupt.  The audio library issues tons of interrupts, so we wake up often.
   
   //has enough time passed to try updating the GUI?
   curTime_millis = millis(); //what time is it right now
-  if (curTime_millis < lastUpdate_millis) lastUpdate_millis = 0;
-  if ((curTime_millis - lastUpdate_millis) > updatePeriod_millis) {
+  if (curTime_millis < lastUpdate_millis) lastUpdate_millis = 0; //handle wrap-around of the clock
+  if ((curTime_millis - lastUpdate_millis) > updatePeriod_millis) { //is it time to update the user interface?
     
     //read potentiometer
     float val = float(analogRead(POT_PIN)) / 1024.0; //0.0 to 1.0
@@ -98,10 +97,10 @@ void loop() {
       gain1.setGain_dB(gain_dB);  //set the gain of the Left-channel gain processor
       gain2.setGain_dB(gain_dB);  //set the gain of the Right-channel gain processor
       Serial.print("Digital Gain dB = "); Serial.println(gain_dB); //print text to Serial port for debugging
-      prev_gain_dB = gain_dB;
+      prev_gain_dB = gain_dB;  //we will use this value the next time around
     }
  
-    lastUpdate_millis = curTime_millis; //hold on to this time value
+    lastUpdate_millis = curTime_millis; //we will use this value the next time around.
   } // end if
 
 } //end loop();
