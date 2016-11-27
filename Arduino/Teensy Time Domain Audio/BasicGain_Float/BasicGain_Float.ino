@@ -18,26 +18,26 @@
 #include <SD.h>
 #include <SerialFlash.h>
 
-#include "AudioStream_Float.h" //here is WEA custom code to extend audio library streams for floating point values
+#include "AudioStream_F32.h" //here is WEA custom code to extend audio library streams for floating point values
 #include "AudioEffectGain.h" //here is the WEA custom audio processing module that does the gain
 
 //create audio library objects for handling the audio
 AudioControlSGTL5000    sgtl5000_1;    //controller for the Teensy Audio Board
-AudioInputI2S           i2s1;          //Digital audio *from* the Teensy Audio Board ADC.  Sends Int16.  Stereo.
-AudioOutputI2S          i2s2;          //Digital audio *to* the Teensy Audio Board DAC.  Expects Int16.  Stereo
-AudioConvert_I16toF32   int2Float1, int2Float2;    //Converts Int16 to Float.  See class in AudioStream_Float.h
-AudioConvert_F32toI16   float2Int1, float2Int2;    //Converts Float to Int16.  See class in AudioStream_Float.h
+AudioInputI2S           i2s_in;          //Digital audio *from* the Teensy Audio Board ADC.  Sends Int16.  Stereo.
+AudioOutputI2S          i2s_out;          //Digital audio *to* the Teensy Audio Board DAC.  Expects Int16.  Stereo
+AudioConvert_I16toF32   int2Float1, int2Float2;    //Converts Int16 to Float.  See class in AudioStream_F32.h
+AudioConvert_F32toI16   float2Int1, float2Int2;    //Converts Float to Int16.  See class in AudioStream_F32.h
 AudioEffectGain_F32     gain1, gain2;  //Applies digital gain to audio data.  Expected Float data.  
 
 //Make all of the audio connections
-AudioConnection         patchCord1(i2s1, 0, int2Float1, 0);   //connect the Left input to the Left Int->Float converter
-AudioConnection         patchCord2(i2s1, 1, int2Float2, 0);   //connect the Right input to the Right Int->Float converter
+AudioConnection         patchCord1(i2s_in, 0, int2Float1, 0);   //connect the Left input to the Left Int->Float converter
+AudioConnection         patchCord2(i2s_in, 1, int2Float2, 0);   //connect the Right input to the Right Int->Float converter
 AudioConnection_F32     patchCord10(int2Float1, 0, gain1, 0); //Left.  makes Float connections between objects
 AudioConnection_F32     patchCord11(int2Float2, 0, gain2, 0); //Right.  makes Float connections between objects
 AudioConnection_F32     patchCord12(gain1, 0, float2Int1, 0); //Left.  makes Float connections between objects
 AudioConnection_F32     patchCord13(gain2, 0, float2Int2, 0); //Right.  makes Float connections between objects
-AudioConnection         patchCord20(float2Int1, 0, i2s2, 0);  //connect the Left float processor to the Left output
-AudioConnection         patchCord21(float2Int2, 0, i2s2, 1);  //connect the Right float processor to the Right output
+AudioConnection         patchCord20(float2Int1, 0, i2s_out, 0);  //connect the Left float processor to the Left output
+AudioConnection         patchCord21(float2Int2, 0, i2s_out, 1);  //connect the Right float processor to the Right output
 
 // which input on the audio shield will be used?
 const int myInput = AUDIO_INPUT_LINEIN;
