@@ -1,11 +1,11 @@
 
-class AudioStream_Float;
-class AudioConnection_Float;
+class AudioStream_F32;
+class AudioConnection_F32;
 
 //create a new structure to hold audio as floating point values.
 //modeled on the existing teensy audio block struct, which uses Int16
 //https://github.com/PaulStoffregen/cores/blob/268848cdb0121f26b7ef6b82b4fb54abbe465427/teensy3/AudioStream.h
-typedef struct audio_float_block_struct {
+typedef struct audio_block_f32_struct {
   unsigned char ref_count;
   unsigned char memory_pool_index;
   unsigned char reserved1;
@@ -13,92 +13,92 @@ typedef struct audio_float_block_struct {
   float data[AUDIO_BLOCK_SAMPLES]; // AUDIO_BLOCK_SAMPLES is 128, from AudioStream.h
   const int length = AUDIO_BLOCK_SAMPLES; // AUDIO_BLOCK_SAMPLES is 128, from AudioStream.h
   const float fs_Hz = AUDIO_SAMPLE_RATE; // AUDIO_SAMPLE_RATE is 44117.64706 from AudioStream.h
-} audio_float_block_t;
+} audio_block_f32_t;
 
-class AudioConnection_Float
+class AudioConnection_F32
 {
   public:
-    AudioConnection_Float(AudioStream_Float &source, AudioStream_Float &destination) :
+    AudioConnection_F32(AudioStream_F32 &source, AudioStream_F32 &destination) :
       src(source), dst(destination), src_index(0), dest_index(0),
       next_dest(NULL)
       { connect(); }
-    AudioConnection_Float(AudioStream_Float &source, unsigned char sourceOutput,
-      AudioStream_Float &destination, unsigned char destinationInput) :
+    AudioConnection_F32(AudioStream_F32 &source, unsigned char sourceOutput,
+      AudioStream_F32 &destination, unsigned char destinationInput) :
       src(source), dst(destination),
       src_index(sourceOutput), dest_index(destinationInput),
       next_dest(NULL)
       { connect(); }
-    friend class AudioStream_Float;
+    friend class AudioStream_F32;
   protected:
     void connect(void);
-    AudioStream_Float &src;
-    AudioStream_Float &dst;
+    AudioStream_F32 &src;
+    AudioStream_F32 &dst;
     unsigned char src_index;
     unsigned char dest_index;
-    AudioConnection_Float *next_dest;
+    AudioConnection_F32 *next_dest;
 };
 
-#define AudioMemory_Float(num) ({ \
-  static audio_float_block_t data[num]; \
-  AudioStream_Float::initialize_memory_float(data, num); \
+#define AudioMemory_F32(num) ({ \
+  static audio_block_f32_t data[num]; \
+  AudioStream_F32::initialize_f32_memory(data, num); \
 })
 
-class AudioStream_Float : public AudioStream {
+class AudioStream_F32 : public AudioStream {
   public:
-    AudioStream_Float(unsigned char ninput_float, audio_float_block_t **iqueue) : AudioStream(1, inputQueueArray_int), 
-        num_inputs_float(ninput_float), inputQueue_float(iqueue) {
-      //active_float = false;
-      destination_list_float = NULL;
-      for (int i=0; i < num_inputs; i++) {
-        inputQueue_float[i] = NULL;
+    AudioStream_F32(unsigned char n_input_f32, audio_block_f32_t **iqueue) : AudioStream(1, inputQueueArray_i16), 
+        num_inputs_f32(n_input_f32), inputQueue_f32(iqueue) {
+      //active_f32 = false;
+      destination_list_f32 = NULL;
+      for (int i=0; i < n_input_f32; i++) {
+        inputQueue_f32[i] = NULL;
       }
     };
-    static void initialize_memory_float(audio_float_block_t *data, unsigned int num);
-    //virtual void update(audio_float_block_t *) = 0; 
-    static uint8_t float_memory_used;
-    static uint8_t float_memory_used_max;
+    static void initialize_f32_memory(audio_block_f32_t *data, unsigned int num);
+    //virtual void update(audio_block_f32_t *) = 0; 
+    static uint8_t f32_memory_used;
+    static uint8_t f32_memory_used_max;
     
   protected:
-    //bool active_float;
-    unsigned char num_inputs_float;
-    static audio_float_block_t * allocate_float(void);
-    static void release(audio_float_block_t * block);
-    void transmit(audio_float_block_t *block, unsigned char index = 0);
-    audio_float_block_t * receiveReadOnly_Float(unsigned int index = 0);
-    audio_float_block_t * receiveWritable_Float(unsigned int index = 0);  
-    friend class AudioConnection_Float;
+    //bool active_f32;
+    unsigned char num_inputs_f32;
+    static audio_block_f32_t * allocate_f32(void);
+    static void release(audio_block_f32_t * block);
+    void transmit(audio_block_f32_t *block, unsigned char index = 0);
+    audio_block_f32_t * receiveReadOnly_f32(unsigned int index = 0);
+    audio_block_f32_t * receiveWritable_f32(unsigned int index = 0);  
+    friend class AudioConnection_F32;
   private:
-    AudioConnection_Float *destination_list_float;
-    audio_float_block_t **inputQueue_float;
+    AudioConnection_F32 *destination_list_f32;
+    audio_block_f32_t **inputQueue_f32;
     virtual void update(void) = 0;
-    audio_block_t *inputQueueArray_int[1];
-    static audio_float_block_t *memory_pool_float;
-    static uint32_t memory_pool_float_available_mask[6];
+    audio_block_t *inputQueueArray_i16[1];  //two for stereo
+    static audio_block_f32_t *f32_memory_pool;
+    static uint32_t f32_memory_pool_available_mask[6];
 };
 
 
-audio_float_block_t * AudioStream_Float::memory_pool_float;
-uint32_t AudioStream_Float::memory_pool_float_available_mask[6];
+audio_block_f32_t * AudioStream_F32::f32_memory_pool;
+uint32_t AudioStream_F32::f32_memory_pool_available_mask[6];
 
-uint8_t AudioStream_Float::float_memory_used = 0;
-uint8_t AudioStream_Float::float_memory_used_max = 0;
+uint8_t AudioStream_F32::f32_memory_used = 0;
+uint8_t AudioStream_F32::f32_memory_used_max = 0;
 
 // Set up the pool of audio data blocks
 // placing them all onto the free list
-void AudioStream_Float::initialize_memory_float(audio_float_block_t *data, unsigned int num)
+void AudioStream_F32::initialize_f32_memory(audio_block_f32_t *data, unsigned int num)
 {
   unsigned int i;
 
-  //Serial.println("AudioStream_Float initialize_memory");
+  //Serial.println("AudioStream_F32 initialize_memory");
   //delay(10);
   if (num > 192) num = 192;
   __disable_irq();
-  memory_pool_float = data;
+  f32_memory_pool = data;
   for (i=0; i < 6; i++) {
-    memory_pool_float_available_mask[i] = 0;
+    f32_memory_pool_available_mask[i] = 0;
   }
   for (i=0; i < num; i++) {
-    memory_pool_float_available_mask[i >> 5] |= (1 << (i & 0x1F));
+    f32_memory_pool_available_mask[i >> 5] |= (1 << (i & 0x1F));
   }
   for (i=0; i < num; i++) {
     data[i].memory_pool_index = i;
@@ -109,14 +109,14 @@ void AudioStream_Float::initialize_memory_float(audio_float_block_t *data, unsig
 
 // Allocate 1 audio data block.  If successful
 // the caller is the only owner of this new block
-audio_float_block_t * AudioStream_Float::allocate_float(void)
+audio_block_f32_t * AudioStream_F32::allocate_f32(void)
 {
   uint32_t n, index, avail;
   uint32_t *p;
-  audio_float_block_t *block;
+  audio_block_f32_t *block;
   uint8_t used;
 
-  p = memory_pool_float_available_mask;
+  p = f32_memory_pool_available_mask;
   __disable_irq();
   do {
     avail = *p; if (avail) break;
@@ -126,19 +126,19 @@ audio_float_block_t * AudioStream_Float::allocate_float(void)
     p++; avail = *p; if (avail) break;
     p++; avail = *p; if (avail) break;
     __enable_irq();
-    //Serial.println("alloc_float:null");
+    //Serial.println("alloc_f32:null");
     return NULL;
   } while (0);
   n = __builtin_clz(avail);
   *p = avail & ~(0x80000000 >> n);
-  used = float_memory_used + 1;
-  float_memory_used = used;
+  used = f32_memory_used + 1;
+  f32_memory_used = used;
   __enable_irq();
-  index = p - memory_pool_float_available_mask;
-  block = memory_pool_float + ((index << 5) + (31 - n));
+  index = p - f32_memory_pool_available_mask;
+  block = f32_memory_pool + ((index << 5) + (31 - n));
   block->ref_count = 1;
-  if (used > float_memory_used_max)float_memory_used_max = used;
-  //Serial.print("alloc_float:");
+  if (used > f32_memory_used_max) f32_memory_used_max = used;
+  //Serial.print("alloc_f32:");
   //Serial.println((uint32_t)block, HEX);
   return block;
 }
@@ -147,7 +147,7 @@ audio_float_block_t * AudioStream_Float::allocate_float(void)
 // Release ownership of a data block.  If no
 // other streams have ownership, the block is
 // returned to the free pool
-void AudioStream_Float::release(audio_float_block_t *block)
+void AudioStream_F32::release(audio_block_f32_t *block)
 {
   uint32_t mask = (0x80000000 >> (31 - (block->memory_pool_index & 0x1F)));
   uint32_t index = block->memory_pool_index >> 5;
@@ -157,10 +157,10 @@ void AudioStream_Float::release(audio_float_block_t *block)
   if (block->ref_count > 1) {
     block->ref_count--;
   } else {
-    //Serial.print("release_float:");
+    //Serial.print("release_f32:");
     //Serial.println((uint32_t)block, HEX);
-    memory_pool_float_available_mask[index] |= mask;
-    float_memory_used--;
+    f32_memory_pool_available_mask[index] |= mask;
+    f32_memory_used--;
   }
   __enable_irq();
 }
@@ -172,12 +172,12 @@ void AudioStream_Float::release(audio_float_block_t *block)
 // by the caller after it's transmitted.  This allows the
 // caller to transmit to same block to more than 1 output,
 // and then release it once after all transmit calls.
-void AudioStream_Float::transmit(audio_float_block_t *block, unsigned char index)
+void AudioStream_F32::transmit(audio_block_f32_t *block, unsigned char index)
 {
-  for (AudioConnection_Float *c = destination_list_float; c != NULL; c = c->next_dest) {
+  for (AudioConnection_F32 *c = destination_list_f32; c != NULL; c = c->next_dest) {
     if (c->src_index == index) {
-      if (c->dst.inputQueue_float[c->dest_index] == NULL) {
-        c->dst.inputQueue_float[c->dest_index] = block;
+      if (c->dst.inputQueue_f32[c->dest_index] == NULL) {
+        c->dst.inputQueue_f32[c->dest_index] = block;
         block->ref_count++;
       }
     }
@@ -186,28 +186,28 @@ void AudioStream_Float::transmit(audio_float_block_t *block, unsigned char index
 
 // Receive block from an input.  The block's data
 // may be shared with other streams, so it must not be written
-audio_float_block_t * AudioStream_Float::receiveReadOnly_Float(unsigned int index)
+audio_block_f32_t * AudioStream_F32::receiveReadOnly_f32(unsigned int index)
 {
-  audio_float_block_t *in;
+  audio_block_f32_t *in;
 
-  if (index >= num_inputs_float) return NULL;
-  in = inputQueue_float[index];
-  inputQueue_float[index] = NULL;
+  if (index >= num_inputs_f32) return NULL;
+  in = inputQueue_f32[index];
+  inputQueue_f32[index] = NULL;
   return in;
 }
 
 
 // Receive block from an input.  The block will not
 // be shared, so its contents may be changed.
-audio_float_block_t * AudioStream_Float::receiveWritable_Float(unsigned int index)
+audio_block_f32_t * AudioStream_F32::receiveWritable_f32(unsigned int index)
 {
-  audio_float_block_t *in, *p;
+  audio_block_f32_t *in, *p;
 
-  if (index >= num_inputs_float) return NULL;
-  in = inputQueue_float[index];
-  inputQueue_float[index] = NULL;
+  if (index >= num_inputs_f32) return NULL;
+  in = inputQueue_f32[index];
+  inputQueue_f32[index] = NULL;
   if (in && in->ref_count > 1) {
-    p = allocate_float();
+    p = allocate_f32();
     if (p) memcpy(p->data, in->data, sizeof(p->data));
     in->ref_count--;
     in = p;
@@ -215,14 +215,14 @@ audio_float_block_t * AudioStream_Float::receiveWritable_Float(unsigned int inde
   return in;
 }
 
-void AudioConnection_Float::connect(void) {
-  AudioConnection_Float *p;
+void AudioConnection_F32::connect(void) {
+  AudioConnection_F32 *p;
   
-  if (dest_index > dst.num_inputs_float) return;
+  if (dest_index > dst.num_inputs_f32) return;
   __disable_irq();
-  p = src.destination_list_float;
+  p = src.destination_list_f32;
   if (p == NULL) {
-    src.destination_list_float = this;
+    src.destination_list_f32 = this;
   } else {
     while (p->next_dest) p = p->next_dest;
     p->next_dest = this;
