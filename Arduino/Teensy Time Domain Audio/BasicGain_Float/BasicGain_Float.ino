@@ -19,21 +19,31 @@
 #include <SerialFlash.h>
 
 #include "AudioStream_Float.h" //here is WEA custom code to extend audio library streams for floating point values
-#include "AudioFloatProcessing.h" //here is WEA custom code to enable floating-point audio processing
+#include "AudioConvert_Int16_Float.h" //here is WEA custom code to enable floating-point audio processing
 #include "AudioEffectGain.h" //here is the WEA custom audio processing module that does the gain
 
 //create audio library objects for handling the audio
 AudioControlSGTL5000     sgtl5000_1;    //controller for the Teensy Audio Board
 AudioInputI2S            i2s1;          //Stereo.  Digital audio from the Teensy Audio Board ADC.  Sends Int16.
 AudioOutputI2S           i2s2;          //Stereo.  Digital audio to the Teensy Audio Board DAC.  Expectes Int16.
-AudioFloatProcessing     floatProc1, floatProc2;    //Left and Right.  Will convert data between Int16->Float->Int16
-AudioConnection          patchCord1(i2s1, 0, floatProc1, 0);  //connect the Left input to the Left floating-point processor
-AudioConnection          patchCord2(i2s1, 1, floatProc2, 0);  //connect the Right input to the Right floating-point processor
-AudioConnection          patchCord10(floatProc1, 0, i2s2, 0); //connect the Left float processor to the Left output
-AudioConnection          patchCord11(floatProc2, 0, i2s2, 1); //connect the Right float processor to the Right output
+AudioConvertInt16ToFloat    int2Float1, int2Float2;    //Left and Right.  Will convert data Int16->Float
+AudioConvertFloatToInt16    float2Int1, float2Int2;    //Left and Right.  Will convert data Float->Int16
+AudioEffectGain_Float    gain1, gain2;  //Left and Right.  
 
-//Define the WEA custom floating-point processing objects
-AudioEffectGain_Float    gain1, gain2;         //Left and Right.  Called by AudioFloatProcessing
+//AudioConnection     patchCord100(i2s1, 0, i2s2, 0);
+//AudioConnection     patchCord101(i2s1, 1, i2s2, 1);
+
+AudioConnection          patchCord1(i2s1, 0, int2Float1, 0);  //connect the Left input to the Left Int->Float converter
+AudioConnection          patchCord2(i2s1, 1, int2Float2, 0);  //connect the Right input to the Right Int->Float converter
+//AudioConnection_Float    patchCord10(int2Float1, 0, float2Int1, 0);
+//AudioConnection_Float    patchCord11(int2Float2, 0, float2Int2, 0);
+AudioConnection_Float    patchCord10(int2Float1, 0, gain1, 0);
+AudioConnection_Float    patchCord11(int2Float2, 0, gain2, 0);
+AudioConnection_Float    patchCord12(gain1, 0, float2Int1, 0);
+AudioConnection_Float    patchCord13(gain2, 0, float2Int2, 0);
+AudioConnection          patchCord20(float2Int1, 0, i2s2, 0); //connect the Left float processor to the Left output
+AudioConnection          patchCord21(float2Int2, 0, i2s2, 1); //connect the Right float processor to the Right output
+
 
 // which input on the audio shield will be used?
 const int myInput = AUDIO_INPUT_LINEIN;
@@ -52,7 +62,8 @@ void setup() {
 
   // Audio connections require memory, and the record queue
   // uses this memory to buffer incoming audio.
-  AudioMemory(60);
+  AudioMemory(20);
+  AudioMemory_Float(20);
 
   // Enable the audio shield, select input, and enable output
   sgtl5000_1.enable();
@@ -64,9 +75,6 @@ void setup() {
   // setup other features
   pinMode(POT_PIN, INPUT); //set the potentiometer's input pin as an INPUT
 
-  //configure the floating point processing
-  floatProc1.addProcessing(&gain1);
-  floatProc2.addProcessing(&gain2);
 }
 
 

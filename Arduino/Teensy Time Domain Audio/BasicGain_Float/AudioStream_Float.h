@@ -40,25 +40,26 @@ class AudioConnection_Float
 
 #define AudioMemory_Float(num) ({ \
   static audio_float_block_t data[num]; \
-  AudioStream_Float::initialize_memory(data, num); \
+  AudioStream_Float::initialize_memory_float(data, num); \
 })
 
 class AudioStream_Float : public AudioStream {
   public:
-    AudioStream_Float(unsigned char ninput_float, audio_float_block_t **iqueue) : AudioStream(1, inputQueue), 
+    AudioStream_Float(unsigned char ninput_float, audio_float_block_t **iqueue) : AudioStream(1, inputQueueArray_int), 
         num_inputs_float(ninput_float), inputQueue_float(iqueue) {
-      active = false;
+      //active_float = false;
       destination_list_float = NULL;
       for (int i=0; i < num_inputs; i++) {
         inputQueue_float[i] = NULL;
       }
     };
     static void initialize_memory_float(audio_float_block_t *data, unsigned int num);
-    virtual void update(audio_float_block_t *) = 0; 
+    //virtual void update(audio_float_block_t *) = 0; 
     static uint8_t float_memory_used;
     static uint8_t float_memory_used_max;
+    
   protected:
-    bool active_float;
+    //bool active_float;
     unsigned char num_inputs_float;
     static audio_float_block_t * allocate_float(void);
     static void release(audio_float_block_t * block);
@@ -69,7 +70,8 @@ class AudioStream_Float : public AudioStream {
   private:
     AudioConnection_Float *destination_list_float;
     audio_float_block_t **inputQueue_float;
-    audio_block_t **inputQueue;
+    virtual void update(void) = 0;
+    audio_block_t *inputQueueArray_int[1];
     static audio_float_block_t *memory_pool_float;
     static uint32_t memory_pool_float_available_mask[6];
 };
@@ -103,9 +105,7 @@ void AudioStream_Float::initialize_memory_float(audio_float_block_t *data, unsig
   }
   __enable_irq();
 
-}
-
-
+} // end initialize_memory
 
 // Allocate 1 audio data block.  If successful
 // the caller is the only owner of this new block
@@ -227,8 +227,8 @@ void AudioConnection_Float::connect(void) {
     while (p->next_dest) p = p->next_dest;
     p->next_dest = this;
   }
-  src.active_float = true;
-  dst.active_float = true;
+  src.active = true;
+  dst.active = true;
   __enable_irq();
 }
 
