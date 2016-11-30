@@ -145,7 +145,7 @@ float micBiasValue_V = targetMicBiasValue_V;
 void setup() {
   // Start the serial debugging
   Serial.begin(115200);
-  Serial1.begin(9600); //2*115200 for BT Classic, 9600 for adafruit bluefruit BLE
+  Serial1.begin(115200); //115200 BT Classic on Breadboard #2.  2*115200 for BT Classic on BB#1, 9600 for adafruit bluefruit BLE
   delay(500);
   Serial.println("USB: Teensy Aduio: GainOnly");
   Serial1.println("BT: Teensy Aduio: GainOnly");
