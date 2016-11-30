@@ -1,3 +1,7 @@
+# jEdit and Matlab temporary files
+*.*~
+*.asv
+
 #kinetis temperorary files
 *.o
 *.d
