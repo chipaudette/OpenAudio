@@ -19,6 +19,7 @@
 #include <SerialFlash.h>
 
 #include <OpenAudio_ArduinoLibrary.h> //for AudioConvert_I16toF32, AudioConvert_F32toI16, and AudioEffectGain_F32
+#include "AudioEffectCompressor_F32.h"
 
 //create audio library objects for handling the audio
 AudioControlSGTL5000    sgtl5000_1;    //controller for the Teensy Audio Board
@@ -26,7 +27,8 @@ AudioInputI2S           i2s_in;          //Digital audio *from* the Teensy Audio
 AudioOutputI2S          i2s_out;          //Digital audio *to* the Teensy Audio Board DAC.  Expects Int16.  Stereo
 AudioConvert_I16toF32   int2Float1, int2Float2;    //Converts Int16 to Float.  See class in AudioStream_F32.h
 AudioConvert_F32toI16   float2Int1, float2Int2;    //Converts Float to Int16.  See class in AudioStream_F32.h
-AudioEffectGain_F32     gain1, gain2;  //Applies digital gain to audio data.  Expected Float data.  
+//AudioEffectGain_F32     gain1, gain2;  //Applies digital gain to audio data.  Expected Float data.  
+AudioEffectCompressor_F32 gain1, gain2;
 
 //Make all of the audio connections
 AudioConnection         patchCord1(i2s_in, 0, int2Float1, 0);   //connect the Left input to the Left Int->Float converter
@@ -49,7 +51,7 @@ const int myInput = AUDIO_INPUT_LINEIN;
 void setup() {
   Serial.begin(115200);   //open the USB serial link to enable debugging messages
   delay(500);             //give the computer's USB serial system a moment to catch up.
-  Serial.println("Teensy Hearing Aid: BasicGain_Float..."); //identify myself over the USB serial
+  Serial.println("Teensy Hearing Aid: BasicCompressor_Float..."); //identify myself over the USB serial
 
   // Audio connections require memory, and the record queue
   // uses this memory to buffer incoming audio.
@@ -93,9 +95,9 @@ void loop() {
 
     //if the gain is different than before, set the new gain value
     if (abs(gain_dB - prev_gain_dB) > 1.0) { //is it different than before
-      gain1.setGain_dB(gain_dB);  //set the gain of the Left-channel gain processor
-      gain2.setGain_dB(gain_dB);  //set the gain of the Right-channel gain processor
-      Serial.print("Digital Gain dB = "); Serial.println(gain_dB); //print text to Serial port for debugging
+      gain1.setPreGain_dB(gain_dB);  //set the gain of the Left-channel gain processor
+      gain2.setPreGain_dB(gain_dB);  //set the gain of the Right-channel gain processor
+      Serial.print("Digital Pre-Gain dB = "); Serial.println(gain_dB); //print text to Serial port for debugging
       prev_gain_dB = gain_dB;  //we will use this value the next time around
     }
  
