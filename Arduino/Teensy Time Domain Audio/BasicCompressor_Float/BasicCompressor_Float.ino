@@ -1,7 +1,7 @@
 /*
    BasicCompressor
 
-   Created: Chip Audette, dec 2016
+   Created: Chip Audette, Dec 2016
    Purpose: Process audio by applying a single-band compressor
             Demonstrates audio processing using floating point data type.
 
@@ -63,7 +63,20 @@ void setup() {
   sgtl5000.volume(0.8);                //volume can be 0.0 to 1.0.  0.5 seems to be the usual default.
   sgtl5000.lineInLevel(10,10);         //level can be 0 to 15.  5 is the Teensy Audio Library's default
   sgtl5000.adcHighPassFilterDisable(); //reduces noise.  https://forum.pjrc.com/threads/27215-24-bit-audio-boards?p=78831&viewfull=1#post78831
-  sgtl5000.micBiasEnable(3.0);         //set the mic bias voltage...only in AudioControlSGTL5000_Extended
+  sgtl5000.micBiasEnable(3.0);         //enable the mic bias voltage...only in AudioControlSGTL5000_Extended
+
+  //configure the compressor...note that preGain is set by the potentiometer in the main loop()
+  boolean use_HP_filter = true; //enable the software HP filter to get rid of DC?
+  comp1.enableHPFilter(use_HP_filter); comp2.enableHPFilter(use_HP_filter);
+  float knee_dBFS = -15;  //when does the compressioin kick in?
+  comp1.setThresh_dBFS(knee_dBFS); comp2.setThresh_dBFS(knee_dBFS);
+  float comp_ratio = 5;  //5:1 compression ratio?  Or something else?
+  comp1.setCompressionRatio(comp_ratio);  comp2.setCompressionRatio(comp_ratio);  
+  float attack_sec = 0.005; //attack time
+  comp1.setAttack_sec(attack_sec); comp2.setAttack_sec(attack_sec);
+  float release_sec = 0.3; //release time
+  comp1.setRelease_sec(release_sec); comp2.setRelease_sec(release_sec);
+
 
   // setup any other other features
   pinMode(POT_PIN, INPUT); //set the potentiometer's input pin as an INPUT
