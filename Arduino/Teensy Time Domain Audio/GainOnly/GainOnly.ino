@@ -18,6 +18,8 @@
 #include <SerialFlash.h>
 #include <math.h>
 
+#include "AudioControlSGTL5000_Extended.h"
+
 class AudioFilterGain : public AudioStream
 {
   public:
@@ -89,22 +91,6 @@ class PeakHold {
     int ind_next_data = 0;
 };
 
-class AudioControlSGTL5000_Extended : public AudioControlSGTL5000
-{
-  public:
-    AudioControlSGTL5000_Extended(void) {};
-    bool micBiasEnable(void) {
-      return micBiasEnable(3.0);
-    }
-    bool micBiasEnable(float volt) {
-      uint16_t bias_resistor_setting = 1 << 8;  //2kOhm
-      uint16_t  bias_voltage_setting = ((uint16_t)((volt - 1.25) / 0.250 + 0.5)) << 4;
-      return write(0x002A, bias_voltage_setting | bias_resistor_setting);
-    }
-    bool micBiasDisable(void) {
-      return write(0x002A, 0x00);
-    }
-};
 
 
 // GUItool: begin automatically generated code
