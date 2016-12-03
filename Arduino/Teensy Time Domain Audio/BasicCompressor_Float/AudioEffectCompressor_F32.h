@@ -31,7 +31,7 @@ class AudioEffectCompressor_F32 : public AudioStream_F32
       audio_block = AudioStream_F32::receiveWritable_f32();
       if (!audio_block) return;
 
-      //apply the high-pass filter
+      //apply a high-pass filter to get rid of the DC offset
       if (use_HP_prefilter) arm_biquad_cascade_df1_f32(&hp_filt_struct, audio_block->data, audio_block->data, audio_block->length);
 
       //apply the pre-gain...a negative gain value will disable
@@ -42,7 +42,7 @@ class AudioEffectCompressor_F32 : public AudioStream_F32
       calcGain(audio_block, gain_block); //returns through gain_block
 
       //apply the gain...store it back into audio_block
-      arm_mult_f32 (audio_block->data, gain_block->data, audio_block->data, audio_block->length);
+      arm_mult_f32(audio_block->data, gain_block->data, audio_block->data, audio_block->length);
 
       ///transmit the block and release memory
       AudioStream_F32::transmit(audio_block);
@@ -57,7 +57,7 @@ class AudioEffectCompressor_F32 : public AudioStream_F32
       float attack_const = exp(-1.0 / (attack_sec * fs_Hz));
       float release_const = exp(-1.0 / (release_sec * fs_Hz));
       float comp_ratio_const = (1.0 / comp_ratio - 1.0);
-      float thresh_pow_FS_wCR = pow(thresh_pow_FS, 1.0 - 1.0 / comp_ratio);
+      float thresh_pow_FS_wCR = pow(thresh_pow_FS, comp_ratio_const);
 
       //calculate the signal power...ie, square the signal:   wav_pow = wav.^2
       audio_block_f32_t *wav_pow_block = AudioStream_F32::allocate_f32();
@@ -67,34 +67,29 @@ class AudioEffectCompressor_F32 : public AudioStream_F32
       float gain_pow = 1.0;
       for (int i = 0; i < wav_pow_block->length; i++) {
 
-        //compute target gain
-        if (wav_pow_block->data[i] < thresh_pow_FS) {
-          //default gain is 1.0
-          gain_pow = 1.0;
-        } else {
+        //compute target gain (well, we're actualy calculating gain^2
+        gain_pow = 1.0;           //default gain is 1.0
+        if (wav_pow_block->data[i] > thresh_pow_FS) { //we're above the threshold, so compress!
           gain_pow = thresh_pow_FS_wCR / pow(wav_pow_block->data[i], comp_ratio_const);
         }
 
-        //smooth the gain in time
-        if (gain_pow < prev_gain_pow) {
-          //attack phase
-          gain_pow = prev_gain_pow * attack_const + gain_pow * (1.0 - attack_const);
-        } else {
-          //release phase
-          gain_pow = prev_gain_pow * release_const + gain_pow * (1.0 - release_const);
-        }
+        //are we in the attack mode or release mode?
+        float c = attack_const; //attack phase
+        if (gain_pow > prev_gain_pow) c = release_const;  //release_phase
 
-        //compute gain from gain^2
-        arm_sqrt_f32(gain_pow, &(gain_block->data[i]));
+        //smooth the gain using the attack or release constants
+        gain_pow = c*prev_gain_pow + (1.0-c)*gain_pow;
 
-        //save value for the next loop
+        //take he sqrt of gain^2 so that we simply get the gain
+        arm_sqrt_f32(gain_pow, &(gain_block->data[i])); //use DSP acceleration!
+
+        //save value for the next time through this loop
         prev_gain_pow = gain_pow;
       }
 
       //free up the memory and return
       release(wav_pow_block);
-      return;
-
+      return;  //the output here is gain_block
     }
 
     //methods to set parameters of this module
