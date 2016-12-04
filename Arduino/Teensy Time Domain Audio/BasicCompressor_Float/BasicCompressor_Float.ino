@@ -68,13 +68,13 @@ void setup() {
   //configure the compressor...note that preGain is set by the potentiometer in the main loop()
   boolean use_HP_filter = true; //enable the software HP filter to get rid of DC?
   comp1.enableHPFilter(use_HP_filter); comp2.enableHPFilter(use_HP_filter);
-  float knee_dBFS = -15;  //when does the compressioin kick in?
+  float knee_dBFS = -40;  //when does the compressioin kick in?
   comp1.setThresh_dBFS(knee_dBFS); comp2.setThresh_dBFS(knee_dBFS);
   float comp_ratio = 5;  //5:1 compression ratio?  Or something else?
   comp1.setCompressionRatio(comp_ratio);  comp2.setCompressionRatio(comp_ratio);  
-  float attack_sec = 0.005; //attack time
+  float attack_sec = 1.0; //attack time
   comp1.setAttack_sec(attack_sec); comp2.setAttack_sec(attack_sec);
-  float release_sec = 0.3; //release time
+  float release_sec = 2.0; //release time
   comp1.setRelease_sec(release_sec); comp2.setRelease_sec(release_sec);
 
 
@@ -89,6 +89,7 @@ unsigned long updatePeriod_millis = 100; //how many milliseconds between updatin
 unsigned long lastUpdate_millis = 0;
 unsigned long curTime_millis = 0;
 int prev_gain_dB = 0;
+unsigned long lastMemUpdate_millis=0;
 void loop() {
   //choose to sleep ("wait for interrupt") instead of spinning our wheels doing nothing but consuming power
   asm(" WFI");  //ARM-specific.  Will wake on next interrupt.  The audio library issues tons of interrupts, so we wake up often.
@@ -116,6 +117,42 @@ void loop() {
  
     lastUpdate_millis = curTime_millis; //we will use this value the next time around.
   } // end if
+
+   if ((curTime_millis - lastMemUpdate_millis) > 2000) {  // print a summary of the current & maximum usage
+    Serial.print("CPU: Usage, Max: ");
+    Serial.print("int2Float1=");
+    Serial.print(int2Float1.processorUsage());
+    Serial.print(", ");
+    Serial.print(int2Float1.processorUsageMax());
+    Serial.print("  ");
+    Serial.print("comp1=");
+    Serial.print(comp1.processorUsage());
+    Serial.print(", ");
+    Serial.print(comp1.processorUsageMax());
+    Serial.print("  ");
+    Serial.print("float2Int1=");
+    Serial.print(float2Int1.processorUsage());
+    Serial.print(", ");
+    Serial.print(float2Int1.processorUsageMax());
+    Serial.print("  ");
+    Serial.print("all=");
+    Serial.print(AudioProcessorUsage());
+    Serial.print(", ");
+    Serial.print(AudioProcessorUsageMax());
+    Serial.print("    ");
+    Serial.print("Int16 Memory: ");
+    Serial.print(AudioMemoryUsage());
+    Serial.print(", ");
+    Serial.print(AudioMemoryUsageMax());
+    Serial.print("    ");
+    Serial.print("Float Memory: ");
+    Serial.print(AudioMemoryUsage_F32());
+    Serial.print(", ");
+    Serial.print(AudioMemoryUsageMax_F32());    
+    Serial.println();
+
+    lastMemUpdate_millis = curTime_millis; //we will use this value the next time around.
+  }
 
 } //end loop();
 

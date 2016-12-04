@@ -18,7 +18,7 @@ class AudioEffectCompressor_F32 : public AudioStream_F32
   public:
     //constructor
     AudioEffectCompressor_F32(void) : AudioStream_F32(1, inputQueueArray_f32) {
-      setThresh_dBFS(-30.0);
+      setThresh_dBFS(-20.0);     //default to this threshold
       //updateAttackConstant();  updateReleaseConstant();
       setHPFilterCoeff();
       resetStates();
@@ -56,7 +56,7 @@ class AudioEffectCompressor_F32 : public AudioStream_F32
       float fs_Hz = wav_block->fs_Hz;
       float attack_const = exp(-1.0 / (attack_sec * fs_Hz));
       float release_const = exp(-1.0 / (release_sec * fs_Hz));
-      float comp_ratio_const = (1.0 / comp_ratio - 1.0);
+      float comp_ratio_const = 1.0-(1.0 / comp_ratio);
       float thresh_pow_FS_wCR = pow(thresh_pow_FS, comp_ratio_const);
 
       //calculate the signal power...ie, square the signal:   wav_pow = wav.^2
@@ -68,9 +68,10 @@ class AudioEffectCompressor_F32 : public AudioStream_F32
       for (int i = 0; i < wav_pow_block->length; i++) {
 
         //compute target gain (well, we're actualy calculating gain^2
-        gain_pow = 1.0;           //default gain is 1.0
-        if (wav_pow_block->data[i] > thresh_pow_FS) { //we're above the threshold, so compress!
-          gain_pow = thresh_pow_FS_wCR / pow(wav_pow_block->data[i], comp_ratio_const);
+        //gain_pow = 1.0;
+        gain_pow = thresh_pow_FS_wCR / powf(wav_pow_block->data[i], comp_ratio_const);
+        if (wav_pow_block->data[i] < thresh_pow_FS) { //we're above the threshold, so compress!
+          gain_pow = 1.0;           //default gain is 1.0
         }
 
         //are we in the attack mode or release mode?
