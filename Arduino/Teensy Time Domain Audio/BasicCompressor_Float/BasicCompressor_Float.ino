@@ -54,7 +54,7 @@ void setup() {
 
   // Audio connections require memory, and the record queue
   // uses this memory to buffer incoming audio.
-  AudioMemory(10);  //allocate Int16 audio data blocks
+  AudioMemory(12);  //allocate Int16 audio data blocks
   AudioMemory_F32(10); //allocate Float32 audio data blocks
 
   // Enable the audio shield, select input, and enable output
@@ -67,16 +67,19 @@ void setup() {
 
   //configure the compressor...note that preGain is set by the potentiometer in the main loop()
   boolean use_HP_filter = true; //enable the software HP filter to get rid of DC?
-  comp1.enableHPFilter(use_HP_filter); comp2.enableHPFilter(use_HP_filter);
-  float knee_dBFS = -40;  //when does the compressioin kick in?
-  comp1.setThresh_dBFS(knee_dBFS); comp2.setThresh_dBFS(knee_dBFS);
-  float comp_ratio = 5;  //5:1 compression ratio?  Or something else?
-  comp1.setCompressionRatio(comp_ratio);  comp2.setCompressionRatio(comp_ratio);  
-  float attack_sec = 1.0; //attack time
-  comp1.setAttack_sec(attack_sec); comp2.setAttack_sec(attack_sec);
-  float release_sec = 2.0; //release time
-  comp1.setRelease_sec(release_sec); comp2.setRelease_sec(release_sec);
-
+  float knee_dBFS, comp_ratio, attack_sec, release_sec;
+  if (false) {
+    Serial.println("Configuring Compressor for fast response for use as a limitter.");
+    knee_dBFS = -15.0; comp_ratio = 8.0;  attack_sec = 0.005;  release_sec = 0.200;    
+  } else {
+    Serial.println("Configuring Compressor for slow response more like an automatic volume control.");
+    knee_dBFS = -50.0; comp_ratio = 5.0;  attack_sec = 1.0;  release_sec = 2.0;
+  }
+  comp1.setThresh_dBFS(knee_dBFS);       comp2.setThresh_dBFS(knee_dBFS);
+  comp1.setCompressionRatio(comp_ratio); comp2.setCompressionRatio(comp_ratio);  
+  comp1.setAttack_sec(attack_sec);       comp2.setAttack_sec(attack_sec);
+  comp1.enableHPFilter(use_HP_filter);   comp2.enableHPFilter(use_HP_filter);
+  comp1.setRelease_sec(release_sec);     comp2.setRelease_sec(release_sec);
 
   // setup any other other features
   pinMode(POT_PIN, INPUT); //set the potentiometer's input pin as an INPUT
@@ -100,7 +103,7 @@ void loop() {
   if ((curTime_millis - lastUpdate_millis) > updatePeriod_millis) { //is it time to update the user interface?
     
     //read potentiometer
-    float val = float(analogRead(POT_PIN)) / 1024.0; //0.0 to 1.0
+    float32_t val = float(analogRead(POT_PIN)) / 1024.0f; //0.0 to 1.0
     val = 0.1*(float)((int)(10.0*val + 0.5));  //quantize so that it doesn't chatter
         
     //compute desired digital gain
@@ -111,48 +114,41 @@ void loop() {
     if (abs(gain_dB - prev_gain_dB) > 1.0) { //is it different than before
       comp1.setPreGain_dB(gain_dB);  //set the gain of the Left-channel gain processor
       comp2.setPreGain_dB(gain_dB);  //set the gain of the Right-channel gain processor
-      Serial.print("Digital Pre-Gain dB = "); Serial.println(gain_dB); //print text to Serial port for debugging
+      Serial.print("Setting Digital Pre-Gain dB = "); Serial.println(gain_dB); //print text to Serial port for debugging
       prev_gain_dB = gain_dB;  //we will use this value the next time around
     }
  
     lastUpdate_millis = curTime_millis; //we will use this value the next time around.
   } // end if
 
-   if ((curTime_millis - lastMemUpdate_millis) > 2000) {  // print a summary of the current & maximum usage
-    Serial.print("CPU: Usage, Max: ");
-    Serial.print("int2Float1=");
-    Serial.print(int2Float1.processorUsage());
-    Serial.print(", ");
-    Serial.print(int2Float1.processorUsageMax());
-    Serial.print("  ");
-    Serial.print("comp1=");
-    Serial.print(comp1.processorUsage());
-    Serial.print(", ");
-    Serial.print(comp1.processorUsageMax());
-    Serial.print("  ");
-    Serial.print("float2Int1=");
-    Serial.print(float2Int1.processorUsage());
-    Serial.print(", ");
-    Serial.print(float2Int1.processorUsageMax());
-    Serial.print("  ");
-    Serial.print("all=");
-    Serial.print(AudioProcessorUsage());
-    Serial.print(", ");
-    Serial.print(AudioProcessorUsageMax());
-    Serial.print("    ");
-    Serial.print("Int16 Memory: ");
-    Serial.print(AudioMemoryUsage());
-    Serial.print(", ");
-    Serial.print(AudioMemoryUsageMax());
-    Serial.print("    ");
-    Serial.print("Float Memory: ");
-    Serial.print(AudioMemoryUsage_F32());
-    Serial.print(", ");
-    Serial.print(AudioMemoryUsageMax_F32());    
-    Serial.println();
 
+  //print status information to the Serial port
+  if ((curTime_millis - lastMemUpdate_millis) > 2000) {  // print a summary of the current & maximum usage
+    //printCompressorState(&Serial);
+    printCPUandMemoryUsage(&Serial);
     lastMemUpdate_millis = curTime_millis; //we will use this value the next time around.
   }
 
 } //end loop();
+
+void printCompressorState(Stream *s) {
+    s->print("Current Compressor: Pre-Gain (dB) = ");
+    s->print(comp1.getPreGain_dB());
+    s->print(", Dynamic Gain L/R (dB) = "); 
+    s->print(comp1.getCurrentGain_dB());
+    s->print(", ");
+    s->print(comp2.getCurrentGain_dB());
+    s->println();
+};
+
+void printCPUandMemoryUsage(Stream *s) {
+    s->print("Usage/Max: ");
+    //s->print("int2Float1 CPU = "); s->print(int2Float1.processorUsage()); s->print("/"); s->print(int2Float1.processorUsageMax());s->print(", ");
+    s->print("comp1 CPU = "); s->print(comp1.processorUsage()); s->print("/"); s->print(comp1.processorUsageMax());s->print(", ");
+    //s->print("float2Int1 CPU = "); s->print(float2Int1.processorUsage()); s->print("/");  s->print(float2Int1.processorUsageMax());s->print(", ");
+    s->print("all CPU = " ); s->print(AudioProcessorUsage()); s->print("/");  s->print(AudioProcessorUsageMax());s->print(", ");
+    s->print("Int16 Mem = ");s->print(AudioMemoryUsage()); s->print("/"); s->print(AudioMemoryUsageMax());s->print(", ");
+    s->print("Float Mem = ");s->print(AudioMemoryUsage_F32());s->print("/"); s->print(AudioMemoryUsageMax_F32()); s->print(", ");
+    s->println();
+};
 
