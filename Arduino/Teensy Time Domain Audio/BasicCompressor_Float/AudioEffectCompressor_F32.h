@@ -18,7 +18,7 @@ class AudioEffectCompressor_F32 : public AudioStream_F32
   public:
     //constructor
     AudioEffectCompressor_F32(void) : AudioStream_F32(1, inputQueueArray_f32) {
-      setThresh_dBFS(-20.0);     //default to this threshold
+      setThresh_dBFS(-20.0f);     //default to this threshold
       //updateAttackConstant();  updateReleaseConstant();
       setHPFilterCoeff();
       resetStates();
@@ -35,7 +35,7 @@ class AudioEffectCompressor_F32 : public AudioStream_F32
       if (use_HP_prefilter) arm_biquad_cascade_df1_f32(&hp_filt_struct, audio_block->data, audio_block->data, audio_block->length);
 
       //apply the pre-gain...a negative gain value will disable
-      if (pre_gain > 0) arm_scale_f32(audio_block->data, pre_gain, audio_block->data, audio_block->length); //use ARM DSP for speed!
+      if (pre_gain > 0.0f) arm_scale_f32(audio_block->data, pre_gain, audio_block->data, audio_block->length); //use ARM DSP for speed!
 
       //compute the desired gain
       audio_block_f32_t *gain_block = AudioStream_F32::allocate_f32();
@@ -50,39 +50,41 @@ class AudioEffectCompressor_F32 : public AudioStream_F32
       AudioStream_F32::release(gain_block);
     }
 
-    void calcGain(audio_block_f32_t *wav_block, audio_block_f32_t *gain_block) {
+    void calcGain(audio_block_f32_t *wav_block, audio_block_f32_t *gain_block) {      
       //prepare constants...move this out of this function later
       //float thresh_pow_FS = pow(10.0,0.1*thresh_dBFS);
-      float fs_Hz = wav_block->fs_Hz;
-      float attack_const = exp(-1.0 / (attack_sec * fs_Hz));
-      float release_const = exp(-1.0 / (release_sec * fs_Hz));
-      float comp_ratio_const = 1.0-(1.0 / comp_ratio);
-      float thresh_pow_FS_wCR = pow(thresh_pow_FS, comp_ratio_const);
+      float32_t fs_Hz = wav_block->fs_Hz;
+      float32_t attack_const = expf(-1.0f / (attack_sec * fs_Hz)); //expf() is much faster than exp()
+      float32_t release_const = expf(-1.0f / (release_sec * fs_Hz)); //expf() is much faster than pow()
+      float32_t comp_ratio_const = 1.0f-(1.0f / comp_ratio);
+      float32_t thresh_pow_FS_wCR = powf(thresh_pow_FS, comp_ratio_const);  //powf() is much faster than pow()
 
       //calculate the signal power...ie, square the signal:   wav_pow = wav.^2
       audio_block_f32_t *wav_pow_block = AudioStream_F32::allocate_f32();
-      arm_mult_f32 (wav_block->data, wav_block->data, wav_pow_block->data, wav_block->length);
+      arm_mult_f32(wav_block->data, wav_block->data, wav_pow_block->data, wav_block->length);
 
       //loop over each sample
-      float gain_pow = 1.0;
+      float32_t gain_pow = 1.0f;
       for (int i = 0; i < wav_pow_block->length; i++) {
 
         //compute target gain (well, we're actualy calculating gain^2
         //gain_pow = 1.0;
         gain_pow = thresh_pow_FS_wCR / powf(wav_pow_block->data[i], comp_ratio_const);
         if (wav_pow_block->data[i] < thresh_pow_FS) { //we're above the threshold, so compress!
-          gain_pow = 1.0;           //default gain is 1.0
+          gain_pow = 1.0f;           //default gain is 1.0
         }
 
         //are we in the attack mode or release mode?
-        float c = attack_const; //attack phase
+        float32_t c = attack_const; //attack phase
         if (gain_pow > prev_gain_pow) c = release_const;  //release_phase
 
         //smooth the gain using the attack or release constants
-        gain_pow = c*prev_gain_pow + (1.0-c)*gain_pow;
+        gain_pow = c*prev_gain_pow + (1.0f-c)*gain_pow;
 
         //take he sqrt of gain^2 so that we simply get the gain
-        arm_sqrt_f32(gain_pow, &(gain_block->data[i])); //use DSP acceleration!
+        //arm_sqrt_f32(gain_pow, &(gain_block->data[i])); //should use the DSP acceleration, if the right CMSIS library is used
+        //gain_block->data[i] = __builtin_sqrtf(gain_pow); //seems to give the same speed as the arm_sqrt_f32
+        gain_block->data[i] = sqrtf(gain_pow);  //also give the same speed and is more portable
 
         //save value for the next time through this loop
         prev_gain_pow = gain_pow;
@@ -95,7 +97,7 @@ class AudioEffectCompressor_F32 : public AudioStream_F32
 
     //methods to set parameters of this module
     void resetStates(void) {
-      prev_gain_pow = 1.0;
+      prev_gain_pow = 1.0f;
 
       //initialize the HP filter (it also resets the filter states)
       arm_biquad_cascade_df1_init_f32(&hp_filt_struct, hp_nstages, hp_coeff, hp_state);
@@ -110,16 +112,17 @@ class AudioEffectCompressor_F32 : public AudioStream_F32
     void enableHPFilter(boolean flag) { use_HP_prefilter = flag; };
 
     //methods to return information about this module
-    float getPreGain_dB(void) { return 20 * .0 * log10(pre_gain);  }
-    float getAttack_sec(void) {  return attack_sec; }
-    float getRelease_sec(void) {  return release_sec; }
-    float getThresh_dBFS(void) { return 10.0 * log10(thresh_pow_FS); }
-    float getCompressionRatio(void) { return comp_ratio; }
+    float32_t getPreGain_dB(void) { return 20.0 * log10(pre_gain);  }
+    float32_t getAttack_sec(void) {  return attack_sec; }
+    float32_t getRelease_sec(void) {  return release_sec; }
+    float32_t getThresh_dBFS(void) { return 10.0 * log10(thresh_pow_FS); }
+    float32_t getCompressionRatio(void) { return comp_ratio; }
+    float32_t getCurrentGain_dB(void) { return 10.0 * log10(prev_gain_pow); }
 
   private:
     //state-related variables
     audio_block_f32_t *inputQueueArray_f32[1]; //memory pointer for the input to this module
-    float prev_gain_pow = 1.0; //last gain^2 used
+    float32_t prev_gain_pow = 1.0; //last gain^2 used
 
     //HP filter state-related variables
     arm_biquad_casd_df1_inst_f32 hp_filt_struct;
@@ -137,12 +140,12 @@ class AudioEffectCompressor_F32 : public AudioStream_F32
     
 
     //settings
-    float attack_sec = 0.005; //attack time
-    float release_sec = 0.100; //release time
+    float32_t attack_sec = 0.005f; //attack time
+    float32_t release_sec = 0.100f; //release time
     //float attack_const[2], release_const[];  //these will be tied to attack_sec and release_sec
-    float thresh_pow_FS = 0.01;  //threshold for compression, relative to digital full scale
-    float comp_ratio = 5.0;  //compression ratio
-    float pre_gain = -1.0;  //gain to apply before the compression.  negative value disables
+    float32_t thresh_pow_FS = 0.01f;  //threshold for compression, relative to digital full scale
+    float32_t comp_ratio = 5.0;  //compression ratio
+    float32_t pre_gain = -1.0;  //gain to apply before the compression.  negative value disables
     boolean use_HP_prefilter = false;
     
     //static float calcUpdateConstant(float tau_sec) {
