@@ -34,7 +34,7 @@ Switching to the Teensy
 
 * **Hardware**: To get started, you should buy a [Teensy](https://www.pjrc.com/teensy/).  I recommend the Teensy 3.6" https://www.pjrc.com/store/teensy36.html as it is the fastest, though it will be damaged if you mistakenly apply 5V signals to its pins.  If you desire 5V tolerance, you should get the Teensy 3.5: https://www.pjrc.com/store/teensy35.html.
 
-* **Software**: To program the Teensy from the Arduino IDE, you need to download and install the Teensyduino add-on. The download and installation instructions are here: https://www.pjrc.com/teensy/td_download.html.  Note that the installation routine will offer to install many (dozens) additional libraries for you.  It's fine to install them all.  Or, you can choose to install just these libraries: Audio, FreqCount, FreqMeasure, i2c_t3, SerialFlash, Snooze, and SPIFlash (did I miss any?).
+* **Software**: To program the Teensy from the Arduino IDE, you need to download and install the Teensyduino add-on. The download and installation instructions are here: https://www.pjrc.com/teensy/td_download.html.  Note that the installation routine will offer to install many (dozens) additional libraries for you.  It's fine to install them all.  Or, you can choose to install just these libraries: Audio, Bounce, FreqCount, FreqMeasure, i2c_t3, SerialFlash, Snooze, and SPIFlash (did I miss any?).
 
 * **Quick Start**:  If you simply plug your Teensy into your computer, it's light should blink.  That's a good start.  But let's try reprogramming it to blink at a different rate.  So, after getting your Arduino IDE running, and after getting the Teensyduino software installed, let's reprogram the Teensy.  (Note, if you're BTNRH, you received a Teensy where the LED had been removed...so this won't work!  Skip to the next section...)
 
@@ -47,5 +47,11 @@ Switching to the Teensy
 Teensy Tutorials
 -----------------
 
-After you get the Teensy's light to blink, you're ready to try some additional Teensy tutorials, so that you see a few more of the small differences between the Teensy and an Arduino...[more coming]
+After you get the Teensy's light to blink (or if you got a board with no LED), you're ready to try some additional Teensy tutorials, so that you see a few more of the small differences between the Teensy and an Arduino.  Under the "Examples" / "Teensy" menu, I suggest the follwoing examples:
+
+* **HellowSerialMonitor**: Upload the code to the Teensy, start the Arduino Serial Monitor, and see the "Hellow World" text.  Note that you'll have to change the Serial baud rate in the Serial Monitor to match the code.  The code is configured to 38400.  Did you see "Hello World"?  If you're successful, try changing the text.  Then try adding new messages.  Pretty easy.
+
+If you have also have Teensy Audio Board (BTNRH, the Audio Board is part of the unit that I sent), you can try some of the Audio examples to be sure that your hardware works.  Under the "Examples" / "Audio" menu, I suggest:
+
+* **HardwareTesting/ToneSweep**:  Upload the code to the Teensy, plug in your headphones, but don't put them on your ears.  The tonesweep is loud!!!  Try changing the volume to make it quieter (change the line `audioShield.volume(0.5);` to a smaller number).  Then, try changing the frequency range of the sweep (`t_lox` and `t_hix`) or the duration of the sweep (`t_timex`).  After the sweep stops, try pressing the button on the Teensy.  It resets the Teensy, which will restart the sweep (after 3 seconds of dead time).
 
