@@ -36,15 +36,16 @@ Switching to the Teensy
 
 * **Software**: To program the Teensy from the Arduino IDE, you need to download and install the Teensyduino add-on. The download and installation instructions are here: https://www.pjrc.com/teensy/td_download.html.  Note that the installation routine will offer to install many (dozens) additional libraries for you.  It's fine to install them all.  Or, you can choose to install just these libraries: Audio, FreqCount, FreqMeasure, i2c_t3, SerialFlash, Snooze, and SPIFlash (did I miss any?).
 
-* **Quick Start**:  Let's get the "Blink" program running on the Teensy.  So, after getting your Arduino IDE running (per the "Arduino" section above), and after getting the Teensyduino software installed, you're ready to program your Teensy.
+* **Quick Start**:  If you simply plug your Teensy into your computer, it's light should blink.  That's a good start.  But let's try reprogramming it to blink at a different rate.  So, after getting your Arduino IDE running, and after getting the Teensyduino software installed, let's reprogram the Teensy.  (Note, if you're BTNRH, you received a Teensy where the LED had been removed...so this won't work!  Skip to the next section...)
 
-1. Plug your Teensy into your computer
-2. Start the Arduino IDE
-3. Under the "Tools" menu, under the "Board" sub-menu, select your particular Teensy model (Teensy 3.6?)
-4. Under the "File" menu, under the "Examples" sub-menu, under the "Teensy" sub-sub-menu, choose "Tutorial1", then "Blink".
+1. Plug your Teensy into your computer and start the Arduino IDE
+2. Under the "Tools" menu, under the "Board" sub-menu, select your particular Teensy model (Teensy 3.6?)
+3. Under the "File" menu, under the "Examples" sub-menu, under the "Teensy" sub-sub-menu, choose "Tutorial1", then "Blink".
+4. Change the delay times from 1000 to 500.  This should make the Teensy blink twice as fast.
 5. Press the Arduino IDE's "Upload" button.  It will compile the code and send it to the Teensy.  The light should blink!  Now change the `delay()` times to change the blink rate and upload again.  Success!
 
 Teensy Tutorials
 -----------------
-More to come...
+
+After you get the Teensy's light to blink, you're ready to try some additional Teensy tutorials, so that you see a few more of the small differences between the Teensy and an Arduino...[more coming]
 
