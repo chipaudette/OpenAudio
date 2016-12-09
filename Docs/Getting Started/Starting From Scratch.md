@@ -29,7 +29,20 @@ Once you have completed these three tutorials using the basic Arduino Uno, you'l
 
 Switching to the Teensy
 -----------------
-More to come...
+
+"Teensy" is a family of microcontroller boards, like Arduino are a family of microcontroller boards.  The Teensy 3 line of boards is much faster (and smaller) than the Arduino boards, which makes them useful for computationally-heavy tasks like processing audio.  A key feature of the Teensy boards is that they can be programmed using the Arduino IDE software, even though they are not "Arduino" boards.  That's great!
+
+* **Hardware**: To get started, you should buy a [Teensy](https://www.pjrc.com/teensy/).  I recommend the Teensy 3.6" https://www.pjrc.com/store/teensy36.html as it is the fastest, though it will be damaged if you mistakenly apply 5V signals to its pins.  If you desire 5V tolerance, you should get the Teensy 3.5: https://www.pjrc.com/store/teensy35.html.
+
+* **Software**: To program the Teensy from the Arduino IDE, you need to download and install the Teensyduino add-on. The download and installation instructions are here: https://www.pjrc.com/teensy/td_download.html.  Note that the installation routine will offer to install many (dozens) additional libraries for you.  It's fine to install them all.  Or, you can choose to install just these libraries: Audio, FreqCount, FreqMeasure, i2c_t3, SerialFlash, Snooze, and SPIFlash (did I miss any?).
+
+* **Quick Start**:  Let's get the "Blink" program running on the Teensy.  So, after getting your Arduino IDE running (per the "Arduino" section above), and after getting the Teensyduino software installed, you're ready to program your Teensy.
+
+1. Plug your Teensy into your computer
+2. Start the Arduino IDE
+3. Under the "Tools" menu, under the "Board" sub-menu, select your particular Teensy model (Teensy 3.6?)
+4. Under the "File" menu, under the "Examples" sub-menu, under the "Teensy" sub-sub-menu, choose "Tutorial1", then "Blink".
+5. Press the Arduino IDE's "Upload" button.  It will compile the code and send it to the Teensy.  The light should blink!  Now change the `delay()` times to change the blink rate and upload again.  Success!
 
 Teensy Tutorials
 -----------------
