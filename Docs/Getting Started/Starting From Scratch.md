@@ -32,7 +32,7 @@ Switching to the Teensy
 
 "Teensy" is a family of microcontroller boards, like Arduino are a family of microcontroller boards.  The Teensy 3 line of boards is much faster (and smaller) than the Arduino boards, which makes them useful for computationally-heavy tasks like processing audio.  A key feature of the Teensy boards is that they can be programmed using the Arduino IDE software, even though they are not "Arduino" boards.  That's great!
 
-* **Hardware**: To get started, you should buy a [Teensy](https://www.pjrc.com/teensy/).  I recommend the Teensy 3.6. https://www.pjrc.com/store/teensy36.html as it is the fastest, though it will be damaged if you mistakenly apply 5V signals to its pins.  If you desire 5V tolerance, you should get the Teensy 3.5: https://www.pjrc.com/store/teensy35.html.
+* **Hardware**: To get started, you should buy a [Teensy](https://www.pjrc.com/teensy/).  I recommend the [Teensy 3.6]( https://www.pjrc.com/store/teensy36.html) as it is the fastest, though it will be damaged if you mistakenly apply 5V signals to its pins.  If you desire 5V tolerance, you should get the [Teensy 3.5] (https://www.pjrc.com/store/teensy35.html).
 
 * **Software**: To program the Teensy from the Arduino IDE, you need to download and install the Teensyduino add-on. The download and installation instructions are here: https://www.pjrc.com/teensy/td_download.html.  Note that the installation routine will offer to install many (dozens) additional libraries for you.  It's fine to install them all.  Or, you can choose to install just these libraries: Audio, Bounce, FreqCount, FreqMeasure, i2c_t3, SerialFlash, Snooze, and SPIFlash (did I miss any?).
 
