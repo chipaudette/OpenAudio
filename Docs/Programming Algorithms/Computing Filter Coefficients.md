@@ -38,9 +38,9 @@ import numpy as np
 from scipy import signal
 
 # setup the filter
-fs_Hz = 44100.0    %sample rate
-cutoff_Hz = 4000   %cutoff frequency
-N_taps = 32        %filter order
+fs_Hz = 44100.0    # sample rate
+cutoff_Hz = 4000   # cutoff frequency
+N_taps = 32        # filter order
 b, a = signal.firwin(N_taps, cutoff_Hz/(fs_Hz/2.0))
 
 # call the filter
@@ -75,10 +75,10 @@ import numpy as np
 from scipy import signal
 
 # setup the filter
-fs_Hz = 44100.0    %sample rate
-cutoff_Hz = 4000   %cutoff frequency
-N_iir = 2          %filter order
-ftype = 'lowpass'; %pick low-pass filter
+fs_Hz = 44100.0    # sample rate
+cutoff_Hz = 4000   # cutoff frequency
+N_iir = 2          # filter order
+ftype = 'lowpass'; # pick low-pass filter
 b, a = signal.butter(N_iir, cutoff_Hz/(fs_Hz/2.0),ftype)
 
 # call the filter
