@@ -1,7 +1,7 @@
 Getting Started with Audio
 ===========================
 
-Assuming that you are familiar with Arduino and Teensy (if not, see this page), you're ready to get started with the audio processing using the Teensy Audio Library along with my OpenAudio extensions.
+Assuming that you are familiar with Arduino and Teensy (if not, see [this page](https://github.com/chipaudette/OpenAudio/blob/master/Docs/Getting%20Started/Starting%20From%20Scratch.md)), you're ready to get started with the audio processing using the Teensy Audio Library along with my OpenAudio extensions.
 
 Teensy Audio Library
 ------------
