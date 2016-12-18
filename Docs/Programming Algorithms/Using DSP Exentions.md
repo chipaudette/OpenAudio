@@ -13,7 +13,7 @@ CMSIS DSP Exentions
 
 Specific to DSP operations, there is a great collection of functions in the CMSIS DSP library.  The official documentation showing all of the callable functions is [here](http://www.keil.com/pack/doc/CMSIS/DSP/html/modules.html).  I am going to show some examples below of the DSP calls that I usually need to make.  I am going to show only the floating-point versions of these functions as I am using the Teensy 3.6, which uses an ARM Cortex M4F processor, which has a floating point unit that makes these floating point calculations very fast.  To use any of these DSP functions, you'll need to include the ARM math library:
 
-```
+``` C++
 //Include ARM DSP extensions. https://www.keil.com/pack/doc/CMSIS/DSP/html/index.html
 #include <arm_math.h> 
 ```
@@ -22,7 +22,7 @@ Specific to DSP operations, there is a great collection of functions in the CMSI
 
 If you want to apply a fixed amount of gain to a signal, it means that you want to multiply your audio data by some gain factor.  Usually, your audio data is buffered into a block of, say, 128 points.  To make it louder or quieter, you multiply that buffer by your gain factor.  This multiplication is best done using the [Vector Scale](http://www.keil.com/pack/doc/CMSIS/DSP/html/group__scale.html) function in the CMSIS library.  Using my floating-point extension to the Teensy library, it would look something like:
 
-```
+``` C++
 audio_block_t *audio = AudioStream_F32::receiveWritable_f32(); //get the audio block
 float32_t gain = 2.0;  //I want to amplify the signal by 6 dB, which is a factor of 2.0
 arm_scale_f32(audio->data, gain, audio->data, audio->length);  //in, gain, out, size
@@ -32,7 +32,7 @@ arm_scale_f32(audio->data, gain, audio->data, audio->length);  //in, gain, out, 
 
 Instead of applying a fixed gain, you may wish to vary the gain value on a sample-by-sample basis, such as to smoothly increase the volume.  In that case, you are not multiplying your audio buffer by a single gain value, but you are multiplying your audio buffer by a vector of gain values.  This is vector mulitplication -- multiplying one vector of values against a second vector of values.  This is best done using the [Vector Multiply](http://www.keil.com/pack/doc/CMSIS/DSP/html/group__BasicMult.html) function:
 
-```
+``` C++
 audio_block_t *audio = AudioStream_F32::receiveWritable_f32(); //get the audio block
 audio_block_f32_t *gain = AudioStream_F32::allocate_f32(); //allocate space for the gain
 for (int i=0; i < gain->length; i++) { gain->data[i] = (float)i/(float)gain->length); } //fade in
@@ -49,7 +49,7 @@ For me, I am used to designing filters in matlab (hence the `butter` example abo
 
 First, we setup the filter using its initialization routine [arm_biquad_cascade_df1_init_f32](http://www.keil.com/pack/doc/CMSIS/DSP/html/group__BiquadCascadeDF1.html#ga8e73b69a788e681a61bccc8959d823c5).  I am setting up a high-pass filter with its cutoff at 20Hz.  In other words, I'm making a filter to get rid of an DC offset in the audio data.
 
-```
+``` C++
 arm_biquad_casd_df1_inst_f32 hp_filt_struct; //this will hold the filter states
 static const uint8_t hp_nstages = 1;
 float32_t hp_coeff[5 * hp_nstages]; //allocate space for the filter coefficients
@@ -66,7 +66,7 @@ void initMyFilter(void) {
 
 Then, inside the audio processing algorithm, we can call the filter itself via [arm_biquad_cascade_df1_f32](http://www.keil.com/pack/doc/CMSIS/DSP/html/group__BiquadCascadeDF1.html#gaa0dbe330d763e3c1d8030b3ef12d5bdc).
 
-```
+``` C++
 audio = AudioStream_F32::receiveWritable_f32();
 arm_biquad_cascade_df1_f32(&hp_filt_struct, audio->data, audio->data, audio->length); //state, in, out, length
 ```
