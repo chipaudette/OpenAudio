@@ -1,7 +1,7 @@
 Computing Filter Coefficients
 ==============================
 
-The purpose of this doc is to show how filter coefficients can be computing using different tools.
+The purpose of this doc is to show how filter coefficients can be computed using different tools.
 
 Requirements
 ----------
@@ -85,3 +85,19 @@ b, a = signal.butter(N_iir, cutoff_Hz/(fs_Hz/2.0),ftype)
 f_my_data = signal.lfilter(b, a, my_data, 0) # apply along the zeroeth dimension
 ```
 
+Filter Frequency Response
+---------------------------
+
+Once you have designed a filter, you often want to see its frequency response.
+
+### Matlab
+
+In Matlab, you want the [freqz](https://www.mathworks.com/help/dsp/ref/freqz.html) command.
+
+``` Matlab
+fs_Hz = 44100;
+[b,a]=butter(2,4000,fs_Hz/2);
+[h,f_Hz]=freqz(b,a,1000,fs_Hz);  %get respones at 1000 frequency points
+subplot(2,1,1); semilogx(f_Hz,10*log10(h.*conj(h))); xlabel('Freq (Hz)'); ylabel('Response (dB)');
+subplot(2,1,2); semilogx(f_Hz,angle(h)*180/pi); xlabel('Freq (Hz)'); ylabel('Phase (deg)');
+```
