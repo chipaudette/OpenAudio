@@ -1,7 +1,7 @@
 Using DSP Exentions
 ====================
 
-For embedded audio processing, most of the best boards use a processor from the ARM Cortex M family.  The Teensy 3.2 and 3.6, for example, use an ARM Cortex M4.  The M4 has special features built into the chip that accelerate certain kinds of math operations that are common in Digital Signal Processing (DSP).  While these M4 processors are fast relative to a basic Arduino UNO, they're not nearly as fast as a full-blown PC.  So, if you want to get the most audio processing done on these little processors, you really need to use these DSP extensions and not rely just pure-C/C++ implementations of your favorite math operations.
+For embedded audio processing, most of the best boards use a processor from the ARM Cortex M family.  The Teensy 3.2 and 3.6, for example, use an ARM Cortex M4.  The M4 has special features built into the chip that accelerate certain kinds of math operations that are common in Digital Signal Processing (DSP).  While these M4 processors are fast relative to a basic Arduino UNO, they're not nearly as fast as a full-blown PC.  So, if you want to get the most audio processing done on these little processors, you really need to use these DSP extensions and not rely just pure-C/C++ implementations of your favorite math operations.  
 
 CMSIS Standard Interface 
 -------------------
@@ -11,7 +11,12 @@ Because ARM wants their chip cores to be widely used (which they are), and to ea
 CMSIS DSP Exentions
 ----------------------
 
-Specific to DSP operations, there is a great collection of functions in the CMSIS DSP library.  The official documentation showing all of the callable functions is [here](http://www.keil.com/pack/doc/CMSIS/DSP/html/modules.html).  I am going to show some examples below of the DSP calls that I usually need to make.  I am going to show only the floating-point versions of these functions as I am using the Teensy 3.6, which uses an ARM Cortex M4F processor, which has a floating point unit that makes these floating point calculations very fast.
+Specific to DSP operations, there is a great collection of functions in the CMSIS DSP library.  The official documentation showing all of the callable functions is [here](http://www.keil.com/pack/doc/CMSIS/DSP/html/modules.html).  I am going to show some examples below of the DSP calls that I usually need to make.  I am going to show only the floating-point versions of these functions as I am using the Teensy 3.6, which uses an ARM Cortex M4F processor, which has a floating point unit that makes these floating point calculations very fast.  To use any of these DSP functions, you'll need to include the ARM math library:
+
+```
+//Include ARM DSP extensions. https://www.keil.com/pack/doc/CMSIS/DSP/html/index.html
+#include <arm_math.h> 
+```
 
 ### Fixed Gain
 
