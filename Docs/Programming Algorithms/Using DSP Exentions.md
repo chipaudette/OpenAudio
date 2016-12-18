@@ -25,3 +25,14 @@ arm_scale_f32(audio->data, gain, audio->data, audio->length);  //in, gain, out, 
 
 ### Variable Gain
 
+Instead of applying a fixed gain, you may wish to vary the gain value on a sample-by-sample basis, such as to smoothly increase the volume.  In that case, you are not multiplying your audio buffer by a single gain value, but you are multiplying your audio buffer by a vector of gain values.  This is vector mulitplication -- multiplying one vector of values against a second vector of values.  This is best done using the [Vector Multiply](http://www.keil.com/pack/doc/CMSIS/DSP/html/group__BasicMult.html) function:
+
+```
+audio_block_t *audio = AudioStream_F32::receiveWritable_f32(); //get the audio block
+audio_block_f32_t *gain = AudioStream_F32::allocate_f32(); //allocate space for the gain
+for (int i=0; i < gain->length; i++) { gain->data[i] = (float)i/(float)gain->length); } //fade in
+arm_mult_f32(audio->data, gain->data, audio->data, audio->length); //in1, in2, out, length
+```
+
+
+
