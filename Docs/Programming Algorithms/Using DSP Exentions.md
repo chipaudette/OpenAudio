@@ -188,9 +188,3 @@ for (int i=0; i < audio.length; i++) { //copy the current audio buffer
 //convert to frequency domain
 arm_cfft_radix4_f32(fft_inst, buffer_complex); //output is in buffer_complex
 ```
-
-
-```
-
-
-float32_t buffer_complex[N_FFT*2];
