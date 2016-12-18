@@ -97,7 +97,35 @@ In Matlab, you want the [freqz](https://www.mathworks.com/help/dsp/ref/freqz.htm
 ``` Matlab
 fs_Hz = 44100;
 [b,a]=butter(2,4000,fs_Hz/2);
-[h,f_Hz]=freqz(b,a,1000,fs_Hz);  %get respones at 1000 frequency points
+[h,f_Hz]=freqz(b,a,1000,fs_Hz);  %get response at 1000 frequency points
 subplot(2,1,1); semilogx(f_Hz,10*log10(h.*conj(h))); xlabel('Freq (Hz)'); ylabel('Response (dB)');
 subplot(2,1,2); semilogx(f_Hz,angle(h)*180/pi); xlabel('Freq (Hz)'); ylabel('Phase (deg)');
+```
+
+### Python
+
+In SciPy, you also want the [freqz](https://docs.scipy.org/doc/scipy-0.16.0/reference/generated/scipy.signal.freqz.html#scipy.signal.freqz) command.
+
+``` Python
+import numpy as np
+from scipy import signal
+
+# design filter anc ompute response
+fs_Hz = 44100.0
+b, a = signal.butter(N_iir, 4000.0/(fs_Hz/2.0),'lowpass')
+[h,w]=freqz(b,a,1000);  # get response at 1000 frequency points
+f_Hz = w * fs_Hz * (fs_Hz / 2.0) 
+
+# plot response
+import matplotlib.pyplot as plt
+plt.figure();
+plt.subplot(2,1,1); 
+plt.semilogx(f_Hz,20 * np.log10(np.abs(h))); 
+plt.xlabel('Freq (Hz)'); plt.ylabel('Response (dB)');
+plt.subplot(2,1,2);
+plt.semilogx(f_Hz,np.angle(h)*180/pi); 
+plt.xlabel('Freq (Hz)'); plt.ylabel('Phase (deg)');
+plt.axis('tight')
+plt.show();
+
 ```
