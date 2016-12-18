@@ -49,7 +49,7 @@ audio_block_f32_t *audio_pow = AudioStream_F32::allocate_f32(); //allocate space
 arm_mult_f32(audio->data, audio->data, audio_pow->data, audio->length); //in1, in2, out, length
 ```
 
-## Square Root
+### Square Root
 
 To compute the square root of signal power (such as to compute the gain factor from the gain_power), there is no block-wise accelerated version of the square-root function.  So, you need to step through each data sample yourself.  You do, however, want to make sure that you explicitly call the floating point version of the square-root function (`sqrtf`).  It turns out that `sqrtf` is much faster than `sqrt` on ARM Cortex M4F chips (such as the Teensy).
 
@@ -150,3 +150,47 @@ Then, inside the audio processing algorithm, we can call the filter itself via [
 audio = AudioStream_F32::receiveWritable_f32();
 arm_fir_f32(&lp_filt_struct, audio->data, audio->data, audio->length); //state, in, out, length
 ```
+
+### FFT and IFFT
+
+Woking with FFT and IFFT routines on an embedded device can be challenging because these functions involve complex numbers, which are not often natively supported.  So, when creating variables to hold inputs and outputs to the FFT/IFFT routines, you need to understand how the FFT/IFFT library expects to handle the real and imaginary components of the data.  
+
+For the ARM CMSIS FFT and IFFT routines, you need to pick the size of your FFT.  Let's assume N = 256.  Then, you need to allocate data buffers that are twice as long so that you can interleave the 256 real values with the 256 imaginary values.  For example, to setup the ARM floating-point FFT routine, you'd use [arm_cfft_radix4_init_f32](http://www.keil.com/pack/doc/CMSIS/DSP/html/group__ComplexFFT.html#gaf336459f684f0b17bfae539ef1b1b78a) and it would look something like this:
+
+``` C++
+#define N_FFT 256
+arm_cfft_radix4_instance_f32 fft_inst;
+uint8_t ifftFlag = 0; // 0 is FFT, 1 is IFFT
+uint8_t doBitReverse = 1;
+void initFFTroutines(void) {
+  arm_cfft_radix4_init_f32(&fft_inst, N_FFT, ifftFlag, doBitReverse); //init FFT
+}
+```
+
+Then, in your audio processing alogorithms, you would actually invoke the FFT using
+
+``` C++
+//assuming N=256, copy data from two 128-point audio buffers into the full buffer
+float32_t buffer_complex[N_FFT*2];
+audio_block_t *audio = AudioStream_F32::receiveWritable_f32(); //get the audio block
+int targ_ind = 0;
+for (int i=0; i < prev_audio.length; i++) { //copy the previous audio buffer
+  buffer_complex[targ_ind++] = prev_audio.data[i]; //set the real part
+  buffer_complex[targ_ind++] = 0.0;  //set the imaginary part
+}
+for (int i=0; i < audio.length; i++) { //copy the current audio buffer
+  buffer_complex[targ_ind++] = prev_audio.data[i]; //set the real part
+  buffer_complex[targ_ind++] = 0.0;  //set the imaginary part
+}
+
+//you might elect to apply a windowing function here
+
+//convert to frequency domain
+arm_cfft_radix4_f32(fft_inst, buffer_complex); //output is in buffer_complex
+```
+
+
+```
+
+
+float32_t buffer_complex[N_FFT*2];
