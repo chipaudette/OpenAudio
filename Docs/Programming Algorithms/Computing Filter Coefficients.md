@@ -41,7 +41,8 @@ from scipy import signal
 fs_Hz = 44100.0    # sample rate
 cutoff_Hz = 4000   # cutoff frequency
 N_taps = 32        # filter order
-b, a = signal.firwin(N_taps, cutoff_Hz/(fs_Hz/2.0))
+b = signal.firwin(N_taps, cutoff_Hz/(fs_Hz/2.0))
+a = 1.0
 
 # call the filter
 f_my_data = signal.lfilter(b, a, my_data, 0) # apply along the zeroeth dimension
@@ -95,11 +96,21 @@ Once you have designed a filter, you often want to see its frequency response.
 In Matlab, you want the [freqz](https://www.mathworks.com/help/dsp/ref/freqz.html) command.
 
 ``` Matlab
+
+% design filter and compute response
 fs_Hz = 44100;
 [b,a]=butter(2,4000,fs_Hz/2);
 [h,f_Hz]=freqz(b,a,1000,fs_Hz);  %get response at 1000 frequency points
-subplot(2,1,1); semilogx(f_Hz,10*log10(h.*conj(h))); xlabel('Freq (Hz)'); ylabel('Response (dB)');
-subplot(2,1,2); semilogx(f_Hz,angle(h)*180/pi); xlabel('Freq (Hz)'); ylabel('Phase (deg)');
+
+% plot response
+figure;
+subplot(2,1,1); 
+semilogx(f_Hz,10*log10(h.*conj(h)));
+xlabel('Freq (Hz)'); ylabel('Response (dB)');
+subplot(2,1,2);
+semilogx(f_Hz,angle(h)*180/pi);
+xlabel('Freq (Hz)');
+ylabel('Phase (deg)');
 ```
 
 ### Python
@@ -110,22 +121,21 @@ In SciPy, you also want the [freqz](https://docs.scipy.org/doc/scipy-0.16.0/refe
 import numpy as np
 from scipy import signal
 
-# design filter anc ompute response
+# design filter and compute response
 fs_Hz = 44100.0
-b, a = signal.butter(N_iir, 4000.0/(fs_Hz/2.0),'lowpass')
-[h,w]=freqz(b,a,1000);  # get response at 1000 frequency points
-f_Hz = w * fs_Hz * (fs_Hz / 2.0) 
+b, a = signal.butter(2, 4000.0/(fs_Hz/2.0),'lowpass')
+w, h = signal.freqz(b,a)  # get response at 1000 frequency points
+f_Hz = w / (2*np.pi) * fs_Hz
 
 # plot response
 import matplotlib.pyplot as plt
-plt.figure();
-plt.subplot(2,1,1); 
-plt.semilogx(f_Hz,20 * np.log10(np.abs(h))); 
-plt.xlabel('Freq (Hz)'); plt.ylabel('Response (dB)');
-plt.subplot(2,1,2);
-plt.semilogx(f_Hz,np.angle(h)*180/pi); 
-plt.xlabel('Freq (Hz)'); plt.ylabel('Phase (deg)');
-plt.axis('tight')
-plt.show();
-
+plt.figure()
+plt.subplot(2,1,1) 
+plt.semilogx(f_Hz,20 * np.log10(np.abs(h)))
+plt.xlabel('Freq (Hz)'); plt.ylabel('Response (dB)')
+plt.subplot(2,1,2)
+plt.semilogx(f_Hz,np.angle(h)*180/np.pi)
+plt.xlabel('Freq (Hz)'); plt.ylabel('Phase (deg)')
+plt.tight_layout()
+plt.show()
 ```
