@@ -148,5 +148,5 @@ Then, inside the audio processing algorithm, we can call the filter itself via [
 
 ``` C++
 audio = AudioStream_F32::receiveWritable_f32();
-arm_fir_f32	(&lp_filt_struct, audio->data, audio->data, audio->length); //state, in, out, length
+arm_fir_f32(&lp_filt_struct, audio->data, audio->data, audio->length); //state, in, out, length
 ```
