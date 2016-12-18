@@ -8,15 +8,17 @@ CMSIS Standard Interface
 
 Because ARM wants their chip cores to be widely used (which they are), and to ease a programmer's job of transitioning between different models of ARM chips (which they've successfully done), ARM has created a large collection of standardized resources that the programmer can invoke.  This is the "Cortex Microcontroller Software Interface Standard" ([CMSIS](https://www.arm.com/products/processors/cortex-m/cortex-microcontroller-software-interface-standard.php)).  The CMSIS standard covers a wide range of resources, from real-time operating system through DSP functions.  The idea is that the programmer learns how to use them for one specific ARM Cortex chip, but that the same knowledge will also work on variety of ARM Cortex chips that the programmer might encounter in the future.  It's like the standard C library, yet optimized for the specific capabilities of the ARM Cortex family.
 
-CMSIS DSP Exentions
-----------------------
-
 Specific to DSP operations, there is a great collection of functions in the CMSIS DSP library.  The official documentation showing all of the callable functions is [here](http://www.keil.com/pack/doc/CMSIS/DSP/html/modules.html).  I am going to show some examples below of the DSP calls that I usually need to make.  I am going to show only the floating-point versions of these functions as I am using the Teensy 3.6, which uses an ARM Cortex M4F processor, which has a floating point unit that makes these floating point calculations very fast.  To use any of these DSP functions, you'll need to include the ARM math library:
 
 ``` C++
 //Include ARM DSP extensions. https://www.keil.com/pack/doc/CMSIS/DSP/html/index.html
 #include <arm_math.h> 
 ```
+
+Example Uses of Optimized Routines
+----------------------------------
+
+Below are some examples of how to do common audio-processing math operations in a fast way on ARM Cortex M4F processors, such as on the Teensy.
 
 ### Fixed Gain
 
