@@ -41,8 +41,34 @@ arm_mult_f32(audio->data, gain->data, audio->data, audio->length); //in1, in2, o
 
 ### IIR Filter
 
-Using the CMSIS DSP library, all of the signal filtering operations can be seen [here](http://www.keil.com/pack/doc/CMSIS/DSP/html/group__groupFilters.html).  Within this collection are a few different IIR filter types. On embedded devices, IIR filters are usually implmented as a series of "biquods", each of which are a simple second-order IIR.  If your IIR is only of order two (eg, `[b,a]=butter(2,cutoff/(fs/2));`), you simply setup a single biquod and you're done.  But, if you want a higher order IIR filter (eg, an A-weighting filter), you'll need to decompose it into a series of second order filters that you will cascade one after the other.
+Using the CMSIS DSP library, all of the signal filtering operations can be seen [here](http://www.keil.com/pack/doc/CMSIS/DSP/html/group__groupFilters.html).  Within this collection are a few different IIR filter types. On embedded devices, IIR filters are usually implmented as a series of "biquads", each of which are a simple second-order IIR.  If your IIR is only of order two (eg, `[b,a]=butter(2,cutoff/(fs/2));`), you simply setup a single biquad and you're done.  But, if you want a higher order IIR filter (eg, an A-weighting filter), you'll need to decompose it into a series of second order filters that you will cascade one after the other.
 
 When using filters to a continuous audio stream an embedded device, you will be processing the audio stream in blocks.  Between blocks, you will need to hold onto the filter states so that there is no discontinuity in the audio at the edges of the blocks.  So, for any of these filter functions, you first need to invoke a setup function.  Once it is setup, you'll then invoke the filter function itself.
 
-For me, I am used to designing filters in matlab (hence the `butter` example above).  Matlab presents its filter coefficients in a form similar to a "Type I" filter, so my example below is for a [Biquad Cascade IIR Filters Using Direct Form I Structure](http://www.keil.com/pack/doc/CMSIS/DSP/html/group__BiquadCascadeDF1.html).
+For me, I am used to designing filters in matlab (hence the `butter` example above).  Matlab presents its filter coefficients in a form similar to a "Type I" filter, so my example below is for a [Biquad Cascade IIR Filters Using Direct Form I Structure](http://www.keil.com/pack/doc/CMSIS/DSP/html/group__BiquadCascadeDF1.html).  With this function, you apply multiple cascaded biquad filters with a single call.  But, as this document is just an introduction, I will apply a single biquad (ie, a single second order IIR filter) only.
+
+First, we setup the filter using its initialization routine `[arm_biquad_cascade_df1_init_f32](http://www.keil.com/pack/doc/CMSIS/DSP/html/group__BiquadCascadeDF1.html#ga8e73b69a788e681a61bccc8959d823c5)`.  I am setting up a high-pass filter with its cutoff at 20Hz.  In other words, I'm making a filter to get rid of an DC offset in the audio data.
+
+```
+arm_biquad_casd_df1_inst_f32 hp_filt_struct; //this will hold the filter states
+static const uint8_t hp_nstages = 1;
+float32_t hp_coeff[5 * hp_nstages]; //allocate space for the filter coefficients
+float32_t hp_state[4 * hp_nstages]; //allocate space for the filter states
+void initMyFilter(void) {
+  //https://www.keil.com/pack/doc/CMSIS/DSP/html/group__BiquadCascadeDF1.html#ga8e73b69a788e681a61bccc8959d823c5
+  //Use matlab to compute the coeff for HP at 20Hz: [b,a]=butter(2,20/(44100/2),'high'); %assumes fs_Hz = 44100
+  float32_t b[] = {9.979871156751189e-01,    -1.995974231350238e+00, 9.979871156751189e-01};  //from Matlab
+  float32_t a[] = { 1.000000000000000e+00,    -1.995970179642828e+00,    9.959782830576472e-01};  //from Matlab
+  hp_coeff[0] = b[0];   hp_coeff[1] = b[1];  hp_coeff[2] = b[2]; //here are the matlab "b" coefficients
+  hp_coeff[3] = -a[1];  hp_coeff[4] = -a[2];  //the DSP needs the "a" terms to have opposite sign vs Matlab
+}
+```
+
+Then, inside the audio processing algorithm, we can call the filter itself via `[arm_biquad_cascade_df1_f32](http://www.keil.com/pack/doc/CMSIS/DSP/html/group__BiquadCascadeDF1.html#gaa0dbe330d763e3c1d8030b3ef12d5bdc)`.
+
+```
+audio = AudioStream_F32::receiveWritable_f32();
+arm_biquad_cascade_df1_f32(&hp_filt_struct, audio->data, audio->data, audio->length); //state, in, out, length
+```
+
+
