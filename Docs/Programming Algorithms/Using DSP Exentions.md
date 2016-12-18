@@ -39,5 +39,10 @@ for (int i=0; i < gain->length; i++) { gain->data[i] = (float)i/(float)gain->len
 arm_mult_f32(audio->data, gain->data, audio->data, audio->length); //in1, in2, out, length
 ```
 
+### IIR Filter
 
+Using the CMSIS DSP library, all of the signal filtering operations can be seen [here](http://www.keil.com/pack/doc/CMSIS/DSP/html/group__groupFilters.html).  Within this collection are a few different IIR filter types. On embedded devices, IIR filters are usually implmented as a series of "biquods", each of which are a simple second-order IIR.  If your IIR is only of order two (eg, `[b,a]=butter(2,cutoff/(fs/2));`), you simply setup a single biquod and you're done.  But, if you want a higher order IIR filter (eg, an A-weighting filter), you'll need to decompose it into a series of second order filters that you will cascade one after the other.
 
+When using filters to a continuous audio stream an embedded device, you will be processing the audio stream in blocks.  Between blocks, you will need to hold onto the filter states so that there is no discontinuity in the audio at the edges of the blocks.  So, for any of these filter functions, you first need to invoke a setup function.  Once it is setup, you'll then invoke the filter function itself.
+
+For me, I am used to designing filters in matlab (hence the `butter` example above).  Matlab presents its filter coefficients in a form similar to a "Type I" filter, so my example below is for a [Biquad Cascade IIR Filters Using Direct Form I Structure](http://www.keil.com/pack/doc/CMSIS/DSP/html/group__BiquadCascadeDF1.html).
