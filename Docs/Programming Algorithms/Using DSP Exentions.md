@@ -49,7 +49,7 @@ audio_block_f32_t *audio_pow = AudioStream_F32::allocate_f32(); //allocate space
 arm_mult_f32(audio->data, audio->data, audio_pow->data, audio->length); //in1, in2, out, length
 ```
 
-## Squre Root
+## Square Root
 
 To compute the square root of signal power (such as to compute the gain factor from the gain_power), there is no block-wise accelerated version of the square-root function.  So, you need to step through each data sample yourself.  You do, however, want to make sure that you explicitly call the floating point version of the square-root function (`sqrtf`).  It turns out that `sqrtf` is much faster than `sqrt` on ARM Cortex M4F chips (such as the Teensy).
 
