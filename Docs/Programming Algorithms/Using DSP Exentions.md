@@ -18,9 +18,9 @@ Specific to DSP operations, there is a great collection of functions in the CMSI
 If you want to apply a fixed amount of gain to a signal, it means that you want to multiply your audio data by some gain factor.  Usually, your audio data is buffered into a block of, say, 128 points.  To make it louder or quieter, you multiply that buffer by your gain factor.  This multiplication is best done using the [Vector Scale](http://www.keil.com/pack/doc/CMSIS/DSP/html/group__scale.html) function in the CMSIS library.  Using my floating-point extension to the Teensy library, it would look something like:
 
 ```
-audio_block_t *audio_block = AudioStream_F32::receiveWritable_f32(); //get the audio block
-float32_t gain_factor = 2.0;  //I want to amplify the signal by 6 dB, which is a factor of 2.0
-arm_scale_f32(audio_block->data, gain_factor, audio_block->data, audio_block->length);  //input, gain, output, size
+audio_block_t *audio = AudioStream_F32::receiveWritable_f32(); //get the audio block
+float32_t gain = 2.0;  //I want to amplify the signal by 6 dB, which is a factor of 2.0
+arm_scale_f32(audio->data, gain, audio->data, audio->length);  //in, gain, out, size
 ```
 
 ### Variable Gain
