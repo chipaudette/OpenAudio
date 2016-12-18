@@ -39,6 +39,53 @@ for (int i=0; i < gain->length; i++) { gain->data[i] = (float)i/(float)gain->len
 arm_mult_f32(audio->data, gain->data, audio->data, audio->length); //in1, in2, out, length
 ```
 
+### Signal Power (ie, Squaring)
+
+To compute the signal power, you can simply square the signal by multiplying each sample by itself.  If you want to square every sample in the audio buffer, though, a faster method (I think) is to use the  [Vector Multiply](http://www.keil.com/pack/doc/CMSIS/DSP/html/group__BasicMult.html) function as we did above.
+
+``` C++
+audio_block_t *audio = AudioStream_F32::receiveWritable_f32(); //get the audio block
+audio_block_f32_t *audio_pow = AudioStream_F32::allocate_f32(); //allocate space for the signal power
+arm_mult_f32(audio->data, audio->data, audio_pow->data, audio->length); //in1, in2, out, length
+```
+
+## Squre Root
+
+To compute the square root of signal power (such as to compute the gain factor from the gain_power), there is no block-wise accelerated version of the square-root function.  So, you need to step through each data sample yourself.  You do, however, want to make sure that you explicitly call the floating point version of the square-root function (`sqrtf`).  It turns out that `sqrtf` is much faster than `sqrt` on ARM Cortex M4F chips (such as the Teensy).
+
+``` C++
+audio_block_f32_t *gain = AudioStream_F32::allocate_f32(); //allocate space for the signal power
+float32_t gain_pow = 1.0;
+float32_t update_fac = 0.001;  %what is my smoothing factor
+//compute gain based on audio_pow has been computed per the example above.
+for (int i=0; i < audio_pow.length; i++) {
+  //let's compute a smoothed-gain that is a dynamic range compressor driving toward audio_pow = 1.0
+  gain_pow = (1.0-update_fac)*gain_pow + update_fac * (1.0/(audio_pow->data[i]));
+  
+  //do square-root to compute the gain, not the gain_pow
+  gain->data[i] = sqrtf(gain_pow);  //sqrtf is faster than sqrt!
+}
+arm_mult_f32(audio->data, gain->data, audio->data, audio->length); //apply the gain
+```
+
+### Logarithm and Expontial Operations
+
+While there is no specific DSP acceleration for logarithm and exponential operations, you'll want to be sure to invoke the floating-point versions of these functions (`logf`, `log10f`, `expf`, and `powf`) because they are much faster than the generic versions.
+
+```
+//assumes that you've computed the audio_pow per the earlier example
+float32_t = foo;
+for (int i=0; i < audio->length; i++) {  //loop over each sample
+  foo = audio_pow->data[i];  //get the value of the signal.^2
+  foo = logf(foo);  //take the log base e
+  foo = expf(foo);  //take the exponential (base e)
+  
+  foo = audio_pow->data[i];  //get the value of the signal.^2
+  foo = log10f(foo);     //take the log base 10
+  foo = powf(10.0,foo);  //take the exponential (base 10)
+}
+```
+
 ### IIR Filter
 
 Using the CMSIS DSP library, all of the signal filtering operations can be seen [here](http://www.keil.com/pack/doc/CMSIS/DSP/html/group__groupFilters.html).  Within this collection are a few different IIR filter types. On embedded devices, IIR filters are usually implmented as a series of "biquads", each of which are a simple second-order IIR.  If your IIR is only of order two (eg, `[b,a]=butter(2,cutoff/(fs/2));`), you simply setup a single biquad and you're done.  But, if you want a higher order IIR filter (eg, an A-weighting filter), you'll need to decompose it into a series of second order filters that you will cascade one after the other.
