@@ -182,6 +182,7 @@ for (int i=0; i < audio.length; i++) { //copy the current audio buffer
   buffer_complex[targ_ind++] = prev_audio.data[i]; //set the real part
   buffer_complex[targ_ind++] = 0.0;  //set the imaginary part
 }
+prev_audio = audio; //hand off the pointer so that we have what we need next time
 
 //you might elect to apply a windowing function here
 
