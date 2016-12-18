@@ -55,3 +55,7 @@ If you have also have Teensy Audio Board (BTNRH, the Audio Board is part of the 
 
 * **HardwareTesting/ToneSweep**:  Upload the code to the Teensy, plug in your headphones, but don't put them on your ears.  The tonesweep is loud!!!  Try changing the volume to make it quieter (change the line `audioShield.volume(0.5);` to a smaller number).  Then, try changing the frequency range of the sweep (`t_lox` and `t_hix`) or the duration of the sweep (`t_timex`).  After the sweep stops, try pressing the button on the Teensy.  It resets the Teensy, which will restart the sweep (after 3 seconds of dead time).
 
+Next Steps
+-------------
+
+Once you get the example programs for the Teensy working correctly, you're now ready to start with the Teensy Audio Library and the Open Audio examples.  Go to [this page](https://github.com/chipaudette/OpenAudio/blob/master/Docs/Getting%20Started/Starting%20with%20Audio.md).
