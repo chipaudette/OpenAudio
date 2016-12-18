@@ -96,3 +96,10 @@ void initMyFilter(void) {
   arm_fir_init_f32(&lp_filt_struct, n_taps, lp_coeff, lp_state, block_size);
 }
 ```
+
+Then, inside the audio processing algorithm, we can call the filter itself via [arm_fir_f32](http://www.keil.com/pack/doc/CMSIS/DSP/html/group__FIR.html#gae8fb334ea67eb6ecbd31824ddc14cd6a)
+
+``` C++
+audio = AudioStream_F32::receiveWritable_f32();
+arm_fir_f32	(&lp_filt_struct, audio->data, audio->data, audio->length); //state, in, out, length
+```
