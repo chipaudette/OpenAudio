@@ -6,7 +6,13 @@ Assuming that you are familiar with Arduino and Teensy (if not, see [this page](
 Teensy Audio Library
 ------------
 
-To do the audio processing examples, you'll need the Teensy Audio Library, which should have been installed on your computer when you installed the Teensyduino stuff when you were getting started with the Teensy.  If you're interested, you can see the Audio Library documenation [here](http://www.pjrc.com/teensy/td_libs_Audio.html).  When those docs are insufficient, you can usually find what you need by digging into its code at its [GitHub](https://github.com/PaulStoffregen/Audio).  And, if you need to see some of the fundamental constants and classes for the Audio Library, they're actually buried in the repository for the Teensy Core (see [AudioStream.h](https://github.com/PaulStoffregen/cores/blob/master/teensy3/AudioStream.h) and [AudioStream.cpp](https://github.com/PaulStoffregen/cores/blob/master/teensy3/AudioStream.cpp)).  Again, if the Teensy works with your computer, you already have these libraries and you don't need to do any more.
+My approach to audio processing with the Teensy relies upon the existing foundation of Teensy's own Audio Library.  This library should have been installed on your computer when you installed the Teensyduino stuff when you were getting started with the Teensy.  So, you should be good-to-go.
+
+If you're particularly interested, you can see the Audio Library documenation [here](http://www.pjrc.com/teensy/td_libs_Audio.html).  When those docs are insufficient, you can usually find what you need by digging into its code at its [GitHub](https://github.com/PaulStoffregen/Audio).  
+
+If you need to get even deeper, some of the fundamental constants and classes for the Audio Library are not actually in the Audio Library.  They're buried deep in the repository for the Teensy Core itself (see [AudioStream.h](https://github.com/PaulStoffregen/cores/blob/master/teensy3/AudioStream.h) and [AudioStream.cpp](https://github.com/PaulStoffregen/cores/blob/master/teensy3/AudioStream.cpp)).  
+
+Again, if the Teensy works with your computer, you already have these libraries and you don't need to do any more.
 
 First Audio Trials
 -----------------
