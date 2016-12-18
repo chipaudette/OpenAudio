@@ -83,20 +83,16 @@ As with the IIR filter, you need to setup the FIR filter before you can use it. 
 
 ``` C++
 arm_fir_instance_f32 lp_filt_struct; //this will hold the filter states
-static const uint16_t n_taps = 8;
+static const uint16_t n_taps = 16;
 static const uint16_t block_size = AUDIO_BLOCK_SAMPLES;
-float32_t lp_coeff[n_taps]; //allocate space for the filter coefficients
+//Use matlab to compute the coeff for HP at 4000 Hz: [b,a]=fir1(16-1,4000/(44100/2)); %assumes fs_Hz = 44100
+float32_t lp_coeff[n_taps] = {-3.21485003e-03,  -3.27201675e-03,   1.00097857e-04,  1.60527544e-02, 
+         5.09739046e-02,   1.01419356e-01,   1.52699318e-01,   1.85241436e-01, 
+         1.85241436e-01,   1.52699318e-01,   1.01419356e-01,   5.09739046e-02, 
+         1.60527544e-02,   1.00097857e-04,  -3.27201675e-03,  -3.21485003e-03 };
 float32_t lp_state[n_taps+block_size-1]; //allocate space for the filter states
 void initMyFilter(void) {
-  //Use matlab to compute the coeff for HP at 20Hz: [b,a]=fir1(1,20/(44100/2),'high'); %assumes fs_Hz = 44100
-  float32_t b[] = {9.979871156751189e-01,    -1.995974231350238e+00, 9.979871156751189e-01};  //from Matlab
-  float32_t a[] = { 1.000000000000000e+00,    -1.995970179642828e+00,    9.959782830576472e-01};  //from Matlab
-  
-  //prepare the coefficients //https://www.keil.com/pack/doc/CMSIS/DSP/html/group__BiquadCascadeDF1.html
-  hp_coeff[0] = b[0];   hp_coeff[1] = b[1];  hp_coeff[2] = b[2]; //here are the matlab "b" coefficients
-  hp_coeff[3] = -a[1];  hp_coeff[4] = -a[2];  //the DSP needs the "a" terms to have opposite sign vs Matlab
-  
   //call the initialization function
-  arm_biquad_cascade_df1_init_f32(&hp_filt_struct, hp_nstages, hp_coeff, hp_state);
+  arm_fir_init_f32(&lp_filt_struct, n_taps, lp_coeff, lp_state, block_size);
 }
 ```
