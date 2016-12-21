@@ -44,6 +44,8 @@ Switching to the Teensy
 4. Change the delay times from 1000 to 500.  This should make the Teensy blink twice as fast.
 5. Press the Arduino IDE's "Upload" button.  It will compile the code and send it to the Teensy.  The light should blink!  Now change the `delay()` times to change the blink rate and upload again.  Success!
 
+* **Troubleshooting**:  We've run across one user who, on Windows, could not get his Teensy to show up in Windows as a COM port. Eventually, he found an updated driver (http://www.pjrc.com/teensy/td_download.html) and that solved his problems.
+
 Teensy Tutorials
 -----------------
 
