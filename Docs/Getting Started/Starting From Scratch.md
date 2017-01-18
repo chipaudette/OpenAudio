@@ -12,7 +12,7 @@ If you really have no experience with Arduino, you should get a basic Arduino tr
 
 * **Software**: Download the latest Arduino software, also known as the Arduino IDE ("Integrated Development Environment").  Be sure to get it from Arduino.cc, not Arduino.org.  You can get the Arduino IDE from this link: https://www.arduino.cc/en/Main/Software
 
-* **Install**: After downloading, you can follow the installation instructions for your platform: https://www.arduino.cc/en/Guide/HomePage
+* **Installation**: After downloading, you can follow the installation instructions for your platform: https://www.arduino.cc/en/Guide/HomePage
 
 * **Quick Start**:  Here's the Arduino Quick Start for the Arduino Uno.  It gets you to compile and upload the "Blink" program, which is always where you should start.  This is totally the key first step: https://www.arduino.cc/en/Guide/ArduinoUno
 
