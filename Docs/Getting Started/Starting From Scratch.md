@@ -30,7 +30,7 @@ Once you have completed these three tutorials using the basic Arduino Uno, you'l
 Switching to the Teensy
 -----------------
 
-"Teensy" is a family of microcontroller boards, like Arduino are a family of microcontroller boards.  The Teensy 3 line of boards is much faster (and smaller) than the Arduino boards, which makes them useful for computationally-heavy tasks like processing audio.  A key feature of the Teensy boards is that they can be programmed using the Arduino IDE software, even though they are not "Arduino" boards.  That's great!
+"Teensy" is a family of microcontroller boards, just as the Arduino is a family of microcontroller boards.  The Teensy 3 line of boards is much faster (and smaller) than the Arduino boards, which makes them useful for computationally-heavy tasks like processing audio.  A key feature of the Teensy boards is that they can be programmed using the Arduino IDE software, even though they are not "Arduino" boards.  That's great!
 
 * **Hardware**: To get started, you should buy a [Teensy](https://www.pjrc.com/teensy/).  I recommend the [Teensy 3.6]( https://www.pjrc.com/store/teensy36.html) as it is the fastest, though it will be damaged if you mistakenly apply 5V signals to its pins.  If you desire 5V tolerance, you should get the [Teensy 3.5] (https://www.pjrc.com/store/teensy35.html).
 
