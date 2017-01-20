@@ -189,7 +189,7 @@ prev_audio = audio; //hand off the pointer so that we have what we need next tim
 //you might elect to apply a windowing function here
 
 //convert to frequency domain
-arm_cfft_radix4_f32(fft_inst, buffer_complex); //output is in buffer_complex
+arm_cfft_radix4_f32(&fft_inst, buffer_complex); //output is in buffer_complex
 ```
 
 To do IFFT instead of FFT, do exactly the same two-step process shown above to initialize and invoke the FFT functions.  Even the function names (`arm_cfft_radix4_init_f32` and `arm_cfft_radix4_f32`) are exactly the same to do the IFFT.  The way that you tell the code that you want an IFFT is to change the variable `ifftFlag` that is sent to `arm_cfft_radix4_init_f32` .  If it was set equal to zero, the code will do an FFT.  If it was set equal to one, the code will do an IFFT.  Easy!
