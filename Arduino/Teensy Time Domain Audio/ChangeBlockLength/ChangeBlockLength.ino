@@ -11,7 +11,7 @@
 
 // Create audio objects
 AudioControlSGTL5000    sgtl5000_1;    //controller for the Teensy Audio Board
-AudioInputI2S           i2s_in;        //Digital audio *from* the Teensy Audio Board ADC.  Sends Int16.  Stereo.
+//AudioInputI2S           i2s_in;        //Digital audio *from* the Teensy Audio Board ADC.  Sends Int16.  Stereo.
 AudioOutputI2S          i2s_out;       //Digital audio *to* the Teensy Audio Board DAC.  Expects Int16.  Stereo
 AudioSynthWaveformSine   testSignal;          //xy=107,185
 
@@ -23,7 +23,7 @@ float freqs_Hz[n_freqs] = {600.0, 700.0, 800.0};
 AudioConnection         patchCord1(testSignal, 0, i2s_out, 0);
 AudioConnection         patchCord2(testSignal, 0, i2s_out, 1);
 //AudioConnection         patchCord1(i2s_in, 0, i2s_out, 0);
-//AudioConnection         patchCord2(i2s_in, 0, i2s_out, 1);
+//AudioConnection         patchCord2(i2s_in, 1, i2s_out, 1);
 
 
 // define the setup() function, the function that is called once when the device is booting
@@ -39,6 +39,9 @@ void setup() {
   sgtl5000_1.enable();                   //start the audio board
   sgtl5000_1.inputSelect(AUDIO_INPUT_LINEIN);       //choose line-in or mic-in
   sgtl5000_1.volume(0.8);      
+  sgtl5000_1.lineInLevel(10, 10);        //level can be 0 to 15.  5 is the Teensy Audio Library's default
+  sgtl5000_1.adcHighPassFilterDisable(); //reduces noise.  https://forum.pjrc.com/threads/27215-24-bit-audio-boards?p=78831&viewfull=1#post78831
+
  
   //setup sine wave as test signal
   testSignal.amplitude(0.01);
