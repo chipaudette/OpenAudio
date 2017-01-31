@@ -12,7 +12,7 @@ If you really have no experience with Arduino, you should get a basic Arduino tr
 
 * **Software**: Download the latest Arduino software, also known as the Arduino IDE ("Integrated Development Environment").  Be sure to get it from Arduino.cc, not Arduino.org.  You can get the Arduino IDE from this link: https://www.arduino.cc/en/Main/Software
 
-* **Install**: After downloading, you can follow the installation instructions for your platform: https://www.arduino.cc/en/Guide/HomePage
+* **Installation**: After downloading, you can follow the installation instructions for your platform: https://www.arduino.cc/en/Guide/HomePage
 
 * **Quick Start**:  Here's the Arduino Quick Start for the Arduino Uno.  It gets you to compile and upload the "Blink" program, which is always where you should start.  This is totally the key first step: https://www.arduino.cc/en/Guide/ArduinoUno
 
@@ -30,7 +30,7 @@ Once you have completed these three tutorials using the basic Arduino Uno, you'l
 Switching to the Teensy
 -----------------
 
-"Teensy" is a family of microcontroller boards, like Arduino are a family of microcontroller boards.  The Teensy 3 line of boards is much faster (and smaller) than the Arduino boards, which makes them useful for computationally-heavy tasks like processing audio.  A key feature of the Teensy boards is that they can be programmed using the Arduino IDE software, even though they are not "Arduino" boards.  That's great!
+"Teensy" is a family of microcontroller boards, just as the Arduino is a family of microcontroller boards.  The Teensy 3 line of boards is much faster (and smaller) than the Arduino boards, which makes them useful for computationally-heavy tasks like processing audio.  A key feature of the Teensy boards is that they can be programmed using the Arduino IDE software, even though they are not "Arduino" boards.  That's great!
 
 * **Hardware**: To get started, you should buy a [Teensy](https://www.pjrc.com/teensy/).  I recommend the [Teensy 3.6]( https://www.pjrc.com/store/teensy36.html) as it is the fastest, though it will be damaged if you mistakenly apply 5V signals to its pins.  If you desire 5V tolerance, you should get the [Teensy 3.5] (https://www.pjrc.com/store/teensy35.html).
 
