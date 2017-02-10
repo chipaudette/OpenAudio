@@ -66,7 +66,6 @@ typedef struct {
 ** when computing db20() is accurate to 7.984884e-003 dB.
 ** ------------------------------------------------------------------- */
 //https://community.arm.com/tools/f/discussions/4292/cmsis-dsp-new-functionality-proposal/22621#22621
-//float log2f_approx_coeff[4] = {1.23149591368684f, -4.11852516267426f, 6.02197014179219f, -3.13396450166353f};
 static float log2f_approx(float X) {
   //float *C = &log2f_approx_coeff[0];
   float Y;
@@ -76,17 +75,13 @@ static float log2f_approx(float X) {
   // This is the approximation to log2()
   F = frexpf(fabsf(X), &E);
   //  Y = C[0]*F*F*F + C[1]*F*F + C[2]*F + C[3] + E;
-  //Y = *C++;
-  Y = 1.23149591368684f;
+  Y = 1.23149591368684f; //C[0]
   Y *= F;
-  //Y += (*C++);
-  Y += -4.11852516267426f;
+  Y += -4.11852516267426f;  //C[1]
   Y *= F;
-  //Y += (*C++);
-  Y += 6.02197014179219f;
+  Y += 6.02197014179219f;  //C[2]
   Y *= F;
-  //Y += (*C++);
-  Y += -3.13396450166353f;
+  Y += -3.13396450166353f; //C[3]
   Y += E;
 
   return(Y);

@@ -52,23 +52,26 @@ AudioOutputI2S          i2s_out;        //Digital audio *to* the Teensy Audio Bo
 //create audio objects
 AudioConvert_I16toF32   int2Float1;     //Converts Int16 to Float.  See class in AudioStream_F32.h
 AudioEffectGain_F32     preGain;
-#define N_BBCOMP 2
-#define N_CHAN 8
-AudioFilterFIR_F32      firFilt[N_CHAN];
-AudioEffectCompWDR_F32  compBroadband[N_BBCOMP], compPerBand[N_CHAN];
-AudioMixer4_F32         mixer1, mixer2, mixer3; //mix floating point data
+#define N_BBCOMP 2      //number of broadband compressors
+AudioEffectCompWDR_F32  compBroadband[N_BBCOMP]; //here are the broad band compressors
+#define N_CHAN 8        //number of channels to use for multi-band compression
+AudioFilterFIR_F32      firFilt[N_CHAN];  //here are the filters to break up the audio into multipel bands
+AudioEffectCompWDR_F32  compPerBand[N_CHAN]; //here are the per-band compressors
+AudioMixer4_F32         mixer1, mixer2, mixer3; //mixers to reconstruct the broadband audio (each is good for 4 channels)
 AudioConvert_F32toI16   float2Int1;     //Converts Float to Int16.  See class in AudioStream_F32.h
 
 //make the audio connections
 #if (USE_TEST_TONE_INPUT == 1)
   //use test tone as audio input
-  AudioConnection         patchCord1(testSignal, 0, int2Float1, 0);    //connect the Left input to the Left Int->Float converter
+  AudioConnection       patchCord1(testSignal, 0, int2Float1, 0);    //connect the Left input to the Left Int->Float converter
 #else
   //use real audio input (microphones or line-in)
-  AudioConnection         patchCord1(i2s_in, 0, int2Float1, 0);    //connect the Left input to the Left Int->Float converter
+  AudioConnection       patchCord1(i2s_in, 0, int2Float1, 0);    //connect the Left input to the Left Int->Float converter
 #endif
 //AudioConnection_F32     patchCord2(int2Float1, 0, preGain, 0);
 AudioConnection_F32     patchCord2(int2Float1, 0, compBroadband[0], 0);
+
+//connect the first broadband compressor to each of the filters
 AudioConnection_F32     patchCord11(compBroadband[0], 0, firFilt[0], 0);
 AudioConnection_F32     patchCord12(compBroadband[0], 0, firFilt[1], 0);
 AudioConnection_F32     patchCord13(compBroadband[0], 0, firFilt[2], 0);
@@ -78,6 +81,7 @@ AudioConnection_F32     patchCord16(compBroadband[0], 0, firFilt[5], 0);
 AudioConnection_F32     patchCord17(compBroadband[0], 0, firFilt[6], 0);
 AudioConnection_F32     patchCord18(compBroadband[0], 0, firFilt[7], 0);
 
+//connect each filter to its corresponding per-band compressor
 AudioConnection_F32     patchCord21(firFilt[0], 0, compPerBand[0], 0);
 AudioConnection_F32     patchCord22(firFilt[1], 0, compPerBand[1], 0);
 AudioConnection_F32     patchCord23(firFilt[2], 0, compPerBand[2], 0);
@@ -87,6 +91,7 @@ AudioConnection_F32     patchCord26(firFilt[5], 0, compPerBand[5], 0);
 AudioConnection_F32     patchCord27(firFilt[6], 0, compPerBand[6], 0);
 AudioConnection_F32     patchCord28(firFilt[7], 0, compPerBand[7], 0);
 
+//compute the output of the per-band compressors to the mixers (to make into one signal again)
 AudioConnection_F32     patchCord31(compPerBand[0], 0, mixer1, 0);
 AudioConnection_F32     patchCord32(compPerBand[1], 0, mixer1, 1);
 AudioConnection_F32     patchCord33(compPerBand[2], 0, mixer1, 2);
@@ -95,11 +100,13 @@ AudioConnection_F32     patchCord35(compPerBand[4], 0, mixer2, 0);
 AudioConnection_F32     patchCord36(compPerBand[5], 0, mixer2, 1);
 AudioConnection_F32     patchCord37(compPerBand[6], 0, mixer2, 2);
 AudioConnection_F32     patchCord38(compPerBand[7], 0, mixer2, 3);
-
-
 AudioConnection_F32     patchCord41(mixer1, 0, mixer3, 0);
 AudioConnection_F32     patchCord42(mixer2, 0, mixer3, 1);
+
+//connect the output of the mixers to the final broadband compressor
 AudioConnection_F32     patchCord43(mixer3, 0, compBroadband[1], 0);
+
+//send the audio out
 AudioConnection_F32     patchCord44(compBroadband[1], 0, float2Int1, 0);    //Left.  makes Float connections between objects
 AudioConnection         patchCord51(float2Int1, 0, i2s_out, 0);  //connect the Left float processor to the Left output
 AudioConnection         patchCord52(float2Int1, 0, i2s_out, 1);  //connect the Right float processor to the Right output
@@ -155,28 +162,17 @@ void setupAudioProcessing(void) {
   firFilt[7].begin(firCoeff7, N_FIR);
 
   //setup the compressors
-  #include "GHA_Constants.h"
+  #include "GHA_Constants.h"  //this sets dsl and gha, which are used in the next line
   configureMultiBandWDRCasGHA(CUSTOM_SAMPLE_RATE, &dsl, &gha, 
-      N_BBCOMP, compBroadband, N_CHAN, compPerBand);
-
-  // set the gains on the mixers
-  #if 0
-    mixer1.gain(0,0.1);  mixer1.gain(1,0.1);  mixer1.gain(2,0.1);  mixer1.gain(3,0.1);
-    mixer2.gain(0,0.3);  mixer2.gain(1,0.5);  mixer2.gain(2,0.8);  mixer2.gain(3,1.0);
-  #else
-    for (int i=0; i<4; i++) {
-      mixer1.gain(i,1.0);  mixer2.gain(i,1.0); mixer3.gain(i,1.0); //set all channels the simply pass-through the signal
-    }
-  #endif
+      N_BBCOMP, compBroadband, N_CHAN, compPerBand); //this function is in AudioEffectCompWDR_F32.h
 }
 
 // define the setup() function, the function that is called once when the device is booting
 void setup() {
   Serial.begin(115200);   //open the USB serial link to enable debugging messages
   delay(500);             //give the computer's USB serial system a moment to catch up.
-  Serial.println("GenericHearingAid: setup()...");
+  Serial.println("WDRC_Compressor_Float: setup()...");
   Serial.print("Global: F_CPU: "); Serial.println(F_CPU);
-  Serial.print("Global: F_PLL: "); Serial.println(F_PLL);
   Serial.print("Global: AUDIO_SAMPLE_RATE: "); Serial.println(AUDIO_SAMPLE_RATE);
   Serial.print("Global: AUDIO_BLOCK_SAMPLES: "); Serial.println(AUDIO_BLOCK_SAMPLES);
 
@@ -185,7 +181,7 @@ void setup() {
   AudioMemory_F32(30);  //allocate Float32 audio data blocks
 
   //change the sample rate...this is required for any sample rate other than 44100...WEA to fix.
-  setI2SFreq((int)AUDIO_SAMPLE_RATE); //set the sample rate for the Audio Card (the rest of the library doesn't know, though)
+  setI2SFreq((int)AUDIO_SAMPLE_RATE); 
 
   // Enable the audio shield, select input, and enable output
   setupAudioHardware();
@@ -197,7 +193,7 @@ void setup() {
   // setup any other other features
   pinMode(POT_PIN, INPUT); //set the potentiometer's input pin as an INPUT
 
-  //setup sine wave as test signal
+  //setup sine wave as test signal..if the sine input
   testSignal.amplitude(0.01);
   testSignal.frequency(500.0f);
   Serial.println("setup() complete");
@@ -215,8 +211,6 @@ void loop() {
   //update the memory and CPU usage...if enough time has passed
   printMemoryAndCPU(millis());
 
-  //print the compressor state
-  //printCompressorState(millis(),&Serial);
 } //end loop()
 
 
@@ -239,9 +233,6 @@ void servicePotentiometer(unsigned long curTime_millis) {
     //float scaled_val = val / 3.0; scaled_val = scaled_val * scaled_val;
     if (abs(val - prev_val) > 0.05) { //is it different than befor?
       prev_val = val;  //save the value for comparison for the next time around
-
-      //Serial.print("Sending new value to my algorithms: ");
-      //Serial.println(effect1.setUserParameter(val));   //effect2.setUserParameter(val);
       if (USE_TYMPAN == 1) val = 1.0 - val; //reverse direction of potentiometer (error with Tympan PCB)
 
       #if USE_TEST_TONE_INPUT==1
@@ -291,28 +282,6 @@ void printMemoryAndCPU(unsigned long curTime_millis) {
   }
 }
 
-/*
-void printCompressorState(unsigned long curTime_millis, Stream *s) {
-  static unsigned long updatePeriod_millis = 2000; //how many milliseconds between updating the potentiometer reading?
-  static unsigned long lastUpdate_millis = 0;
-
-  //has enough time passed to update everything?
-  if (curTime_millis < lastUpdate_millis) lastUpdate_millis = 0; //handle wrap-around of the clock
-  if ((curTime_millis - lastUpdate_millis) > updatePeriod_millis) { //is it time to update the user interface?
-
-      s->print("Current Compressor: Pre-Gain (dB) = ");
-      s->print(preGain.getGain_dB());
-      s->print(", Dynamic Gain L/R (dB) = ");
-      for (int Ichan = 0; Ichan < N_CHAN; Ichan++ ) {
-        s->print(compPerBand[Ichan].getCurrentGain_dB());
-        s->print(", ");
-      }
-      s->println();
-
-      lastUpdate_millis = curTime_millis; //we will use this value the next time around.
-    }
-};
-*/
 
 //Here's the function to change the sample rate of the system (via changing the clocking of the I2S bus)
 //https://forum.pjrc.com/threads/38753-Discussion-about-a-simple-way-to-change-the-sample-rate?p=121365&viewfull=1#post121365
