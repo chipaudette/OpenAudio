@@ -9,9 +9,10 @@ Created: OpenAudio (Chip Audette)
 
 // Choose the operation that you want to do
 #define DO_NAIVE_FIR 0
-#define DO_KISS_FFT 1
-#define DO_ARM_FFT 2
-#define OPERATION_TO_DO DO_NAIVE_FIR  //change this to select which function to run
+#define DO_ARM_FIR 1
+#define DO_KISS_FFT 2
+#define DO_ARM_FFT 3
+#define OPERATION_TO_DO DO_ARM_FFT  //change this to select which function to run
 
 
 //In this header file is the definition for things like DataType (int16, int32, float) and MAX_N
@@ -20,6 +21,12 @@ Created: OpenAudio (Chip Audette)
 #if OPERATION_TO_DO == DO_NAIVE_FIR
 #include "do_naive_fir.h"
 char *alg_name = "NAIVE FIR";
+#define N_TRIALS 500   // how many times to repeat the operation
+#endif
+
+#if OPERATION_TO_DO == DO_ARM_FIR
+#include "do_arm_fir.h"
+char *alg_name = "ARM FIR";
 #define N_TRIALS 500   // how many times to repeat the operation
 #endif
 
@@ -73,17 +80,24 @@ void loop() {
      I_loop++;
 
 		//step trough each N
+    int FLOPS_per_trial[LEN_ALL_N];
 		for (int I_N = 0; I_N < LEN_ALL_N;  I_N++) {
 			N = ALL_N[I_N];
       if (N >= 4) {
         
   			//do the processing
   			#if (OPERATION_TO_DO == DO_NAIVE_FIR)
-  				dt_micros = naive_fir_func(N,N_TRIALS);
+  				dt_micros = naive_fir_func(N,N_TRIALS); //applies FIR to one input sample.  Does it N_TRIALS times.
+          FLOPS_per_trial[I_N] = 2*N; //multiply plus add 
+        #elif (OPERATION_TO_DO == DO_ARM_FIR)
+          dt_micros = arm_fir_func(N,N_TRIALS);  //corrected dt_micros to be like applying FIR to one input sample.
+          FLOPS_per_trial[I_N] = 2*N;
   			#elif (OPERATION_TO_DO == DO_KISS_FFT)
   				dt_micros = kiss_fft_func(N,N_TRIALS);
+          FLOPS_per_trial[I_N]=-1;
   			#elif (OPERATION_TO_DO == DO_ARM_FFT)
   				dt_micros = arm_fft_func(N,N_TRIALS);
+          FLOPS_per_trial[I_N]=-1;
   			#endif
   
   			//report the timing
@@ -93,7 +107,11 @@ void loop() {
           Serial.print(F(" *** NOT ENOUGH TEMP MEMORY *** "));
         } else {
           Serial.print(((float)dt_micros)/((float)N_TRIALS));
-          Serial.print(F(" usec per operation"));  
+          Serial.print(F(" usec per operation"));
+          if (FLOPS_per_trial[I_N] > 0) {
+            Serial.print(F(", MFLOPS = "));
+            Serial.print(((float)FLOPS_per_trial[I_N])*((float)N_TRIALS) / ((float)dt_micros));
+          }
         }
         #ifdef IS_ARDUINO_UNO
           Serial.print(F(", Free RAM = ")); Serial.print(freeRam());

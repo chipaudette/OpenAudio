@@ -27,6 +27,7 @@ uint32_t naive_fir_func(const int N_FIR, const int N_LOOP) {
 
 	//start doing the trials
 	start_micros = micros();
+  filt_t accum=0;
 	for (int count = 0; count < N_LOOP; count++) { //run multiple times?  or not.
 		z_ind=0;
 
@@ -47,6 +48,7 @@ uint32_t naive_fir_func(const int N_FIR, const int N_LOOP) {
 			//foo_z_ind = (z_ind-i) % N_FIR;  //modulo.  Slow on Uno.  Not bad on M0 Pro.
 			out_val += b[i]*z[foo_z_ind];
 		}
+    accum+=out_val;
 	}
 
 	// assess the timing

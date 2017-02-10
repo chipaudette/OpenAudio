@@ -12,8 +12,7 @@
 #define USE_INT16 0  //you don't need to change this
 #define USE_INT32 1  //you don't need to change this
 #define USE_FLOAT 2  //you don't need to change this
-#define DATA_TYPE  USE_INT16  //THIS is the one to change...copy-paste one of the three types above
-
+#define DATA_TYPE  USE_FLOAT  //THIS is the one to change...copy-paste one of the three types above
 
 #ifdef IS_ARDUINO_IDE
   #ifdef IS_MAPLE
@@ -49,7 +48,11 @@
     #endif
   #else
     //Arduino M0, Due (?), Teensy
-    #define MAX_N 1024  //All other platforms have more memory so you can do more
+    #if OPERATION_TO_DO == DO_ARM_FIR
+      #define MAX_N 256
+    #else
+      #define MAX_N 512 //All other platforms have more memory so you can do more
+    #endif
   #endif
 #endif
 
