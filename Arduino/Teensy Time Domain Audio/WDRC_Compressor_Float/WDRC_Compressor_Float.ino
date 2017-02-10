@@ -34,9 +34,7 @@
 //include <SerialFlash.h>
 
 #include <OpenAudio_ArduinoLibrary.h> //for AudioConvert_I16toF32, AudioConvert_F32toI16, and AudioEffectGain_F32
-#include "AudioFilterFIR_F32.h"
 #include "AudioEffectCompWDR_F32.h"
-
 
 //create audio library objects for handling the audio
 #if USE_TYMPAN == 0
@@ -48,9 +46,11 @@
 AudioSynthWaveformSine  testSignal;          //use to generate test tone as input
 AudioInputI2S           i2s_in;          //Digital audio *from* the Teensy Audio Board ADC.  Sends Int16.  Stereo.
 AudioOutputI2S          i2s_out;        //Digital audio *to* the Teensy Audio Board DAC.  Expects Int16.  Stereo
-
-//create audio objects
+AudioAnalyzeRMS         rms_input, rms_output; //only used for Bluetooth monitoring of signal levels
 AudioConvert_I16toF32   int2Float1;     //Converts Int16 to Float.  See class in AudioStream_F32.h
+AudioConvert_F32toI16   float2Int1;     //Converts Float to Int16.  See class in AudioStream_F32.h
+
+//create audio objects for the algorithm
 AudioEffectGain_F32     preGain;
 #define N_BBCOMP 2      //number of broadband compressors
 AudioEffectCompWDR_F32  compBroadband[N_BBCOMP]; //here are the broad band compressors
@@ -58,20 +58,24 @@ AudioEffectCompWDR_F32  compBroadband[N_BBCOMP]; //here are the broad band compr
 AudioFilterFIR_F32      firFilt[N_CHAN];  //here are the filters to break up the audio into multipel bands
 AudioEffectCompWDR_F32  compPerBand[N_CHAN]; //here are the per-band compressors
 AudioMixer4_F32         mixer1, mixer2, mixer3; //mixers to reconstruct the broadband audio (each is good for 4 channels)
-AudioConvert_F32toI16   float2Int1;     //Converts Float to Int16.  See class in AudioStream_F32.h
 
-//make the audio connections
+//choose the input audio source
 #if (USE_TEST_TONE_INPUT == 1)
-  //use test tone as audio input
-  AudioConnection       patchCord1(testSignal, 0, int2Float1, 0);    //connect the Left input to the Left Int->Float converter
-#else
-  //use real audio input (microphones or line-in)
-  AudioConnection       patchCord1(i2s_in, 0, int2Float1, 0);    //connect the Left input to the Left Int->Float converter
-#endif
-//AudioConnection_F32     patchCord2(int2Float1, 0, preGain, 0);
-AudioConnection_F32     patchCord2(int2Float1, 0, compBroadband[0], 0);
+  AudioConnection       patchCord1(testSignal, 0, int2Float1, 0);    //connect a test tone to the Left Int->Float converter
+  AudioConnection       patchCord2(testSignal, 0, rms_input, 0);    //connect the Left input to level monitor (Bluetooth reporting only)
 
-//connect the first broadband compressor to each of the filters
+#else
+  AudioConnection       patchCord1(i2s_in, 0, int2Float1, 0);    //connect the Left input to the Left Int->Float converter
+  AudioConnection       patchCord2(i2s_in, 0, rms_input, 0);    //connect the Left input to level monitor (Bluetooth reporting only)
+#endif
+
+//setup the pre-gain
+AudioConnection_F32     patchCord3(int2Float1, 0, preGain, 0);
+
+//apply the first broadband compressor
+AudioConnection_F32     patchCord5(preGain, 0, compBroadband[0], 0);
+
+//connect to each of the filters to make the sub-bands
 AudioConnection_F32     patchCord11(compBroadband[0], 0, firFilt[0], 0);
 AudioConnection_F32     patchCord12(compBroadband[0], 0, firFilt[1], 0);
 AudioConnection_F32     patchCord13(compBroadband[0], 0, firFilt[2], 0);
@@ -110,48 +114,56 @@ AudioConnection_F32     patchCord43(mixer3, 0, compBroadband[1], 0);
 AudioConnection_F32     patchCord44(compBroadband[1], 0, float2Int1, 0);    //Left.  makes Float connections between objects
 AudioConnection         patchCord51(float2Int1, 0, i2s_out, 0);  //connect the Left float processor to the Left output
 AudioConnection         patchCord52(float2Int1, 0, i2s_out, 1);  //connect the Right float processor to the Right output
+AudioConnection         patchCord45(float2Int1, 0, rms_output, 0); //measure the RMS of the output (for reporting)
 
+//Bluetooth parameters
+#define USE_BT_SERIAL 1  //set to zero to disable bluetooth
+#define BT_SERIAL Serial1
 
 //I have a potentiometer on the Teensy Audio Board
 #define POT_PIN A1  //potentiometer is tied to this pin
 
 // define functions to setup the hardware
 void setupAudioHardware(void) {
-#if USE_TYMPAN == 0
-  //use Teensy Audio Board
-  Serial.println("Setting up Teensy Audio Board...");
-  const int myInput = AUDIO_INPUT_LINEIN;   //which input to use?  AUDIO_INPUT_LINEIN or AUDIO_INPUT_MIC
-  audioHardware.enable();                   //start the audio board
-  audioHardware.inputSelect(myInput);       //choose line-in or mic-in
-  audioHardware.volume(0.8);                //volume can be 0.0 to 1.0.  0.5 seems to be the usual default.
-  audioHardware.lineInLevel(10, 10);        //level can be 0 to 15.  5 is the Teensy Audio Library's default
-  audioHardware.adcHighPassFilterDisable(); //reduces noise.  https://forum.pjrc.com/threads/27215-24-bit-audio-boards?p=78831&viewfull=1#post78831
-#else
-  //use Tympan Audio Board
-  Serial.println("Setting up Tympan Audio Board...");
-  audioHardware.enable(); // activate AIC
+  #if USE_TYMPAN == 0
+    //use Teensy Audio Board
+    Serial.println("Setting up Teensy Audio Board...");
+    const int myInput = AUDIO_INPUT_LINEIN;   //which input to use?  AUDIO_INPUT_LINEIN or AUDIO_INPUT_MIC
+    audioHardware.enable();                   //start the audio board
+    audioHardware.inputSelect(myInput);       //choose line-in or mic-in
+    audioHardware.volume(0.8);                //volume can be 0.0 to 1.0.  0.5 seems to be the usual default.
+    audioHardware.lineInLevel(10, 10);        //level can be 0 to 15.  5 is the Teensy Audio Library's default
+    audioHardware.adcHighPassFilterDisable(); //reduces noise.  https://forum.pjrc.com/threads/27215-24-bit-audio-boards?p=78831&viewfull=1#post78831
+  #else
+    //use Tympan Audio Board
+    Serial.println("Setting up Tympan Audio Board...");
+    audioHardware.enable(); // activate AIC
+  
+    //choose input
+    //audioHardware.inputSelect(TYMPAN_INPUT_MIC_JACK); // use the microphone jack
+    audioHardware.inputSelect(TYMPAN_INPUT_ON_BOARD_MIC); // use the on board microphones // default
+  
+    //choose mic bias (if using mics on input jack)
+    int myBiasLevel = TYMPAN_MIC_BIAS_2_5;  //choices: TYMPAN_MIC_BIAS_2_5, TYMPAN_MIC_BIAS_1_7, TYMPAN_MIC_BIAS_1_25, TYMPAN_MIC_BIAS_VSUPPLY
+    audioHardware.setMicBias(myBiasLevel); // set mic bias to 2.5 // default
+  
+    //set volumes
+    audioHardware.volume(0);  // -63.6 to +24 dB in 0.5dB steps.  uses signed 8-bit
+    audioHardware.micGain(10); // set MICPGA volume, 0-47.5dB in 0.5dB setps
+  #endif
 
-  //choose input
-  //audioHardware.inputSelect(TYMPAN_INPUT_MIC_JACK); // use the microphone jack
-  audioHardware.inputSelect(TYMPAN_INPUT_ON_BOARD_MIC); // use the on board microphones // default
-
-  //choose mic bias (if using mics on input jack)
-  int myBiasLevel = TYMPAN_MIC_BIAS_2_5;  //choices: TYMPAN_MIC_BIAS_2_5, TYMPAN_MIC_BIAS_1_7, TYMPAN_MIC_BIAS_1_25, TYMPAN_MIC_BIAS_VSUPPLY
-  audioHardware.setMicBias(myBiasLevel); // set mic bias to 2.5 // default
-
-  //set volumes
-  audioHardware.volume(0);  // -63.6 to +24 dB in 0.5dB steps.  uses signed 8-bit
-  audioHardware.micGain(10); // set MICPGA volume, 0-47.5dB in 0.5dB setps
-#endif
+  //setup the potentiometer.  same for Teensy Audio Board as for Tympan
+  pinMode(POT_PIN, INPUT); //set the potentiometer's input pin as an INPUT
 }
 
+//define functions to setup the audio processing parameters
 #define N_FIR 64
-#include "filtCoeff_64NFIR_8chan_fs24000Hz.h"
+#include "filtCoeff_64NFIR_8chan_fs24000Hz.h" //this creates data arrays for the FIR coefficients
 void setupAudioProcessing(void) {
-  //set the pre-gain
+  //set the pre-gain (if used)
   preGain.setGain_dB(0.0f);
 
-  //set the filter coefficients
+  //set the per-channel filter coefficients
   firFilt[0].begin(firCoeff0, N_FIR);
   firFilt[1].begin(firCoeff1, N_FIR);
   firFilt[2].begin(firCoeff2, N_FIR);
@@ -161,7 +173,7 @@ void setupAudioProcessing(void) {
   firFilt[6].begin(firCoeff6, N_FIR);
   firFilt[7].begin(firCoeff7, N_FIR);
 
-  //setup the compressors
+  //setup all of the the compressors
   #include "GHA_Constants.h"  //this sets dsl and gha, which are used in the next line
   configureMultiBandWDRCasGHA(CUSTOM_SAMPLE_RATE, &dsl, &gha, 
       N_BBCOMP, compBroadband, N_CHAN, compPerBand); //this function is in AudioEffectCompWDR_F32.h
@@ -169,29 +181,25 @@ void setupAudioProcessing(void) {
 
 // define the setup() function, the function that is called once when the device is booting
 void setup() {
-  Serial.begin(115200);   //open the USB serial link to enable debugging messages
-  delay(500);             //give the computer's USB serial system a moment to catch up.
+  Serial.begin(115200);   //Open USB Serial link...for debugging
+  if (USE_BT_SERIAL) BT_SERIAL.begin(115200);  //Open BT link
+  delay(500); 
+  
   Serial.println("WDRC_Compressor_Float: setup()...");
-  Serial.print("Global: F_CPU: "); Serial.println(F_CPU);
-  Serial.print("Global: AUDIO_SAMPLE_RATE: "); Serial.println(AUDIO_SAMPLE_RATE);
-  Serial.print("Global: AUDIO_BLOCK_SAMPLES: "); Serial.println(AUDIO_BLOCK_SAMPLES);
+  Serial.print("AUDIO_SAMPLE_RATE: "); Serial.println(AUDIO_SAMPLE_RATE);
+  Serial.print("AUDIO_BLOCK_SAMPLES: "); Serial.println(AUDIO_BLOCK_SAMPLES);
+  if (USE_BT_SERIAL) BT_SERIAL.println("WDRC_Compressor_Float: starting...");
 
   // Audio connections require memory
-  AudioMemory(30);      //allocate Int16 audio data blocks
-  AudioMemory_F32(30);  //allocate Float32 audio data blocks
-
-  //change the sample rate...this is required for any sample rate other than 44100...WEA to fix.
-  setI2SFreq((int)AUDIO_SAMPLE_RATE); 
+  AudioMemory(20);      //allocate Int16 audio data blocks
+  AudioMemory_F32(20);  //allocate Float32 audio data blocks
 
   // Enable the audio shield, select input, and enable output
+  setI2SFreq((int)AUDIO_SAMPLE_RATE); //change the sample rate...this is required for any sample rate other than 44100...WEA to fix.
   setupAudioHardware();
-  Serial.println("Audio Hardware Setup Complete.");
 
   //setup filters and mixers
   setupAudioProcessing();
-
-  // setup any other other features
-  pinMode(POT_PIN, INPUT); //set the potentiometer's input pin as an INPUT
 
   //setup sine wave as test signal..if the sine input
   testSignal.amplitude(0.01);
@@ -213,6 +221,9 @@ void loop() {
 
   //print the state of the gain processing
   printCompressorState(millis(),&Serial);
+
+  //print compressor status to bluetooth
+  printStatusToBluetooth(millis(), &BT_SERIAL);
 } //end loop()
 
 
@@ -270,12 +281,12 @@ void printMemoryAndCPU(unsigned long curTime_millis) {
     Serial.print("%/");
     Serial.print(AudioProcessorUsageMax());
     Serial.print("%,   ");
-    Serial.print("MEMORY Int16 Cur/Peak: ");
+    Serial.print("Dyn MEM Int16 Cur/Peak: ");
     Serial.print(AudioMemoryUsage());
     Serial.print("/");
     Serial.print(AudioMemoryUsageMax());
     Serial.print(",   ");
-    Serial.print("MEMORY Float32 Cur/Peak: ");
+    Serial.print("Dyn MEM Float32 Cur/Peak: ");
     Serial.print(AudioMemoryUsage_F32());
     Serial.print("/");
     Serial.print(AudioMemoryUsageMax_F32());
@@ -303,6 +314,25 @@ void printCompressorState(unsigned long curTime_millis, Stream *s) {
       s->print(". BB2 Level (dB) = "); s->print(compBroadband[1].getCurrentLevel_dB());
       s->println();
 
+      lastUpdate_millis = curTime_millis; //we will use this value the next time around.
+    }
+};
+
+
+void printStatusToBluetooth(unsigned long curTime_millis, Stream *s) {
+  static unsigned long updatePeriod_millis = 100; //how many milliseconds between updating the potentiometer reading?
+  static unsigned long lastUpdate_millis = 0;
+
+  //has enough time passed to update everything?
+  if (curTime_millis < lastUpdate_millis) lastUpdate_millis = 0; //handle wrap-around of the clock
+  if ((curTime_millis - lastUpdate_millis) > updatePeriod_millis) { //is it time to update the user interface?
+
+      s->print("In, Out (dBFS): ");
+      s->print(fast_dB(rms_input.read()));
+      s->print(", ");
+      s->print(fast_dB(rms_output.read()));
+      s->println();
+      
       lastUpdate_millis = curTime_millis; //we will use this value the next time around.
     }
 };

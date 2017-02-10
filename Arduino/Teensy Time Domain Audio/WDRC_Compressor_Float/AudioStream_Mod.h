@@ -82,7 +82,6 @@
   #endif
 #endif
 
-
 #ifndef __ASSEMBLER__
 class AudioStream;
 class AudioConnection;
