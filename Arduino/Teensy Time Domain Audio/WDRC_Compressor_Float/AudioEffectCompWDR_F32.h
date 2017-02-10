@@ -188,17 +188,18 @@ class AudioEffectCompWDR_F32 : public AudioStream_F32
       if ((tk + tkgn) > bolt) {
           tk = bolt - tkgn;
       }
-      tkgo = tkgn + tk * (1 - 1 / cr);
+      tkgo = tkgn + tk * (1.0f - 1.0f / cr);
       pblt = cr * (bolt - tkgo);
+      const float cr_const = ((1.0f / cr) - 1.0f);
       for (k = 0; k < n; k++) {
         if ((pdb[k] < tk) && (cr >= 1)) {
             gdb = tkgn;
         } else if (pdb[k] > pblt) {
-            gdb = bolt + ((pdb[k] - pblt) / 10) - pdb[k];
+            gdb = bolt + ((pdb[k] - pblt) / 10.0f) - pdb[k];
         } else {
-            gdb = ((1 / cr) - 1) * pdb[k] + tkgo;
+            gdb = cr_const * pdb[k] + tkgo;
         }
-        y[k] = x[k] * undb2(gdb); 
+        y[k] = x[k] * undb2(gdb); //apply the gain
       }
     }
 
@@ -224,6 +225,8 @@ class AudioEffectCompWDR_F32 : public AudioStream_F32
         *alfa = (float) (ansi_atk / (1.0f + ansi_atk));
         *beta = (float) (ansi_rel / (10.f + ansi_rel));
     }
+
+    float getCurrentLevel_dB(void) { return db2(prev_env); }  //this is 20*log10(abs(signal)) after the envelope smoothing
 
   private:
     audio_block_f32_t *inputQueueArray[1];

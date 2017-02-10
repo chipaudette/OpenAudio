@@ -211,6 +211,8 @@ void loop() {
   //update the memory and CPU usage...if enough time has passed
   printMemoryAndCPU(millis());
 
+  //print the state of the gain processing
+  printCompressorState(millis(),&Serial);
 } //end loop()
 
 
@@ -282,6 +284,28 @@ void printMemoryAndCPU(unsigned long curTime_millis) {
   }
 }
 
+void printCompressorState(unsigned long curTime_millis, Stream *s) {
+  static unsigned long updatePeriod_millis = 2000; //how many milliseconds between updating the potentiometer reading?
+  static unsigned long lastUpdate_millis = 0;
+
+  //has enough time passed to update everything?
+  if (curTime_millis < lastUpdate_millis) lastUpdate_millis = 0; //handle wrap-around of the clock
+  if ((curTime_millis - lastUpdate_millis) > updatePeriod_millis) { //is it time to update the user interface?
+
+      s->print("Gain Processing: Pre-Gain (dB) = ");
+      s->print(preGain.getGain_dB());
+      s->print(", BB1 Level (dB) = "); s->print(compBroadband[0].getCurrentLevel_dB());
+      s->print(". Per-Chan Level (dB) = ");
+      for (int Ichan = 0; Ichan < N_CHAN; Ichan++ ) {
+        s->print(compPerBand[Ichan].getCurrentLevel_dB());
+        if (Ichan < (N_CHAN-1)) s->print(", ");
+      }
+      s->print(". BB2 Level (dB) = "); s->print(compBroadband[1].getCurrentLevel_dB());
+      s->println();
+
+      lastUpdate_millis = curTime_millis; //we will use this value the next time around.
+    }
+};
 
 //Here's the function to change the sample rate of the system (via changing the clocking of the I2S bus)
 //https://forum.pjrc.com/threads/38753-Discussion-about-a-simple-way-to-change-the-sample-rate?p=121365&viewfull=1#post121365

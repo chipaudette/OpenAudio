@@ -75,7 +75,7 @@ void AudioFilterFIR_F32::update(void)
   // get a block for the FIR output
   b_new = AudioStream_F32::allocate_f32();
   if (b_new) {
-    arm_fir_f32(&fir_inst, (float32_t *)block->data, (float32_t *)b_new->data, AUDIO_BLOCK_SAMPLES);
+    arm_fir_f32(&fir_inst, (float32_t *)block->data, (float32_t *)b_new->data, block->length);
     AudioStream_F32::transmit(b_new); // send the FIR output
     AudioStream_F32::release(b_new);
   }
