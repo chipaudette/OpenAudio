@@ -57,8 +57,6 @@ typedef struct {
 
 #define undb2(x)    (expf(0.11512925464970228420089957273422f*x))  //faster:  exp(log(10.0f)*x/20);  this is exact
 #define db2(x)      (6.020599913279623f*log2f_approx(x)) //faster: 20*log2_approx(x)/log2(10);  this is approximate
-#define fast_dB(x)      (6.020599913279623f*log2f_approx(x)) //faster: 20*log2_approx(x)/log2(10);  this is approximate
-
 
 /* ----------------------------------------------------------------------
 ** Fast approximation to the log2() function.  It uses a two step
@@ -230,6 +228,7 @@ class AudioEffectCompWDR_F32 : public AudioStream_F32
     }
 
     float getCurrentLevel_dB(void) { return db2(prev_env); }  //this is 20*log10(abs(signal)) after the envelope smoothing
+    static float fast_dB(float x) { return db2(x); } //faster: 20*log2_approx(x)/log2(10);  this is approximate
 
   private:
     audio_block_f32_t *inputQueueArray[1];

@@ -328,9 +328,9 @@ void printStatusToBluetooth(unsigned long curTime_millis, Stream *s) {
   if ((curTime_millis - lastUpdate_millis) > updatePeriod_millis) { //is it time to update the user interface?
 
       s->print("In, Out (dBFS): ");
-      s->print(fast_dB(rms_input.read()));
+      s->print(AudioEffectCompWDR_F32::fast_dB(rms_input.read())); //use a faster dB function
       s->print(", ");
-      s->print(fast_dB(rms_output.read()));
+      s->print(AudioEffectCompWDR_F32::fast_dB(rms_output.read())); //use a faster dB function
       s->println();
       
       lastUpdate_millis = curTime_millis; //we will use this value the next time around.
