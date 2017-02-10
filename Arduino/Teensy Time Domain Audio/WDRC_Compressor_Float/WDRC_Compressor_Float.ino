@@ -1,14 +1,19 @@
 /*
-   MultiBandCompressor_Float
+  MultiBandCompressor_Float
 
-   Created: Chip Audette (openAudio), Feb 2017
-   Purpose: Implements 8-band compressor, all in the time-domain
+  Created: Chip Audette (OpenAudio), Feb 2017
+    Primarly built upon CHAPRO "Generic Hearing Aid" from 
+    Boys Town National Research Hospital (BTNRH): https://github.com/BTNRH/chapro
+    
+  Purpose: Implements 8-band compressor.  The BTNRH version was implemented the
+    filters in the frequency-domain, whereas I implemented them in the time-domain.
 
-   Uses Teensy Audio Adapter ro the Tympan Audio Board
+  Uses Teensy Audio Adapter ro the Tympan Audio Board
       For Teensy Audio Board, assumes microphones (or whatever) are attached to the
       For Tympan Audio Board, can use on board mics or external mic
 
-   Listens  potentiometer mounted to Audio Board to provde a control signal.
+  User Controls:
+    Potentiometer on Tympan controls the headphone volume
 
    MIT License.  use at your own risk.
 */
@@ -16,32 +21,28 @@
 #define CUSTOM_SAMPLE_RATE 24000     //See local AudioStream_Mod.h.  Only a limitted number supported
 #define CUSTOM_BLOCK_SAMPLES 128     //See local AudioStream_Mod.h.  Do not change.  Doesn't work yet.
 
-
 //Use the new Tympan board?
-#define USE_TYMPAN 1    //1 = uses tympan hardware, 0 = uses teensy audio board
+#define USE_TYMPAN 1    //1 = uses tympan hardware, 0 = uses the old teensy audio board
 
 //Use test tone as input (set to 1)?  Or, use live audio (set to zero)
 #define USE_TEST_TONE_INPUT 0
 
-//include my custom AudioStream.h...this prevents the default one from being used
-#include "AudioStream_Mod.h"
 
-//These are the includes from the Teensy Audio Library
+// Include all the of the needed libraries
+#include "AudioStream_Mod.h" //include my custom AudioStream.h...this prevents the default one from being used
 #include <Audio.h>      //Teensy Audio Library
 #include <Wire.h>
 #include <SPI.h>
 //include <SD.h>
 //include <SerialFlash.h>
-
 #include <OpenAudio_ArduinoLibrary.h> //for AudioConvert_I16toF32, AudioConvert_F32toI16, and AudioEffectGain_F32
 #include "AudioEffectCompWDR_F32.h"
 
 //create audio library objects for handling the audio
 #if USE_TYMPAN == 0
-  AudioControlSGTL5000    audioHardware;    //controller for the Teensy Audio Board
+  AudioControlSGTL5000        audioHardware;    //controller for the Teensy Audio Board
 #else
-  #include "control_tlv320.h"
-  AudioControlTLV320    audioHardware;    //controller for the Teensy Audio Board
+  AudioControlTLV320AIC3206   audioHardware;    //controller for the Teensy Audio Board
 #endif
 AudioSynthWaveformSine  testSignal;          //use to generate test tone as input
 AudioInputI2S           i2s_in;          //Digital audio *from* the Teensy Audio Board ADC.  Sends Int16.  Stereo.
@@ -63,7 +64,6 @@ AudioMixer4_F32         mixer1, mixer2, mixer3; //mixers to reconstruct the broa
 #if (USE_TEST_TONE_INPUT == 1)
   AudioConnection       patchCord1(testSignal, 0, int2Float1, 0);    //connect a test tone to the Left Int->Float converter
   AudioConnection       patchCord2(testSignal, 0, rms_input, 0);    //connect the Left input to level monitor (Bluetooth reporting only)
-
 #else
   AudioConnection       patchCord1(i2s_in, 0, int2Float1, 0);    //connect the Left input to the Left Int->Float converter
   AudioConnection       patchCord2(i2s_in, 0, rms_input, 0);    //connect the Left input to level monitor (Bluetooth reporting only)
