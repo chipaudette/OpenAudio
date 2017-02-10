@@ -1,3 +1,6 @@
+#ignore the analysis directory for now
+Analysis/*
+
 # jEdit and Matlab temporary files
 *.*~
 *.asv
