@@ -65,7 +65,7 @@ a.brand img {
 }
 
 #workspace {
-   margin-left: 160px;
+   margin-left: 180px;
    overflow: hidden;
 }
 
@@ -97,7 +97,7 @@ a.brand img {
 
 #palette {
    background: #f3f3f3;
-   width: 160px;
+   width: 180px;
    text-align: center;
    -webkit-user-select: none;
    -khtml-user-select: none;
@@ -220,7 +220,7 @@ a.brand img {
    border: 2px solid #999;
    background-position: 5% 50%;
    background-repeat: no-repeat;
-   width: 110px;
+   width: 130px;
    background-size: contain;
    position: relative;
 }
@@ -241,7 +241,7 @@ a.brand img {
    border: 1px solid #999;
 }
 .palette_port_output {
-    left:105px;
+    left:125px;
 }
 
 .palette_node:hover .palette_port {
@@ -273,7 +273,7 @@ a.brand img {
 #workspace {
     position: absolute;
     margin: 0;
-    top:5px; left:160px; bottom: 10px; right: 330px;
+    top:5px; left:180px; bottom: 10px; right: 330px;
 }
 #chart-zoom-controls {
     position: absolute;
