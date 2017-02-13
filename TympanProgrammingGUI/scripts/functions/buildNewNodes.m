@@ -32,6 +32,9 @@ all_short_names = guessShortName(all_class_names);
 %guess the category
 all_categories = guessCategory(all_class_names);
 
+%choose icon based on categories
+all_icons = chooseIcon(all_class_names,all_categories);
+
 %display results
 headings = {'type';'shortName';'inputs';'outputs';'category';'color';'icon'};new_node_data={};
 for Iclass=1:length(all_class_names)
@@ -41,7 +44,7 @@ for Iclass=1:length(all_class_names)
     new_node_data{Iclass,4} = all_num_outputs(Iclass);
     new_node_data{Iclass,5} = all_categories{Iclass};
     new_node_data{Iclass,6} = '#E6E0F8'; %default color
-    new_node_data{Iclass,7} = 'arrow-in.png'; %default icon
+    new_node_data{Iclass,7} = all_icons{Iclass}; %default icon
     
     str=[];
     for I=1:length(new_node_data(Iclass,:))
@@ -250,6 +253,9 @@ for Iname=1:length(class_names)
             name = name((length(targ_str)+1):end);
         end
     end
+    if strcmpi(name,'sgtl5000_extended')
+        name = 'sgtl5000ext';
+    end
     
     %strop off leading space or underscore
     while( (name(1) == ' ') | (name(1) == '_')); name=name(2:end);  end
@@ -257,8 +263,19 @@ for Iname=1:length(class_names)
     %strop off trailing space or underscore
     while( (name(end) == ' ') | (name(end) == '_')); name=name(1:end-1);  end
     
+    %adjust the case
+    if strcmpi(name(1:3),'I16') | strcmpi(name(1:3),'F32');
+        %don't change the case
+    else
+        %do change the case
+        name(1) = lower(name(1)); %remove any leading capital letter
+        if strcmpi(name(1:3),'SGT') | strcmpi(name(1:3),'TLV') | strcmpi(name(1:3),'FIR') | strcmpi(name(1:3),'IIR')
+            name=lower(name);  %go all lower case;
+        end
+    end
+    
     %save the name
-    short_names{Iname} = lower(name);
+    short_names{Iname} = name;
 end
 
 end %end function
@@ -326,7 +343,7 @@ for Iname=1:length(class_names)
     %translate the category name to an existing one
     switch lower(name)
         case 'synth'
-            name = 'input';
+            name = 'synth';
         case 'multiply'
             name = 'effect';
         case 'divide'
@@ -340,3 +357,20 @@ for Iname=1:length(class_names)
     all_categories{Iname} = name;
 end
 end %end function 
+
+
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function all_icons = chooseIcon(all_class_names,all_categories)
+
+all_icons = {};
+for Iclass = 1:length(all_class_names)
+    category = all_categories(Iclass);
+    icon = 'arrow-in.png';  %default
+    
+    if strcmpi(lower(category),'control-function')
+        icon = 'debug.png';
+    end
+    
+    all_icons{end+1} = icon;
+end
+end %end function

@@ -1,7 +1,7 @@
 
 addpath('functions\');
 
-overall_outfname = 'index.html';
+overall_outfname = '..\index.html';
 inpname = 'ParsedInputs\';
 
 all_lines={};

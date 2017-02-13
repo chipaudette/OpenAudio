@@ -28,13 +28,28 @@ orig_nodes = parseNodeFile(origNode_fname);
 %     'AudioSynthNoiseWhite','AudioSynthNoisePink',...
 %     'AudioAnalyzePeak','AudioAnalyzeRMS',...
 %     'AudioControlSGTL5000'};
+% 
+% nodes_keep = {'AudioInputUSB',...
+%     'AudioOutputUSB',...
+%     'AudioPlaySdWav',...
+%     'AudioPlayQueue','AudioRecordQueue',...
+%     'AudioAnalyzePeak','AudioAnalyzeRMS'};
 
 nodes_keep = {'AudioInputUSB',...
     'AudioOutputUSB',...
-    'AudioPlaySdWav',...
-    'AudioPlayQueue','AudioRecordQueue',...
-    'AudioAnalyzePeak','AudioAnalyzeRMS'};
+};
 
+%adjust node shortnames
+for Inode=1:length(orig_nodes)
+    node = orig_nodes(Inode);
+    if strcmpi(node.type,'AudioInputUSB');
+        node.shortName = 'usbAudioIn';
+    elseif strcmpi(node.type,'AudioOutputUSB');
+        node.shortName = 'usbAudioOut';
+    end
+    orig_nodes(Inode)=node;
+end
+        
 
 %keep just these
 nodes=[];
@@ -81,6 +96,28 @@ for Inode = 1:size(new_node_data,1)
         nodes(end+1) = node;
     end
 end
+
+%% sort the nodes
+
+%put tlv before sgtl
+all_names = {nodes(:).shortName};
+I = find(strcmpi(all_names,'tlv320aic3206'));tlv_node = nodes(I);
+J = find(strcmpi(all_names,'sgtl5000ext')); sgtl_node = nodes(J);
+nodes(min([I(1) J(1)])) = tlv_node;  %this comes first
+nodes(max([I(1) J(1)])) = sgtl_node;  %this comes second
+
+% put i2s before USB
+all_names = {nodes(:).shortName};
+I = find(strcmpi(all_names,'inputI2S'));first_node = nodes(I);
+J = find(strcmpi(all_names,'usbAudioIn')); second_node = nodes(J);
+nodes(min([I(1) J(1)])) = first_node;  %this comes first
+nodes(max([I(1) J(1)])) = second_node;  %this comes second
+   
+all_names = {nodes(:).shortName};
+I = find(strcmpi(all_names,'outputI2S'));first_node = nodes(I);
+J = find(strcmpi(all_names,'usbAudioOut')); second_node = nodes(J);
+nodes(min([I(1) J(1)])) = first_node;  %this comes first
+nodes(max([I(1) J(1)])) = second_node;  %this comes second
 
 %% write new nodes
 if ~isempty(outfname)
