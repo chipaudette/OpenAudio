@@ -19,7 +19,7 @@
 */
 
 #define CUSTOM_SAMPLE_RATE 24000     //See local AudioStream_Mod.h.  Only a limitted number supported
-#define CUSTOM_BLOCK_SAMPLES 128     //See local AudioStream_Mod.h.  Do not change.  Doesn't work yet.
+#define CUSTOM_BLOCK_SAMPLES 32     //See local AudioStream_Mod.h.  Do not change.  Doesn't work yet.
 
 //Use the new Tympan board?
 #define USE_TYMPAN 1    //1 = uses tympan hardware, 0 = uses the old teensy audio board
@@ -117,7 +117,7 @@ AudioConnection         patchCord52(float2Int1, 0, i2s_out, 1);  //connect the R
 AudioConnection         patchCord45(float2Int1, 0, rms_output, 0); //measure the RMS of the output (for reporting)
 
 //Bluetooth parameters
-#define USE_BT_SERIAL 1  //set to zero to disable bluetooth
+#define USE_BT_SERIAL 0  //set to zero to disable bluetooth
 #define BT_SERIAL Serial1
 
 //I have a potentiometer on the Teensy Audio Board
@@ -148,8 +148,8 @@ void setupAudioHardware(void) {
     audioHardware.setMicBias(myBiasLevel); // set mic bias to 2.5 // default
   
     //set volumes
-    audioHardware.volume(0);  // -63.6 to +24 dB in 0.5dB steps.  uses signed 8-bit
-    audioHardware.micGain(10); // set MICPGA volume, 0-47.5dB in 0.5dB setps
+    audioHardware.volume_dB(0);  // -63.6 to +24 dB in 0.5dB steps.  uses signed 8-bit
+    audioHardware.setInputGain_dB(10); // set MICPGA volume, 0-47.5dB in 0.5dB setps
   #endif
 
   //setup the potentiometer.  same for Teensy Audio Board as for Tympan
@@ -175,8 +175,9 @@ void setupAudioProcessing(void) {
 
   //setup all of the the compressors
   #include "GHA_Constants.h"  //this sets dsl and gha, which are used in the next line
-  configureMultiBandWDRCasGHA(CUSTOM_SAMPLE_RATE, &dsl, &gha, 
-      N_BBCOMP, compBroadband, N_CHAN, compPerBand); //this function is in AudioEffectCompWDR_F32.h
+  float fs_Hz = AUDIO_SAMPLE_RATE_EXACT; //should be same as CUSTOM_SAMPLE_RATE
+  configureMultiBandWDRCasGHA(fs_Hz, &dsl, &gha, 
+    N_BBCOMP, compBroadband, N_CHAN, compPerBand); //this function is in AudioEffectCompWDR_F32.h
 }
 
 // define the setup() function, the function that is called once when the device is booting
@@ -256,7 +257,7 @@ void servicePotentiometer(unsigned long curTime_millis) {
         #if USE_TYMPAN == 1
               float vol_dB = 0.f + 15.0f * ((val - 0.5) * 2.0); //set volume as 0dB +/- 15 dB
               Serial.print("Changing output volume frequency to = "); Serial.print(vol_dB); Serial.println(" dB");
-              audioHardware.volume(vol_dB);
+              audioHardware.volume_dB(vol_dB);
         #else
               float vol = 0.70f + 0.15f * ((val - 0.5) * 2.0); //set volume as 0.70 +/- 0.15
               Serial.print("Setting output volume control to = "); Serial.println(vol);

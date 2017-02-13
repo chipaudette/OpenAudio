@@ -50,7 +50,7 @@
 // Some parts of the audio library may have hard-coded dependency on 128 samples.
 // Please report these on the forum with reproducible test cases.
 // Added extra cases to support other sample rates (assumes you change them yourself
-#if defined(CUSTOM_SAMPLE_RATE) && defined(CUSTOM_BLOCK_SAMPLES)
+#ifdef CUSTOM_BLOCK_SAMPLES
   #if CUSTOM_BLOCK_SAMPLES == 128
     #define AUDIO_BLOCK_SAMPLES 128
   #elif CUSTOM_BLOCK_SAMPLES == 64
@@ -60,6 +60,14 @@
   #else
     #define AUDIO_BLOCK_SAMPLES 128
   #endif
+#else
+  #if defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__)
+    #define AUDIO_BLOCK_SAMPLES  128
+  #elif defined(__MKL26Z64__)
+    #define AUDIO_BLOCK_SAMPLES  64
+  #endif
+#endif 
+#ifdef CUSTOM_SAMPLE_RATE
   #if CUSTOM_SAMPLE_RATE == 24000   
     #define AUDIO_SAMPLE_RATE 24000
     #define AUDIO_SAMPLE_RATE_EXACT 23999
@@ -72,13 +80,11 @@
   #endif
 #else
   #if defined(__MK20DX128__) || defined(__MK20DX256__) || defined(__MK64FX512__) || defined(__MK66FX1M0__)
-  #define AUDIO_BLOCK_SAMPLES  128
-  #define AUDIO_SAMPLE_RATE    44117.64706
-  #define AUDIO_SAMPLE_RATE_EXACT 44117.64706 // 48 MHz / 1088, or 96 MHz * 2 / 17 / 256
+    #define AUDIO_SAMPLE_RATE    44117.64706
+    #define AUDIO_SAMPLE_RATE_EXACT 44117.64706 // 48 MHz / 1088, or 96 MHz * 2 / 17 / 256
   #elif defined(__MKL26Z64__)
-  #define AUDIO_BLOCK_SAMPLES  64
-  #define AUDIO_SAMPLE_RATE    22058.82353
-  #define AUDIO_SAMPLE_RATE_EXACT 22058.82353 // 48 MHz / 2176, or 96 MHz * 1 / 17 / 256
+    #define AUDIO_SAMPLE_RATE    22058.82353
+    #define AUDIO_SAMPLE_RATE_EXACT 22058.82353 // 48 MHz / 2176, or 96 MHz * 1 / 17 / 256
   #endif
 #endif
 
