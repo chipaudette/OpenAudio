@@ -104,23 +104,23 @@ class AudioEffectCompWDR_F32 : public AudioStream_F32
         10.0f,     // cr, compression ratio
         105.0f     // bolt, broadband output limiting threshold
       };
-      setParams(gha.attack, gha.release, gha.fs, gha.maxdB, gha.tkgain, gha.cr, gha.tk, gha.bolt);
-      calcEnvelope.setSampleRate_Hz(gha.fs); calcEnvelope.setAttackRelease_msec(gha.attack,gha.release);
+      setParams(gha.attack, gha.release, gha.fs, gha.maxdB, gha.tkgain, gha.cr, gha.tk, gha.bolt); //also sets calcEnvelope
     }
 
     AudioEffectCompWDR_F32(AudioSettings_F32 settings): AudioStream_F32(1,inputQueueArray) { //need to modify this for user to set sample rate
       //set default values...taken from CHAPRO, GHA_Demo.c  from "amplify()"
       CHA_WDRC gha = {1.0f, // attack time (ms)
         50.0f,     // release time (ms)
-        24000.0f,  // fs, sampling rate (Hz)
+        24000.f,  // fs, sampling rate (Hz)...is over-ridden below
         119.0f,    // maxdB, maximum signal (dB SPL)
         0.0f,      // tkgain, compression-start gain
         105.0f,    // tk, compression-start kneepoint
         10.0f,     // cr, compression ratio
         105.0f     // bolt, broadband output limiting threshold
       };
-      setParams(gha.attack, gha.release, settings.sample_rate_Hz, gha.maxdB, gha.tkgain, gha.cr, gha.tk, gha.bolt);
-      calcEnvelope.setSampleRate_Hz(gha.fs); calcEnvelope.setAttackRelease_msec(gha.attack,gha.release);
+
+      //override the sample rate
+      setParams(gha.attack, gha.release, settings.sample_rate_Hz, gha.maxdB, gha.tkgain, gha.cr, gha.tk, gha.bolt); //also sets calcEnvelope
     }
 
     //here is the method called automatically by the audio library
@@ -208,6 +208,9 @@ class AudioEffectCompWDR_F32 : public AudioStream_F32
       CHA_DVAR.cr = comp_ratio;
       CHA_DVAR.tk = tk;
       CHA_DVAR.bolt = bolt;
+
+      //configure the envelope calculator
+      calcEnvelope.setSampleRate_Hz(fs_Hz); calcEnvelope.setAttackRelease_msec(attack_ms,release_ms);
     }
 
     float getCurrentLevel_dB(void) { return db2(prev_env); }  //this is 20*log10(abs(signal)) after the envelope smoothing
