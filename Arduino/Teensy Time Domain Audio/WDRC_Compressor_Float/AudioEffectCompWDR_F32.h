@@ -153,26 +153,13 @@ class AudioEffectCompWDR_F32 : public AudioStream_F32
     //void compress(float *x, float *y, int n, float *prev_env,
     //    float &alfa, float &beta, float &tkgn, float &tk, float &cr, float &bolt, float &mxdB)
      void compress(float *x, float *y, int n)    
-    {
-
-        //allocate some temp memory for the envelope
+    {        
+        // find smoothed envelope
         audio_block_f32_t *envelope_block = AudioStream_F32::allocate_f32();
         if (!envelope_block) return;
+        calcEnvelope.smooth_env(x, envelope_block->data, n);
+        float *xpk = envelope_block->data; //get pointer to the array of (empty) data values
         
-        // find smoothed envelope
-        #if 0
-          //original
-          const float alfa = CHA_DVAR.alfa;
-          const float beta = CHA_DVAR.beta;
-          //xpk = (float *) cp[_xpk];
-          float *xpk = envelope_block->data; //get pointer to the array of (empty) data values
-          //smooth_env(x, xpk, n, ppk, alfa, beta);
-          smooth_env(x, xpk, n, &prev_env, alfa, beta);
-        #else
-          calcEnvelope.smooth_env(x, envelope_block->data, n);
-          float *xpk = envelope_block->data; //get pointer to the array of (empty) data values
-        #endif
-          
         // convert envelope to dB
         //mxdb = (float) CHA_DVAR[_mxdb];
         const float mxdb = CHA_DVAR.maxdB;
@@ -188,25 +175,6 @@ class AudioEffectCompWDR_F32 : public AudioStream_F32
         // release memory
         AudioStream_F32::release(envelope_block);
     }
-
-//    void smooth_env(float *x, float *y, int n, float *ppk, float alfa, float beta)
-//    {
-//        float  xab, xpk;
-//        int k;
-//    
-//        // find envelope of x and return as y
-//        xpk = *ppk;                     // start with previous xpk
-//        for (k = 0; k < n; k++) {
-//          xab = (x[k] >= 0) ? x[k] : -x[k];
-//          if (xab >= xpk) {
-//              xpk = alfa * xpk + (1-alfa) * xab;
-//          } else {
-//              xpk = beta * xpk;
-//          }
-//          y[k] = xpk;
-//        }
-//        *ppk = xpk;                     // save xpk for next time
-//    }
 
     void WDRC_circuit(float *x, float *y, float *pdb, int n, float tkgn, float tk, float cr, float bolt)
     {
@@ -241,18 +209,6 @@ class AudioEffectCompWDR_F32 : public AudioStream_F32
       CHA_DVAR.tk = tk;
       CHA_DVAR.bolt = bolt;
     }
-
-    //convert time constants from seconds to unitless parameters
-    //from CHAPRO, agc_prepare.c
-//    static void time_const(float atk_msec, float rel_msec, float fs, float *alfa, float *beta) {
-//        float ansi_atk, ansi_rel;
-//    
-//        // convert ANSI attack & release times to filter time constants
-//        ansi_atk = 0.001f* atk_msec * fs / 2.425f; 
-//        ansi_rel = 0.001f* rel_msec * fs / 1.782f; 
-//        *alfa = (float) (ansi_atk / (1.0f + ansi_atk));
-//        *beta = (float) (ansi_rel / (10.f + ansi_rel));
-//    }
 
     float getCurrentLevel_dB(void) { return db2(prev_env); }  //this is 20*log10(abs(signal)) after the envelope smoothing
     static float fast_dB(float x) { return db2(x); } //faster: 20*log2_approx(x)/log2(10);  this is approximate
