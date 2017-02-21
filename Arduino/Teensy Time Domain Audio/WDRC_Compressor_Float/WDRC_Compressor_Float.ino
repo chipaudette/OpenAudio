@@ -33,6 +33,7 @@
 //include <SD.h>
 //include <SerialFlash.h>
 #include <OpenAudio_ArduinoLibrary.h> //for AudioConvert_I16toF32, AudioConvert_F32toI16, and AudioEffectGain_F32
+#include "AudioCalcWDRCGain_F32.h"
 #include "AudioEffectCompWDR_F32.h"
 
 const float sample_rate_Hz = 24000.0f ; //24000 or 44117.64706f (or other frequencies in the table in AudioOutputI2S_F32
@@ -149,8 +150,8 @@ void setupAudioHardware(void) {
     audioHardware.setMicBias(myBiasLevel); // set mic bias to 2.5 // default
   
     //set volumes
-    audioHardware.volume_dB(10);  // -63.6 to +24 dB in 0.5dB steps.  uses signed 8-bit
-    audioHardware.setInputGain_dB(10); // set MICPGA volume, 0-47.5dB in 0.5dB setps
+    audioHardware.volume_dB(0.f);  // -63.6 to +24 dB in 0.5dB steps.  uses signed 8-bit
+    audioHardware.setInputGain_dB(10.f); // set MICPGA volume, 0-47.5dB in 0.5dB setps
   #endif
 
   //setup the potentiometer.  same for Teensy Audio Board as for Tympan
@@ -343,43 +344,68 @@ void printCompressorState(unsigned long curTime_millis, Stream *s) {
 //    }
 //};
 //
-////Here's the function to change the sample rate of the system (via changing the clocking of the I2S bus)
-////https://forum.pjrc.com/threads/38753-Discussion-about-a-simple-way-to-change-the-sample-rate?p=121365&viewfull=1#post121365
-//float setI2SFreq(int freq) {
-//  typedef struct {
-//    uint8_t mult;
-//    uint16_t div;
-//  } __attribute__((__packed__)) tmclk;
-//
-//  const int numfreqs = 15;
-//  const int samplefreqs[numfreqs] = { 8000, 11025, 16000, 22050, 24000, 32000, 44100, 44117.64706 , 48000, 88200, 44117.64706 * 2, 96000, 176400, 44117.64706 * 4, 192000};
-//
-//#if (F_PLL==16000000)
-//  const tmclk clkArr[numfreqs] = {{16, 125}, {148, 839}, {32, 125}, {145, 411}, {48, 125}, {64, 125}, {151, 214}, {12, 17}, {96, 125}, {151, 107}, {24, 17}, {192, 125}, {127, 45}, {48, 17}, {255, 83} };
-//#elif (F_PLL==72000000)
-//  const tmclk clkArr[numfreqs] = {{32, 1125}, {49, 1250}, {64, 1125}, {49, 625}, {32, 375}, {128, 1125}, {98, 625}, {8, 51}, {64, 375}, {196, 625}, {16, 51}, {128, 375}, {249, 397}, {32, 51}, {185, 271} };
-//#elif (F_PLL==96000000)
-//  const tmclk clkArr[numfreqs] = {{8, 375}, {73, 2483}, {16, 375}, {147, 2500}, {8, 125},  {32, 375}, {147, 1250}, {2, 17}, {16, 125}, {147, 625}, {4, 17}, {32, 125}, {151, 321}, {8, 17}, {64, 125} };
-//#elif (F_PLL==120000000)
-//  const tmclk clkArr[numfreqs] = {{32, 1875}, {89, 3784}, {64, 1875}, {147, 3125}, {32, 625},  {128, 1875}, {205, 2179}, {8, 85}, {64, 625}, {89, 473}, {16, 85}, {128, 625}, {178, 473}, {32, 85}, {145, 354} };
-//#elif (F_PLL==144000000)
-//  const tmclk clkArr[numfreqs] = {{16, 1125}, {49, 2500}, {32, 1125}, {49, 1250}, {16, 375},  {64, 1125}, {49, 625}, {4, 51}, {32, 375}, {98, 625}, {8, 51}, {64, 375}, {196, 625}, {16, 51}, {128, 375} };
-//#elif (F_PLL==180000000)
-//  const tmclk clkArr[numfreqs] = {{46, 4043}, {49, 3125}, {73, 3208}, {98, 3125}, {37, 1084},  {183, 4021}, {196, 3125}, {16, 255}, {128, 1875}, {107, 853}, {32, 255}, {219, 1604}, {214, 853}, {64, 255}, {219, 802} };
-//#elif (F_PLL==192000000)
-//  const tmclk clkArr[numfreqs] = {{4, 375}, {37, 2517}, {8, 375}, {73, 2483}, {4, 125}, {16, 375}, {147, 2500}, {1, 17}, {8, 125}, {147, 1250}, {2, 17}, {16, 125}, {147, 625}, {4, 17}, {32, 125} };
-//#elif (F_PLL==216000000)
-//  const tmclk clkArr[numfreqs] = {{32, 3375}, {49, 3750}, {64, 3375}, {49, 1875}, {32, 1125},  {128, 3375}, {98, 1875}, {8, 153}, {64, 1125}, {196, 1875}, {16, 153}, {128, 1125}, {226, 1081}, {32, 153}, {147, 646} };
-//#elif (F_PLL==240000000)
-//  const tmclk clkArr[numfreqs] = {{16, 1875}, {29, 2466}, {32, 1875}, {89, 3784}, {16, 625}, {64, 1875}, {147, 3125}, {4, 85}, {32, 625}, {205, 2179}, {8, 85}, {64, 625}, {89, 473}, {16, 85}, {128, 625} };
-//#endif
-//
-//  for (int f = 0; f < numfreqs; f++) {
-//    if ( freq == samplefreqs[f] ) {
-//      while (I2S0_MCR & I2S_MCR_DUF) ;
-//      I2S0_MDR = I2S_MDR_FRACT((clkArr[f].mult - 1)) | I2S_MDR_DIVIDE((clkArr[f].div - 1));
-//      return (float)(F_PLL / 256 * clkArr[f].mult / clkArr[f].div);
-//    }
-//  }
-//  return 0.0f;
-//}
+
+
+
+static void configureBroadbandWDRCs(int ncompressors, float fs_Hz, CHA_WDRC *gha, AudioEffectCompWDR_F32 *WDRCs) {
+  //assume all broadband compressors are the same
+  for (int i=0; i< ncompressors; i++) {
+    //logic and values are extracted from from CHAPRO repo agc_prepare.c...the part setting CHA_DVAR
+    
+    //extract the parameters
+    float atk = (float)gha->attack;  //milliseconds!
+    float rel = (float)gha->release; //milliseconds!
+    //float fs = gha->fs;
+    float fs = (float)fs_Hz; // WEA override...not taken from gha
+    float maxdB = (float) gha->maxdB;
+    float tk = (float) gha->tk;
+    float comp_ratio = (float) gha->cr;
+    float tkgain = (float) gha->tkgain;
+    float bolt = (float) gha->bolt;
+    
+    //set the compressor's parameters
+    WDRCs[i].setSampleRate_Hz(fs);
+    WDRCs[i].setParams(atk,rel,maxdB,tkgain,comp_ratio,tk,bolt);    
+  }
+}
+    
+static void configurePerBandWDRCs(int nchan, float fs_Hz, CHA_DSL *dsl, CHA_WDRC *gha, AudioEffectCompWDR_F32 *WDRCs) {
+  if (nchan > dsl->nchannel) {
+    Serial.println(F("configureWDRC.configure: *** ERROR ***: nchan > dsl.nchannel"));
+    Serial.print(F("    : nchan = ")); Serial.println(nchan);
+    Serial.print(F("    : dsl.nchannel = ")); Serial.println(dsl->nchannel);
+  }
+  
+  //now, loop over each channel
+  for (int i=0; i < nchan; i++) {
+    
+    //logic and values are extracted from from CHAPRO repo agc_prepare.c
+    float atk = (float)dsl->attack;   //milliseconds!
+    float rel = (float)dsl->release;  //milliseconds!
+    //float fs = gha->fs;
+    float fs = (float)fs_Hz; // WEA override
+    float maxdB = (float) gha->maxdB;
+    float tk = (float) dsl->tk[i];
+    float comp_ratio = (float) dsl->cr[i];
+    float tkgain = (float) dsl->tkgain[i];
+    float bolt = (float) dsl->bolt[i];
+
+    // adjust BOLT
+    float cltk = (float)gha->tk;
+    if (bolt > cltk) bolt = cltk;
+    if (tkgain < 0) bolt = bolt + tkgain;
+
+    //set the compressor's parameters
+    WDRCs[i].setSampleRate_Hz(fs);
+    WDRCs[i].setParams(atk,rel,maxdB,tkgain,comp_ratio,tk,bolt);
+  }  
+}
+
+static void configureMultiBandWDRCasGHA(float fs_Hz, CHA_DSL *dsl, CHA_WDRC *gha, 
+    int nBB, AudioEffectCompWDR_F32 *broadbandWDRCs,
+    int nchan, AudioEffectCompWDR_F32 *perBandWDRCs) {
+    
+  configureBroadbandWDRCs(nBB, fs_Hz, gha, broadbandWDRCs);
+  configurePerBandWDRCs(nchan, fs_Hz, dsl, gha, perBandWDRCs);
+}
+

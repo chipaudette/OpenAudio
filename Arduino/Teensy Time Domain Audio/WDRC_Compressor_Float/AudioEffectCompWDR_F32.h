@@ -15,7 +15,8 @@
 #include <Arduino.h>
 #include <AudioStream_F32.h>
 #include <arm_math.h>
-#include <AudioComputeEnvelope_F32.h>
+#include <AudioCalcEnvelope_F32.h>
+#include "AudioCalcWDRCGain_F32.h"
 
 
 // from CHAPRO cha_ff.h
@@ -33,16 +34,16 @@ typedef struct {
     float bolt[DSL_MXCH];       // broadband output limiting threshold
 } CHA_DSL;
 
-typedef struct {
-    float attack;               // attack time (ms)
-    float release;              // release time (ms)
-    float fs;                   // sampling rate (Hz)
-    float maxdB;                // maximum signal (dB SPL)
-    float tkgain;               // compression-start gain
-    float tk;                   // compression-start kneepoint
-    float cr;                   // compression ratio
-    float bolt;                 // broadband output limiting threshold
-} CHA_WDRC;
+//typedef struct {
+//    float attack;               // attack time (ms)
+//    float release;              // release time (ms)
+//    float fs;                   // sampling rate (Hz)
+//    float maxdB;                // maximum signal (dB SPL)
+//    float tkgain;               // compression-start gain
+//    float tk;                   // compression-start kneepoint
+//    float cr;                   // compression ratio
+//    float bolt;                 // broadband output limiting threshold
+//} CHA_WDRC;
 
 typedef struct {
     float alfa;                 // attack constant (not time)
@@ -56,8 +57,8 @@ typedef struct {
 } CHA_DVAR_t;
 
 
-#define undb2(x)    (expf(0.11512925464970228420089957273422f*x))  //faster:  exp(log(10.0f)*x/20);  this is exact
-#define db2(x)      (6.020599913279623f*log2f_approx(x)) //faster: 20*log2_approx(x)/log2(10);  this is approximate
+//define undb2(x)    (expf(0.11512925464970228420089957273422f*x))  //faster:  exp(log(10.0f)*x/20);  this is exact
+//define db2(x)      (6.020599913279623f*log2f_approx(x)) //faster: 20*log2_approx(x)/log2(10);  this is approximate
 
 /* ----------------------------------------------------------------------
 ** Fast approximation to the log2() function.  It uses a two step
@@ -67,60 +68,40 @@ typedef struct {
 ** to the result.  A 3rd order polynomial is used and the result
 ** when computing db20() is accurate to 7.984884e-003 dB.
 ** ------------------------------------------------------------------- */
-//https://community.arm.com/tools/f/discussions/4292/cmsis-dsp-new-functionality-proposal/22621#22621
-static float log2f_approx(float X) {
-  //float *C = &log2f_approx_coeff[0];
-  float Y;
-  float F;
-  int E;
-
-  // This is the approximation to log2()
-  F = frexpf(fabsf(X), &E);
-  //  Y = C[0]*F*F*F + C[1]*F*F + C[2]*F + C[3] + E;
-  Y = 1.23149591368684f; //C[0]
-  Y *= F;
-  Y += -4.11852516267426f;  //C[1]
-  Y *= F;
-  Y += 6.02197014179219f;  //C[2]
-  Y *= F;
-  Y += -3.13396450166353f; //C[3]
-  Y += E;
-
-  return(Y);
-}
+////https://community.arm.com/tools/f/discussions/4292/cmsis-dsp-new-functionality-proposal/22621#22621
+//static float log2f_approx(float X) {
+//  //float *C = &log2f_approx_coeff[0];
+//  float Y;
+//  float F;
+//  int E;
+//
+//  // This is the approximation to log2()
+//  F = frexpf(fabsf(X), &E);
+//  //  Y = C[0]*F*F*F + C[1]*F*F + C[2]*F + C[3] + E;
+//  Y = 1.23149591368684f; //C[0]
+//  Y *= F;
+//  Y += -4.11852516267426f;  //C[1]
+//  Y *= F;
+//  Y += 6.02197014179219f;  //C[2]
+//  Y *= F;
+//  Y += -3.13396450166353f; //C[3]
+//  Y += E;
+//
+//  return(Y);
+//}
 
 
 class AudioEffectCompWDR_F32 : public AudioStream_F32
 {
   public:
     AudioEffectCompWDR_F32(void): AudioStream_F32(1,inputQueueArray) { //need to modify this for user to set sample rate
-      //set default values...taken from CHAPRO, GHA_Demo.c  from "amplify()"
-      CHA_WDRC gha = {1.0f, // attack time (ms)
-        50.0f,     // release time (ms)
-        24000.0f,  // fs, sampling rate (Hz)
-        119.0f,    // maxdB, maximum signal (dB SPL)
-        0.0f,      // tkgain, compression-start gain
-        105.0f,    // tk, compression-start kneepoint
-        10.0f,     // cr, compression ratio
-        105.0f     // bolt, broadband output limiting threshold
-      };
-      setParams(gha.attack, gha.release, gha.fs, gha.maxdB, gha.tkgain, gha.cr, gha.tk, gha.bolt); //also sets calcEnvelope
+      setSampleRate_Hz(AUDIO_SAMPLE_RATE);
+      setDefaultValues();
     }
 
     AudioEffectCompWDR_F32(AudioSettings_F32 settings): AudioStream_F32(1,inputQueueArray) { //need to modify this for user to set sample rate
-      //set default values...taken from CHAPRO, GHA_Demo.c  from "amplify()"
-      CHA_WDRC gha = {1.0f, // attack time (ms)
-        50.0f,     // release time (ms)
-        24000.f,  // fs, sampling rate (Hz)...is over-ridden below
-        119.0f,    // maxdB, maximum signal (dB SPL)
-        0.0f,      // tkgain, compression-start gain
-        105.0f,    // tk, compression-start kneepoint
-        10.0f,     // cr, compression ratio
-        105.0f     // bolt, broadband output limiting threshold
-      };
-
-      //override the sample rate
-      setParams(gha.attack, gha.release, settings.sample_rate_Hz, gha.maxdB, gha.tkgain, gha.cr, gha.tk, gha.bolt); //also sets calcEnvelope
+      setSampleRate_Hz(settings.sample_rate_Hz);
+      setDefaultValues();
     }
 
     //here is the method called automatically by the audio library
@@ -153,136 +134,82 @@ class AudioEffectCompWDR_F32 : public AudioStream_F32
     //void compress(float *x, float *y, int n, float *prev_env,
     //    float &alfa, float &beta, float &tkgn, float &tk, float &cr, float &bolt, float &mxdB)
      void compress(float *x, float *y, int n)    
+     //x, input, audio waveform data
+     //y, output, audio waveform data after compression
+     //n, input, number of samples in this audio block
     {        
         // find smoothed envelope
         audio_block_f32_t *envelope_block = AudioStream_F32::allocate_f32();
         if (!envelope_block) return;
         calcEnvelope.smooth_env(x, envelope_block->data, n);
-        float *xpk = envelope_block->data; //get pointer to the array of (empty) data values
+        //float *xpk = envelope_block->data; //get pointer to the array of (empty) data values
+
+        //calculate gain
+        audio_block_f32_t *gain_block = AudioStream_F32::allocate_f32();
+        if (!gain_block) return;
+        calcWDRCGain.calcWDRCGainFromEnvelope(envelope_block->data, gain_block->data, n);
         
-        // convert envelope to dB
-        //mxdb = (float) CHA_DVAR[_mxdb];
-        const float mxdb = CHA_DVAR.maxdB;
-        for (int k = 0; k < n; k++) xpk[k] = mxdb + db2(xpk[k]);
-        
-        // apply wide-dynamic range compression
-        const float tkgn = CHA_DVAR.tkgain;
-        const float tk = CHA_DVAR.tk;
-        const float cr = CHA_DVAR.cr;
-        const float bolt = CHA_DVAR.bolt;
-        WDRC_circuit(x, y, xpk, n, tkgn, tk, cr, bolt);
+        //apply gain
+        arm_mult_f32(x, gain_block->data, y, n);
 
         // release memory
         AudioStream_F32::release(envelope_block);
+        AudioStream_F32::release(gain_block);
     }
 
-    void WDRC_circuit(float *x, float *y, float *pdb, int n, float tkgn, float tk, float cr, float bolt)
-    {
-      float gdb, tkgo, pblt;
-      int k;
-      
-      if ((tk + tkgn) > bolt) {
-          tk = bolt - tkgn;
-      }
-      tkgo = tkgn + tk * (1.0f - 1.0f / cr);
-      pblt = cr * (bolt - tkgo);
-      const float cr_const = ((1.0f / cr) - 1.0f);
-      for (k = 0; k < n; k++) {
-        if ((pdb[k] < tk) && (cr >= 1)) {
-            gdb = tkgn;
-        } else if (pdb[k] > pblt) {
-            gdb = bolt + ((pdb[k] - pblt) / 10.0f) - pdb[k];
-        } else {
-            gdb = cr_const * pdb[k] + tkgo;
-        }
-        y[k] = x[k] * undb2(gdb); //apply the gain
-      }
+
+    void setDefaultValues(void) {
+      //set default values...taken from CHAPRO, GHA_Demo.c  from "amplify()"...ignores given sample rate
+      //assumes that the sample rate has already been set!!!!
+      CHA_WDRC gha = {1.0f, // attack time (ms)
+        50.0f,     // release time (ms)
+        24000.0f,  // fs, sampling rate (Hz), THIS IS IGNORED!
+        119.0f,    // maxdB, maximum signal (dB SPL)
+        0.0f,      // tkgain, compression-start gain
+        105.0f,    // tk, compression-start kneepoint
+        10.0f,     // cr, compression ratio
+        105.0f     // bolt, broadband output limiting threshold
+      };
+      setParams_from_CHA_WDRC(&gha);
+    }
+
+    //set all of the parameters for the compressor using the CHA_WDRC structure
+    //assumes that the sample rate has already been set!!!
+    void setParams_from_CHA_WDRC(CHA_WDRC *gha) {
+      //configure the envelope calculator...assumes that the sample rate has already been set!
+      calcEnvelope.setAttackRelease_msec(gha->attack,gha->release); //these are in milliseconds
+
+      //configure the compressor
+      calcWDRCGain.setParams_from_CHA_WDRC(gha);
     }
 
     //set all of the user parameters for the compressor
-    void setParams(float attack_ms, float release_ms, float fs_Hz, float maxdB, float tkgain, float comp_ratio, float tk, float bolt) {
-      //time_const(attack_ms, release_ms, fs_Hz, &CHA_DVAR.alfa, &CHA_DVAR.beta);
-      CHA_DVAR.fs = fs_Hz;
-      CHA_DVAR.maxdB = maxdB;
-      CHA_DVAR.tkgain = tkgain;
-      CHA_DVAR.cr = comp_ratio;
-      CHA_DVAR.tk = tk;
-      CHA_DVAR.bolt = bolt;
+    //assumes that the sample rate has already been set!!!
+    void setParams(float attack_ms, float release_ms, float maxdB, float tkgain, float comp_ratio, float tk, float bolt) {
+      
+      //configure the envelope calculator...assumes that the sample rate has already been set!
+      calcEnvelope.setAttackRelease_msec(attack_ms,release_ms);
 
-      //configure the envelope calculator
-      calcEnvelope.setSampleRate_Hz(fs_Hz); calcEnvelope.setAttackRelease_msec(attack_ms,release_ms);
+      //configure the WDRC gains
+      calcWDRCGain.setParams(maxdB, tkgain, comp_ratio, tk, bolt);
     }
 
-    float getCurrentLevel_dB(void) { return db2(prev_env); }  //this is 20*log10(abs(signal)) after the envelope smoothing
-    static float fast_dB(float x) { return db2(x); } //faster: 20*log2_approx(x)/log2(10);  this is approximate
-    AudioComputeEnvelope_F32 calcEnvelope;
+    void setSampleRate_Hz(const float _fs_Hz) {
+      //pass this data on to its components that care
+      given_sample_rate_Hz = _fs_Hz;
+      calcEnvelope.setSampleRate_Hz(_fs_Hz);
+    }
+
+    float getCurrentLevel_dB(void) { return AudioCalcWDRCGain_F32::db2(calcEnvelope.getCurrentLevel()); }  //this is 20*log10(abs(signal)) after the envelope smoothing
+    //static float fast_dB(float x) { return db2(x); } //faster: 20*log2_approx(x)/log2(10);  this is approximate
+    AudioCalcEnvelope_F32 calcEnvelope;
+    AudioCalcWDRCGain_F32 calcWDRCGain;
     
   private:
     audio_block_f32_t *inputQueueArray[1];
-    CHA_DVAR_t CHA_DVAR;
-    float32_t prev_env = 0.f;  // "ppk" in CHAPRO
+    float given_sample_rate_Hz;
 };
 
-
-static void configureBroadbandWDRCs(int ncompressors, float fs_Hz, CHA_WDRC *gha, AudioEffectCompWDR_F32 *WDRCs) {
-  //assume all broadband compressors are the same
-  for (int i=0; i< ncompressors; i++) {
-    //logic and values are extracted from from CHAPRO repo agc_prepare.c...the part setting CHA_DVAR
-    
-    //extract the parameters
-    float atk = (float)gha->attack;  //milliseconds!
-    float rel = (float)gha->release; //milliseconds!
-    //float fs = gha->fs;
-    float fs = (float)fs_Hz; // WEA override...not taken from gha
-    float maxdB = (float) gha->maxdB;
-    float tk = (float) gha->tk;
-    float comp_ratio = (float) gha->cr;
-    float tkgain = (float) gha->tkgain;
-    float bolt = (float) gha->bolt;
-    
-    //set the compressor's parameters
-    WDRCs[i].setParams(atk,rel,fs,maxdB,tkgain,comp_ratio,tk,bolt);    
-  }
-}
-    
-static void configurePerBandWDRCs(int nchan, float fs_Hz, CHA_DSL *dsl, CHA_WDRC *gha, AudioEffectCompWDR_F32 *WDRCs) {
-  if (nchan > dsl->nchannel) {
-    Serial.println(F("configureWDRC.configure: *** ERROR ***: nchan > dsl.nchannel"));
-    Serial.print(F("    : nchan = ")); Serial.println(nchan);
-    Serial.print(F("    : dsl.nchannel = ")); Serial.println(dsl->nchannel);
-  }
-  
-  //now, loop over each channel
-  for (int i=0; i < nchan; i++) {
-    
-    //logic and values are extracted from from CHAPRO repo agc_prepare.c
-    float atk = (float)dsl->attack;   //milliseconds!
-    float rel = (float)dsl->release;  //milliseconds!
-    //float fs = gha->fs;
-    float fs = (float)fs_Hz; // WEA override
-    float maxdB = (float) gha->maxdB;
-    float tk = (float) dsl->tk[i];
-    float comp_ratio = (float) dsl->cr[i];
-    float tkgain = (float) dsl->tkgain[i];
-    float bolt = (float) dsl->bolt[i];
-
-    // adjust BOLT
-    float cltk = (float)gha->tk;
-    if (bolt > cltk) bolt = cltk;
-    if (tkgain < 0) bolt = bolt + tkgain;
-
-    //set the compressor's parameters
-    WDRCs[i].setParams(atk,rel,fs,maxdB,tkgain,comp_ratio,tk,bolt);
-  }  
-}
-
-static void configureMultiBandWDRCasGHA(float fs_Hz, CHA_DSL *dsl, CHA_WDRC *gha, 
-    int nBB, AudioEffectCompWDR_F32 *broadbandWDRCs,
-    int nchan, AudioEffectCompWDR_F32 *perBandWDRCs) {
-    
-  configureBroadbandWDRCs(nBB, fs_Hz, gha, broadbandWDRCs);
-  configurePerBandWDRCs(nchan, fs_Hz, dsl, gha, perBandWDRCs);
-}
 
 #endif
     
