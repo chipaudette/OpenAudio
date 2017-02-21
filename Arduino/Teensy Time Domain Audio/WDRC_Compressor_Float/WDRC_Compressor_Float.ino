@@ -32,12 +32,11 @@
 #include <SPI.h>
 //include <SD.h>
 //include <SerialFlash.h>
-#include <OpenAudio_ArduinoLibrary.h> //for AudioConvert_I16toF32, AudioConvert_F32toI16, and AudioEffectGain_F32
-#include "AudioCalcGainWDRC_F32.h"
-#include "AudioEffectCompWDRC_F32.h"
+#include <OpenAudio_ArduinoLibrary.h>
+
 
 const float sample_rate_Hz = 24000.0f ; //24000 or 44117.64706f (or other frequencies in the table in AudioOutputI2S_F32
-const int audio_block_samples = 32;  //do not make bigger than AUDIO_BLOCK_SAMPLES from AudioStream.h
+const int audio_block_samples = 32;  //do not make bigger than AUDIO_BLOCK_SAMPLES from AudioStream.h (which is 128)
 AudioSettings_F32   audio_settings(sample_rate_Hz, audio_block_samples);
 
 //create audio library objects for handling the audio
@@ -56,10 +55,10 @@ AudioOutputI2S_F32          i2s_out(audio_settings);        //Digital audio *to*
 //create audio objects for the algorithm
 AudioEffectGain_F32     preGain;
 #define N_BBCOMP 2      //number of broadband compressors
-AudioEffectCompWDR_F32  compBroadband[N_BBCOMP]; //here are the broad band compressors
+AudioEffectCompWDRC_F32  compBroadband[N_BBCOMP]; //here are the broad band compressors
 #define N_CHAN 8        //number of channels to use for multi-band compression
 AudioFilterFIR_F32      firFilt[N_CHAN];  //here are the filters to break up the audio into multipel bands
-AudioEffectCompWDR_F32  compPerBand[N_CHAN]; //here are the per-band compressors
+AudioEffectCompWDRC_F32  compPerBand[N_CHAN]; //here are the per-band compressors
 AudioMixer8_F32         mixer1; //mixer to reconstruct the broadband audio 
 
 //choose the input audio source
@@ -347,7 +346,7 @@ void printCompressorState(unsigned long curTime_millis, Stream *s) {
 
 
 
-static void configureBroadbandWDRCs(int ncompressors, float fs_Hz, CHA_WDRC *gha, AudioEffectCompWDR_F32 *WDRCs) {
+static void configureBroadbandWDRCs(int ncompressors, float fs_Hz, CHA_WDRC *gha, AudioEffectCompWDRC_F32 *WDRCs) {
   //assume all broadband compressors are the same
   for (int i=0; i< ncompressors; i++) {
     //logic and values are extracted from from CHAPRO repo agc_prepare.c...the part setting CHA_DVAR
@@ -369,7 +368,7 @@ static void configureBroadbandWDRCs(int ncompressors, float fs_Hz, CHA_WDRC *gha
   }
 }
     
-static void configurePerBandWDRCs(int nchan, float fs_Hz, CHA_DSL *dsl, CHA_WDRC *gha, AudioEffectCompWDR_F32 *WDRCs) {
+static void configurePerBandWDRCs(int nchan, float fs_Hz, CHA_DSL *dsl, CHA_WDRC *gha, AudioEffectCompWDRC_F32 *WDRCs) {
   if (nchan > dsl->nchannel) {
     Serial.println(F("configureWDRC.configure: *** ERROR ***: nchan > dsl.nchannel"));
     Serial.print(F("    : nchan = ")); Serial.println(nchan);
@@ -402,8 +401,8 @@ static void configurePerBandWDRCs(int nchan, float fs_Hz, CHA_DSL *dsl, CHA_WDRC
 }
 
 static void configureMultiBandWDRCasGHA(float fs_Hz, CHA_DSL *dsl, CHA_WDRC *gha, 
-    int nBB, AudioEffectCompWDR_F32 *broadbandWDRCs,
-    int nchan, AudioEffectCompWDR_F32 *perBandWDRCs) {
+    int nBB, AudioEffectCompWDRC_F32 *broadbandWDRCs,
+    int nchan, AudioEffectCompWDRC_F32 *perBandWDRCs) {
     
   configureBroadbandWDRCs(nBB, fs_Hz, gha, broadbandWDRCs);
   configurePerBandWDRCs(nchan, fs_Hz, dsl, gha, perBandWDRCs);

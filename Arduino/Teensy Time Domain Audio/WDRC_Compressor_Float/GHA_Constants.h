@@ -1,4 +1,6 @@
 
+#include <AudioEffectCompWDRC_F32.h>  //for CHA_DSL and CHA_WDRC data types
+
 //from GHA_Demo.c
 // DSL prescription - (first subject, left ear) from LD_RX.mat
 static CHA_DSL dsl = {5,  //attack (ms)
