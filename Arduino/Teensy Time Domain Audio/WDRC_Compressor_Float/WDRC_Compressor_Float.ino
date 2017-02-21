@@ -33,6 +33,7 @@
 //include <SD.h>
 //include <SerialFlash.h>
 #include <OpenAudio_ArduinoLibrary.h>
+#include "MakeLogSpacedFIRCoeff_F32.h"
 
 
 const float sample_rate_Hz = 24000.0f ; //24000 or 44117.64706f (or other frequencies in the table in AudioOutputI2S_F32
@@ -49,8 +50,7 @@ AudioSynthWaveformSine_F32  testSignal(audio_settings);          //use to genera
 AudioInputI2S_F32           i2s_in(audio_settings);          //Digital audio *from* the Teensy Audio Board ADC.  Sends Int16.  Stereo.
 AudioOutputI2S_F32          i2s_out(audio_settings);        //Digital audio *to* the Teensy Audio Board DAC.  Expects Int16.  Stereo
 //AudioAnalyzeRMS         rms_input, rms_output; //only used for Bluetooth monitoring of signal levels
-//AudioConvert_I16toF32   int2Float1;     //Converts Int16 to Float.  See class in AudioStream_F32.h
-//AudioConvert_F32toI16   float2Int1;     //Converts Float to Int16.  See class in AudioStream_F32.h
+//AudioConvert_F32toI16   float2Int1, float2Int2;     //Converts Float to Int16.
 
 //create audio objects for the algorithm
 AudioEffectGain_F32     preGain;
@@ -64,14 +64,12 @@ AudioMixer8_F32         mixer1; //mixer to reconstruct the broadband audio
 //choose the input audio source
 #if (USE_TEST_TONE_INPUT == 1)
   AudioConnection_F32       patchCord1(testSignal, 0, preGain, 0);    //connect a test tone to the Left Int->Float converter
-  //AudioConnection       patchCord2(testSignal, 0, rms_input, 0);    //connect the Left input to level monitor (Bluetooth reporting only)
+  //AudioConnection_F32       patchCord2(testSignal, 0, float2Int1, 0);
 #else
   AudioConnection_F32       patchCord1(i2s_in, 0, preGain, 0);    //connect the Left input to the Left Int->Float converter
-  //AudioConnection       patchCord2(i2s_in, 0, rms_input, 0);    //connect the Left input to level monitor (Bluetooth reporting only)
+  //AudioConnection_F32       patchCord2(i2s_in, 0, float2Int1, 0);    //connect the Left input to level monitor (Bluetooth reporting only)
 #endif
-
-//setup the pre-gain
-//AudioConnection_F32     patchCord3(int2Float1, 0, preGain, 0);
+//AudioConnection       patchCord2(float2Int1, 0, rms_input, 0);    //connect the Left input to level monitor (Bluetooth reporting only)
 
 //apply the first broadband compressor
 AudioConnection_F32     patchCord5(preGain, 0, compBroadband[0], 0);
@@ -113,9 +111,9 @@ AudioConnection_F32     patchCord43(mixer1, 0, compBroadband[1], 0);
 //send the audio out
 AudioConnection_F32     patchCord44(compBroadband[1], 0, i2s_out, 0);    //Left.  makes Float connections between objects
 AudioConnection_F32     patchCord45(compBroadband[1], 0, i2s_out, 1);    //Right.  makes Float connections between objects
-//AudioConnection_F32       patchCord44(firFilt[0], 0, i2s_out, 0), patchCord45(firFilt[0], 0, i2s_out, 1);
 
-//AudioConnection         patchCord46(float2Int1, 0, rms_output, 0); //measure the RMS of the output (for reporting)
+//AudioConnection_F32   patchCord45(compBroadband[1], 0, float2Int2, 0);
+//AudioConnection       patchCord46(float2Int2, 0, rms_output, 0); //measure the RMS of the output (for reporting)
 
 //Bluetooth parameters
 #define USE_BT_SERIAL 0  //set to zero to disable bluetooth
@@ -126,60 +124,68 @@ AudioConnection_F32     patchCord45(compBroadband[1], 0, i2s_out, 1);    //Right
 
 // define functions to setup the hardware
 void setupAudioHardware(void) {
-  #if USE_TYMPAN == 0
-    //use Teensy Audio Board
-    Serial.println("Setting up Teensy Audio Board...");
-    const int myInput = AUDIO_INPUT_LINEIN;   //which input to use?  AUDIO_INPUT_LINEIN or AUDIO_INPUT_MIC
-    audioHardware.enable();                   //start the audio board
-    audioHardware.inputSelect(myInput);       //choose line-in or mic-in
-    audioHardware.volume(0.8);                //volume can be 0.0 to 1.0.  0.5 seems to be the usual default.
-    audioHardware.lineInLevel(10, 10);        //level can be 0 to 15.  5 is the Teensy Audio Library's default
-    audioHardware.adcHighPassFilterDisable(); //reduces noise.  https://forum.pjrc.com/threads/27215-24-bit-audio-boards?p=78831&viewfull=1#post78831
+  #if USE_TYMPAN == 1
+    setupTympanHardware(void);
   #else
-    //use Tympan Audio Board
-    Serial.println("Setting up Tympan Audio Board...");
-    audioHardware.enable(); // activate AIC
-  
-    //choose input
-    //audioHardware.inputSelect(TYMPAN_INPUT_MIC_JACK); // use the microphone jack
-    audioHardware.inputSelect(TYMPAN_INPUT_ON_BOARD_MIC); // use the on board microphones // default
-  
-    //choose mic bias (if using mics on input jack)
-    int myBiasLevel = TYMPAN_MIC_BIAS_2_5;  //choices: TYMPAN_MIC_BIAS_2_5, TYMPAN_MIC_BIAS_1_7, TYMPAN_MIC_BIAS_1_25, TYMPAN_MIC_BIAS_VSUPPLY
-    audioHardware.setMicBias(myBiasLevel); // set mic bias to 2.5 // default
-  
-    //set volumes
-    audioHardware.volume_dB(0.f);  // -63.6 to +24 dB in 0.5dB steps.  uses signed 8-bit
-    audioHardware.setInputGain_dB(10.f); // set MICPGA volume, 0-47.5dB in 0.5dB setps
+    setupTeensyAudioBoard(void);
   #endif
 
   //setup the potentiometer.  same for Teensy Audio Board as for Tympan
   pinMode(POT_PIN, INPUT); //set the potentiometer's input pin as an INPUT
 }
 
+void setupTeensyAudioBoard(void) {
+  Serial.println("Setting up Teensy Audio Board...");
+  const int myInput = AUDIO_INPUT_LINEIN;   //which input to use?  AUDIO_INPUT_LINEIN or AUDIO_INPUT_MIC
+  audioHardware.enable();                   //start the audio board
+  audioHardware.inputSelect(myInput);       //choose line-in or mic-in
+  audioHardware.volume(0.8);                //volume can be 0.0 to 1.0.  0.5 seems to be the usual default.
+  audioHardware.lineInLevel(10, 10);        //level can be 0 to 15.  5 is the Teensy Audio Library's default
+  audioHardware.adcHighPassFilterDisable(); //reduces noise.  https://forum.pjrc.com/threads/27215-24-bit-audio-boards?p=78831&viewfull=1#post78831
+}
+
+void setupTympanHardware(void) {
+  Serial.println("Setting up Tympan Audio Board...");
+  audioHardware.enable(); // activate AIC
+  
+  //choose input
+  switch (1) {
+    case 1: 
+      //choose on-board mics
+      audioHardware.inputSelect(TYMPAN_INPUT_ON_BOARD_MIC); // use the on board microphones
+      break;
+    case 2:
+      //choose external input, as a line in
+      audioHardware.inputSelect(TYMPAN_INPUT_JACK_AS_LINEIN); //
+      break;
+    case 3:
+      //choose external mic plus the desired bias level
+      audioHardware.inputSelect(TYMPAN_INPUT_JACK_AS_MIC); // use the microphone jack
+      int myBiasLevel = TYMPAN_MIC_BIAS_2_5;  //choices: TYMPAN_MIC_BIAS_2_5, TYMPAN_MIC_BIAS_1_7, TYMPAN_MIC_BIAS_1_25, TYMPAN_MIC_BIAS_VSUPPLY
+      audioHardware.setMicBias(myBiasLevel); // set mic bias to 2.5 // default
+      break;
+  }
+  
+  //set volumes
+  audioHardware.volume_dB(10.f);  // -63.6 to +24 dB in 0.5dB steps.  uses signed 8-bit
+  audioHardware.setInputGain_dB(0.f); // set MICPGA volume, 0-47.5dB in 0.5dB setps
+}
+
 //define functions to setup the audio processing parameters
-#define N_FIR 64
-#include "filtCoeff_64NFIR_8chan_fs24000Hz.h" //this creates data arrays for the FIR coefficients
+#define N_FIR 128
+float firCoeff[N_CHAN][N_FIR];
 void setupAudioProcessing(void) {
   //set the pre-gain (if used)
   preGain.setGain_dB(0.0f);
 
   //set the per-channel filter coefficients
-  int block_len = audio_settings.audio_block_samples;
-  firFilt[0].begin(firCoeff0, N_FIR, block_len);
-  firFilt[1].begin(firCoeff1, N_FIR, block_len);
-  firFilt[2].begin(firCoeff2, N_FIR, block_len);
-  firFilt[3].begin(firCoeff3, N_FIR, block_len);
-  firFilt[4].begin(firCoeff4, N_FIR, block_len);
-  firFilt[5].begin(firCoeff5, N_FIR, block_len);
-  firFilt[6].begin(firCoeff6, N_FIR, block_len);
-  firFilt[7].begin(firCoeff7, N_FIR, block_len);
+  #include "GHA_Constants.h"  //this sets dsl and gha, which are used in the next line
+  MakeLogSpacedFIRCoeff_F32 makeFIRcoeffs(N_CHAN, N_FIR, audio_settings.sample_rate_Hz, (float *)dsl.cross_freq, (float *)firCoeff);
+  for (int i=0; i< N_CHAN; i++) firFilt[i].begin(firCoeff[i], N_FIR, audio_settings.audio_block_samples);
 
   //setup all of the the compressors
-  #include "GHA_Constants.h"  //this sets dsl and gha, which are used in the next line
-  float fs_Hz = audio_settings.sample_rate_Hz; 
-  configureMultiBandWDRCasGHA(fs_Hz, &dsl, &gha, 
-    N_BBCOMP, compBroadband, N_CHAN, compPerBand); //this function is in AudioEffectCompWDR_F32.h
+  configureBroadbandWDRCs(N_BBCOMP, audio_settings.sample_rate_Hz, &gha, compBroadband);
+  configurePerBandWDRCs(N_CHAN, audio_settings.sample_rate_Hz, &dsl, &gha, compPerBand);  
 }
 
 // define the setup() function, the function that is called once when the device is booting
@@ -198,7 +204,6 @@ void setup() {
   AudioMemory_F32_wSettings(40,audio_settings);  //allocate Float32 audio data blocks (primary memory used for audio processing)
 
   // Enable the audio shield, select input, and enable output
-  //setI2SFreq((int)AUDIO_SAMPLE_RATE); //change the sample rate...this is required for any sample rate other than 44100...WEA to fix.
   setupAudioHardware();
 
   //setup filters and mixers
@@ -345,7 +350,6 @@ void printCompressorState(unsigned long curTime_millis, Stream *s) {
 //
 
 
-
 static void configureBroadbandWDRCs(int ncompressors, float fs_Hz, CHA_WDRC *gha, AudioEffectCompWDRC_F32 *WDRCs) {
   //assume all broadband compressors are the same
   for (int i=0; i< ncompressors; i++) {
@@ -400,11 +404,11 @@ static void configurePerBandWDRCs(int nchan, float fs_Hz, CHA_DSL *dsl, CHA_WDRC
   }  
 }
 
-static void configureMultiBandWDRCasGHA(float fs_Hz, CHA_DSL *dsl, CHA_WDRC *gha, 
-    int nBB, AudioEffectCompWDRC_F32 *broadbandWDRCs,
-    int nchan, AudioEffectCompWDRC_F32 *perBandWDRCs) {
-    
-  configureBroadbandWDRCs(nBB, fs_Hz, gha, broadbandWDRCs);
-  configurePerBandWDRCs(nchan, fs_Hz, dsl, gha, perBandWDRCs);
-}
+//static void configureMultiBandWDRCasGHA(float fs_Hz, CHA_DSL *dsl, CHA_WDRC *gha, 
+//    int nBB, AudioEffectCompWDRC_F32 *broadbandWDRCs,
+//    int nchan, AudioEffectCompWDRC_F32 *perBandWDRCs) {
+//    
+//  configureBroadbandWDRCs(nBB, fs_Hz, gha, broadbandWDRCs);
+//  configurePerBandWDRCs(nchan, fs_Hz, dsl, gha, perBandWDRCs);
+//}
 
