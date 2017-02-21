@@ -14,10 +14,6 @@
 
 #include "rfft.c"
 
-//#define N_CHAN  8
-//#define N_FIR   256
-//float my_filter_b[N_CHAN][N_FIR];
-
 #define fmove(x,y,n)    memmove(x,y,(n)*sizeof(float))
 #define fcopy(x,y,n)    memcpy(x,y,(n)*sizeof(float))
 #define fzero(x,n)      memset(x,0,(n)*sizeof(float))
@@ -39,7 +35,7 @@ class MakeLogSpacedFIRCoeff_F32 {
         //compute corner frequencies that are logarithmically spaced
         cf = (float *) calloc(n_chan, sizeof(float));
         flag__free_cf = 1;
-        computeEvenlySpacedCornerFreqs(n_chan, sample_rate_Hz, cf);
+        computeLogSpacedCornerFreqs(n_chan, sample_rate_Hz, cf);
       }
       const int window_type = 0;  //0 = Hamming
       fir_filterbank(filter_coeff, cf, n_chan, n_fir, window_type, sample_rate_Hz);
@@ -48,7 +44,7 @@ class MakeLogSpacedFIRCoeff_F32 {
 
     //compute frequencies that space zero to nyquist.  Leave zero off, because it is assumed to exist in the later code.
     //example of an *8* channel set of frequencies: cf = {317.1666, 502.9734, 797.6319, 1264.9, 2005.9, 3181.1, 5044.7}
-    void computeEvenlySpacedCornerFreqs(const int n_chan, const float sample_rate_Hz, float *cf) {
+    void computeLogSpacedCornerFreqs(const int n_chan, const float sample_rate_Hz, float *cf) {
       float cf_8_band[] = {317.1666, 502.9734, 797.6319, 1264.9, 2005.9, 3181.1, 5044.7};
       float scale_fac = expf(logf(cf_8_band[6]/cf_8_band[0]) / ((float)(n_chan-2)));
       Serial.print("MakeFIRFilterBank: computeEvenlySpacedCornerFreqs: scale_fac = "); Serial.println(scale_fac);
