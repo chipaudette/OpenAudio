@@ -16,7 +16,7 @@
 #include <AudioStream_F32.h>
 #include <arm_math.h>
 #include <AudioCalcEnvelope_F32.h>
-#include "AudioCalcWDRCGain_F32.h"
+#include "AudioCalcGainWDRC_F32.h"
 
 
 // from CHAPRO cha_ff.h
@@ -147,7 +147,7 @@ class AudioEffectCompWDR_F32 : public AudioStream_F32
         //calculate gain
         audio_block_f32_t *gain_block = AudioStream_F32::allocate_f32();
         if (!gain_block) return;
-        calcWDRCGain.calcWDRCGainFromEnvelope(envelope_block->data, gain_block->data, n);
+        calcGain.calcGainFromEnvelope(envelope_block->data, gain_block->data, n);
         
         //apply gain
         arm_mult_f32(x, gain_block->data, y, n);
@@ -180,7 +180,7 @@ class AudioEffectCompWDR_F32 : public AudioStream_F32
       calcEnvelope.setAttackRelease_msec(gha->attack,gha->release); //these are in milliseconds
 
       //configure the compressor
-      calcWDRCGain.setParams_from_CHA_WDRC(gha);
+      calcGain.setParams_from_CHA_WDRC(gha);
     }
 
     //set all of the user parameters for the compressor
@@ -191,7 +191,7 @@ class AudioEffectCompWDR_F32 : public AudioStream_F32
       calcEnvelope.setAttackRelease_msec(attack_ms,release_ms);
 
       //configure the WDRC gains
-      calcWDRCGain.setParams(maxdB, tkgain, comp_ratio, tk, bolt);
+      calcGain.setParams(maxdB, tkgain, comp_ratio, tk, bolt);
     }
 
     void setSampleRate_Hz(const float _fs_Hz) {
@@ -200,10 +200,10 @@ class AudioEffectCompWDR_F32 : public AudioStream_F32
       calcEnvelope.setSampleRate_Hz(_fs_Hz);
     }
 
-    float getCurrentLevel_dB(void) { return AudioCalcWDRCGain_F32::db2(calcEnvelope.getCurrentLevel()); }  //this is 20*log10(abs(signal)) after the envelope smoothing
+    float getCurrentLevel_dB(void) { return AudioCalcGainWDRC_F32::db2(calcEnvelope.getCurrentLevel()); }  //this is 20*log10(abs(signal)) after the envelope smoothing
     //static float fast_dB(float x) { return db2(x); } //faster: 20*log2_approx(x)/log2(10);  this is approximate
     AudioCalcEnvelope_F32 calcEnvelope;
-    AudioCalcWDRCGain_F32 calcWDRCGain;
+    AudioCalcGainWDRC_F32 calcGain;
     
   private:
     audio_block_f32_t *inputQueueArray[1];

@@ -1,5 +1,5 @@
 /*
- * AudioCalcWDRCGain_F32
+ * AudioCalcGainWDRC_F32
  * 
  * Created: Chip Audette, Feb 2017
  * Purpose: This module calculates the gain needed for wide dynamic range compression.
@@ -12,16 +12,16 @@
  * MIT License.  use at your own risk.
 */
 
-#ifndef _AudioCalcWDRCGain_F32_h
-#define _AudioCalcWDRCGain_F32_h
+#ifndef _AudioCalcGainWDRC_F32_h
+#define _AudioCalcGainWDRC_F32_h
 
 #include <arm_math.h> //ARM DSP extensions.  for speed!
 #include <AudioStream_F32.h>
 
 typedef struct {
-    float attack;               // attack time (ms), unused in AudioCalcWDRCGain_F32
-    float release;              // release time (ms), unused in AudioCalcWDRCGain_F32
-    float fs;                   // sampling rate (Hz), set through other means in AudioCalcWDRCGain_F32
+    float attack;               // attack time (ms), unused in this class
+    float release;              // release time (ms), unused in this class
+    float fs;                   // sampling rate (Hz), set through other means in this class
     float maxdB;                // maximum signal (dB SPL)...I think this is the SPL corresponding to signal with rms of 1.0
     float tkgain;               // compression-start gain
     float tk;                   // compression-start kneepoint
@@ -30,13 +30,13 @@ typedef struct {
 } CHA_WDRC;
 
 
-class AudioCalcWDRCGain_F32 : public AudioStream_F32
+class AudioCalcGainWDRC_F32 : public AudioStream_F32
 {
   //GUI: inputs:1, outputs:1  //this line used for automatic generation of GUI node
   //GUI: shortName:calc_WDRCGain
   public:
     //default constructor
-    AudioCalcWDRCGain_F32(void) : AudioStream_F32(1, inputQueueArray_f32) { setDefaultValues(); };
+    AudioCalcGainWDRC_F32(void) : AudioStream_F32(1, inputQueueArray_f32) { setDefaultValues(); };
 
     //here's the method that does all the work
     void update(void) {
@@ -50,7 +50,7 @@ class AudioCalcWDRCGain_F32 : public AudioStream_F32
       if (!out_block) return;
       
       // //////////////////////add your processing here!
-      calcWDRCGainFromEnvelope(in_block->data, out_block->data, in_block->length);
+      calcGainFromEnvelope(in_block->data, out_block->data, in_block->length);
       out_block->length = in_block->length; out_block->fs_Hz = in_block->fs_Hz;
       
       //transmit the block and be done
@@ -60,7 +60,7 @@ class AudioCalcWDRCGain_F32 : public AudioStream_F32
       
     }
   
-    void calcWDRCGainFromEnvelope(float *env, float *gain_out, const int n)  {
+    void calcGainFromEnvelope(float *env, float *gain_out, const int n)  {
       //env = input, signal envelope (not the envelope of the power, but the envelope of the signal itslef)
       //gain = output, the gain in natural units (not power, not dB)
       //n = input, number of samples to process in each vector

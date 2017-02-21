@@ -33,8 +33,8 @@
 //include <SD.h>
 //include <SerialFlash.h>
 #include <OpenAudio_ArduinoLibrary.h> //for AudioConvert_I16toF32, AudioConvert_F32toI16, and AudioEffectGain_F32
-#include "AudioCalcWDRCGain_F32.h"
-#include "AudioEffectCompWDR_F32.h"
+#include "AudioCalcGainWDRC_F32.h"
+#include "AudioEffectCompWDRC_F32.h"
 
 const float sample_rate_Hz = 24000.0f ; //24000 or 44117.64706f (or other frequencies in the table in AudioOutputI2S_F32
 const int audio_block_samples = 32;  //do not make bigger than AUDIO_BLOCK_SAMPLES from AudioStream.h
