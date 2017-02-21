@@ -70,16 +70,9 @@ class AudioCalcGainWDRC_F32 : public AudioStream_F32
       if (!env_dB_block) return;
   
       //convert to dB
-      //mxdb = (float) CHA_DVAR[_mxdb];
-      //const float mxdb = CHA_DVAR.maxdB;
-      //for (int k = 0; k < n; k++) xpk[k] = mxdb + db2(xpk[k]);
       for (int k=0; k < n; k++) env_dB_block->data[k] = maxdB + db2(env[k]); //maxdb in the private section 
       
       // apply wide-dynamic range compression
-      //const float tkgn = CHA_DVAR.tkgain;
-      //const float tk = CHA_DVAR.tk;
-      //const float cr = CHA_DVAR.cr;
-      //const float bolt = CHA_DVAR.bolt;
       WDRC_circuit_gain(env_dB_block->data, gain_out, n, tkgn, tk, cr, bolt);
       AudioStream_F32::release(env_dB_block);
     }

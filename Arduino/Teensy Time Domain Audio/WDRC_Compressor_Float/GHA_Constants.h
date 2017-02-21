@@ -1,5 +1,4 @@
 
-
 //from GHA_Demo.c
 // DSL prescription - (first subject, left ear) from LD_RX.mat
 static CHA_DSL dsl = {5,  //attack (ms)

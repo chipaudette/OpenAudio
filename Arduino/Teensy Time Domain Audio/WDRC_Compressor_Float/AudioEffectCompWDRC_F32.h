@@ -16,7 +16,7 @@
 #include <AudioStream_F32.h>
 #include <arm_math.h>
 #include <AudioCalcEnvelope_F32.h>
-#include "AudioCalcGainWDRC_F32.h"
+#include "AudioCalcGainWDRC_F32.h"  //has definition of CHA_WDRC
 
 
 // from CHAPRO cha_ff.h
@@ -34,17 +34,6 @@ typedef struct {
     float bolt[DSL_MXCH];       // broadband output limiting threshold
 } CHA_DSL;
 
-//typedef struct {
-//    float attack;               // attack time (ms)
-//    float release;              // release time (ms)
-//    float fs;                   // sampling rate (Hz)
-//    float maxdB;                // maximum signal (dB SPL)
-//    float tkgain;               // compression-start gain
-//    float tk;                   // compression-start kneepoint
-//    float cr;                   // compression ratio
-//    float bolt;                 // broadband output limiting threshold
-//} CHA_WDRC;
-
 typedef struct {
     float alfa;                 // attack constant (not time)
     float beta;                 // release constant (not time
@@ -55,40 +44,6 @@ typedef struct {
     float cr;                   // compression ratio
     float bolt;                 // broadband output limiting threshold
 } CHA_DVAR_t;
-
-
-//define undb2(x)    (expf(0.11512925464970228420089957273422f*x))  //faster:  exp(log(10.0f)*x/20);  this is exact
-//define db2(x)      (6.020599913279623f*log2f_approx(x)) //faster: 20*log2_approx(x)/log2(10);  this is approximate
-
-/* ----------------------------------------------------------------------
-** Fast approximation to the log2() function.  It uses a two step
-** process.  First, it decomposes the floating-point number into
-** a fractional component F and an exponent E.  The fraction component
-** is used in a polynomial approximation and then the exponent added
-** to the result.  A 3rd order polynomial is used and the result
-** when computing db20() is accurate to 7.984884e-003 dB.
-** ------------------------------------------------------------------- */
-////https://community.arm.com/tools/f/discussions/4292/cmsis-dsp-new-functionality-proposal/22621#22621
-//static float log2f_approx(float X) {
-//  //float *C = &log2f_approx_coeff[0];
-//  float Y;
-//  float F;
-//  int E;
-//
-//  // This is the approximation to log2()
-//  F = frexpf(fabsf(X), &E);
-//  //  Y = C[0]*F*F*F + C[1]*F*F + C[2]*F + C[3] + E;
-//  Y = 1.23149591368684f; //C[0]
-//  Y *= F;
-//  Y += -4.11852516267426f;  //C[1]
-//  Y *= F;
-//  Y += 6.02197014179219f;  //C[2]
-//  Y *= F;
-//  Y += -3.13396450166353f; //C[3]
-//  Y += E;
-//
-//  return(Y);
-//}
 
 
 class AudioEffectCompWDR_F32 : public AudioStream_F32
