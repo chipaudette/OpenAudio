@@ -124,25 +124,25 @@ AudioConnection_F32     patchCord45(compBroadband[1], 0, i2s_out, 1);    //Right
 
 // define functions to setup the hardware
 void setupAudioHardware(void) {
-  #if USE_TYMPAN == 1
-    setupTympanHardware(void);
-  #else
-    setupTeensyAudioBoard(void);
-  #endif
+  //#if USE_TYMPAN == 1
+    setupTympanHardware();
+  //#else
+  //  setupTeensyAudioBoard();
+  //#endif
 
   //setup the potentiometer.  same for Teensy Audio Board as for Tympan
   pinMode(POT_PIN, INPUT); //set the potentiometer's input pin as an INPUT
 }
 
-void setupTeensyAudioBoard(void) {
-  Serial.println("Setting up Teensy Audio Board...");
-  const int myInput = AUDIO_INPUT_LINEIN;   //which input to use?  AUDIO_INPUT_LINEIN or AUDIO_INPUT_MIC
-  audioHardware.enable();                   //start the audio board
-  audioHardware.inputSelect(myInput);       //choose line-in or mic-in
-  audioHardware.volume(0.8);                //volume can be 0.0 to 1.0.  0.5 seems to be the usual default.
-  audioHardware.lineInLevel(10, 10);        //level can be 0 to 15.  5 is the Teensy Audio Library's default
-  audioHardware.adcHighPassFilterDisable(); //reduces noise.  https://forum.pjrc.com/threads/27215-24-bit-audio-boards?p=78831&viewfull=1#post78831
-}
+//void setupTeensyAudioBoard(void) {
+//  Serial.println("Setting up Teensy Audio Board...");
+//  const int myInput = AUDIO_INPUT_LINEIN;   //which input to use?  AUDIO_INPUT_LINEIN or AUDIO_INPUT_MIC
+//  audioHardware.enable();                   //start the audio board
+//  audioHardware.inputSelect(myInput);       //choose line-in or mic-in
+//  audioHardware.volume(0.8);                //volume can be 0.0 to 1.0.  0.5 seems to be the usual default.
+//  audioHardware.lineInLevel(10, 10);        //level can be 0 to 15.  5 is the Teensy Audio Library's default
+//  audioHardware.adcHighPassFilterDisable(); //reduces noise.  https://forum.pjrc.com/threads/27215-24-bit-audio-boards?p=78831&viewfull=1#post78831
+//}
 
 void setupTympanHardware(void) {
   Serial.println("Setting up Tympan Audio Board...");
@@ -172,7 +172,7 @@ void setupTympanHardware(void) {
 }
 
 //define functions to setup the audio processing parameters
-#define N_FIR 128
+#define N_FIR 96
 float firCoeff[N_CHAN][N_FIR];
 void setupAudioProcessing(void) {
   //set the pre-gain (if used)

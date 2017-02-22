@@ -9,8 +9,8 @@
  * 
  */
 
-#ifndef _MakeLogSpacedFIRCoeff_F32_h
-#define _MakeLogSpacedFIRCoeff_F32_h
+#ifndef _AudioConfigureFIRFilterBank_F32_h
+#define _AudioConfigureFIRFilterBank_F32_h
 
 #include "rfft.c"
 
@@ -18,17 +18,31 @@
 #define fcopy(x,y,n)    memcpy(x,y,(n)*sizeof(float))
 #define fzero(x,n)      memset(x,0,(n)*sizeof(float))
 
-class MakeLogSpacedFIRCoeff_F32 {
+class AudioConfigFIRFilterBank_F32 {
+  //GUI: inputs:0, outputs:0  //this line used for automatic generation of GUI node  
+  //GUI: shortName:config_FIRbank
   public:
-    MakeLogSpacedFIRCoeff_F32(void) {
+    AudioConfigFIRFilterBank_F32(void) {
     }
-    MakeLogSpacedFIRCoeff_F32(const int n_chan, const int n_fir, const float sample_rate_Hz, float *corner_freq, float *filter_coeff) {
+    AudioConfigFIRFilterBank_F32(const int n_chan, const int n_fir, const float sample_rate_Hz, float *corner_freq, float *filter_coeff) {
       createFilterCoeff(n_chan, n_fir, sample_rate_Hz, corner_freq, filter_coeff);
     }
 
-    //if you want logarithmically-spaced corner frequencies, set corner_freq==NULL
+
+    //createFilterCoeff:
+    //   Purpose: create all of the FIR filter coefficients for the FIR filterbank
+    //   Syntax: createFilterCoeff(n_chan, n_fir, sample_rate_Hz, corner_freq, filter_coeff)
+    //      int n_chan (input): number of channels (number of filters) you desire.  Must be 2 or greater
+    //      int n_fir (input): length of each FIR filter (should probably be 8 or greater)
+    //      float sample_rate_Hz (input): sample rate of your system (used to scale the corner_freq values)
+    //      float *corner_freq (input): array of frequencies (Hz) seperating each band in your filter bank.
+    //          should contain n_chan-1 values because it should exclude the bottom (0 Hz) and the top
+    //          (Nyquist) as those values are already assumed by this routine. An valid example is below:
+    //          int n_chan = 8;  float cf[] = {317.1666, 502.9734, 797.6319, 1264.9, 2005.9, 3181.1, 5044.7}; 
+    //      float *filter_coeff (output): array of FIR filter coefficients that are computed by this
+    //          routine.  You must have pre-allocated the array such as: float filter_coeff[N_CHAN][N_FIR];
+    //Optional Usage: if you want 8 default filters spaced logarithmically, use: float *corner_freq = NULL
     void createFilterCoeff(const int n_chan, const int n_fir, const float sample_rate_Hz, float *corner_freq, float *filter_coeff) {
-      Serial.print("MakeFIRFilterBank: createFilterCoeff: start...cf = "); Serial.println((int)(corner_freq==NULL));
       float *cf = corner_freq;
       int flag__free_cf = 0;
       if (cf == NULL) {
@@ -47,22 +61,38 @@ class MakeLogSpacedFIRCoeff_F32 {
     void computeLogSpacedCornerFreqs(const int n_chan, const float sample_rate_Hz, float *cf) {
       float cf_8_band[] = {317.1666, 502.9734, 797.6319, 1264.9, 2005.9, 3181.1, 5044.7};
       float scale_fac = expf(logf(cf_8_band[6]/cf_8_band[0]) / ((float)(n_chan-2)));
-      Serial.print("MakeFIRFilterBank: computeEvenlySpacedCornerFreqs: scale_fac = "); Serial.println(scale_fac);
+      //Serial.print("MakeFIRFilterBank: computeEvenlySpacedCornerFreqs: scale_fac = "); Serial.println(scale_fac);
       cf[0] = cf_8_band[0];
-      Serial.println("MakeFIRFilterBank: computeEvenlySpacedCornerFreqs: cf = ");Serial.print(cf[0]); Serial.print(", ");
+      //Serial.println("MakeFIRFilterBank: computeEvenlySpacedCornerFreqs: cf = ");Serial.print(cf[0]); Serial.print(", ");
       for (int i=1; i < n_chan-1; i++) {
         cf[i] = cf[i-1]*scale_fac;
-        Serial.print(cf[i]); Serial.print(", ");
+        //Serial.print(cf[i]); Serial.print(", ");
       }
-      Serial.println();
+      //Serial.println();
     }
   private:
-  
-    void fir_filterbank(float *bb, float *cf, const int nc, const int nw, const int wt, const float sr)
+
+    int nextPowerOfTwo(int n) {
+      const int n_out_vals = 8;
+      int out_vals[n_out_vals] = {8, 16, 32, 64, 128, 256, 512, 1024};
+      if (n < out_vals[0]) return out_vals[0];
+      for (int i=1;i<n_out_vals; i++) {
+        if ((n > out_vals[i-1]) & (n <= out_vals[i])) {
+          return out_vals[i];
+        }
+      }
+      return n;
+    }
+
+    void fir_filterbank(float *bb, float *cf, const int nc, const int nw_orig, const int wt, const float sr)
     {
         double   p, w, a = 0.16, sm = 0;
         float   *ww, *bk, *xx, *yy;
         int      j, k, kk, nt, nf, ns, *be;
+
+        int nw = nextPowerOfTwo(nw_orig);
+        Serial.print("fir_filterbank: nw_orig = "); Serial.print(nw_orig);
+        Serial.print(", nw = "); Serial.println(nw);
     
         nt = nw * 2;
         nf = nw + 1;
@@ -71,9 +101,11 @@ class MakeLogSpacedFIRCoeff_F32 {
         ww = (float *) calloc(nw, sizeof(float));
         xx = (float *) calloc(ns, sizeof(float));
         yy = (float *) calloc(ns, sizeof(float));
+        
         // window
-        for (j = 0; j < nw; j++) {
-            p = M_PI * (2.0 * j - nw) / nw;
+        for (j = 0; j < nw; j++) ww[j]=0.0f; //clear
+        for (j = 0; j < nw_orig; j++) {
+            p = M_PI * (2.0 * j - nw_orig) / nw_orig;
             if (wt == 0) {
                 w = 0.54 + 0.46 * cos(p);                   // Hamming
             } else {
@@ -82,16 +114,18 @@ class MakeLogSpacedFIRCoeff_F32 {
             sm += w;
             ww[j] = (float) w;
         }
-        // frequency bands
+        
+        // frequency bands...add the DC-facing band and add the Nyquist-facing band
         be[0] = 0;
         for (k = 1; k < nc; k++) {
             kk = round(nf * cf[k - 1] * (2 / sr));
             be[k] = (kk > nf) ? nf : kk;
         }
         be[nc] = nf;
+        
         // channel tranfer functions
         fzero(xx, ns);
-        xx[nw / 2] = 1;
+        xx[nw_orig / 2] = 1; //make a single-sample impulse centered on our eventual window
         cha_fft_rc(xx, nt);
         for (k = 0; k < nc; k++) {
             fzero(yy, ns); //zero the temporary output
@@ -104,8 +138,8 @@ class MakeLogSpacedFIRCoeff_F32 {
                 yy[j] *= ww[j];
             }
             
-            bk = bb + k * nw; //pointer to location in output array
-            fcopy(bk, yy, nw); //copy the filter coefficients to the output array
+            bk = bb + k * nw_orig; //pointer to location in output array
+            fcopy(bk, yy, nw_orig); //copy the filter coefficients to the output array
 
             //print out the coefficients
             //for (int i=0; i<nw; i++) { Serial.print(yy[i]*1000.0f);Serial.print(" "); }; Serial.println();
