@@ -33,7 +33,6 @@
 //include <SD.h>
 //include <SerialFlash.h>
 #include <OpenAudio_ArduinoLibrary.h>
-#include "MakeLogSpacedFIRCoeff_F32.h"
 
 
 const float sample_rate_Hz = 24000.0f ; //24000 or 44117.64706f (or other frequencies in the table in AudioOutputI2S_F32
@@ -180,7 +179,7 @@ void setupAudioProcessing(void) {
 
   //set the per-channel filter coefficients
   #include "GHA_Constants.h"  //this sets dsl and gha, which are used in the next line
-  MakeLogSpacedFIRCoeff_F32 makeFIRcoeffs(N_CHAN, N_FIR, audio_settings.sample_rate_Hz, (float *)dsl.cross_freq, (float *)firCoeff);
+  AudioConfigFIRFilterBank_F32 makeFIRcoeffs(N_CHAN, N_FIR, audio_settings.sample_rate_Hz, (float *)dsl.cross_freq, (float *)firCoeff);
   for (int i=0; i< N_CHAN; i++) firFilt[i].begin(firCoeff[i], N_FIR, audio_settings.audio_block_samples);
 
   //setup all of the the compressors
