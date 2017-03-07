@@ -65,7 +65,7 @@ AudioMixer8_F32         mixer1; //mixer to reconstruct the broadband audio
   AudioConnection_F32       patchCord1(testSignal, 0, preGain, 0);    //connect a test tone to the Left Int->Float converter
   //AudioConnection_F32       patchCord2(testSignal, 0, float2Int1, 0);
 #else
-  AudioConnection_F32       patchCord1(i2s_in, 0, preGain, 0);    //connect the Left input to the Left Int->Float converter
+  AudioConnection_F32       patchCord1(i2s_in, 0, preGain, 0);   //#8 wants left, #3 wants right. //connect the Left input to the Left Int->Float converter
   //AudioConnection_F32       patchCord2(i2s_in, 0, float2Int1, 0);    //connect the Left input to level monitor (Bluetooth reporting only)
 #endif
 //AudioConnection       patchCord2(float2Int1, 0, rms_input, 0);    //connect the Left input to level monitor (Bluetooth reporting only)
@@ -148,7 +148,7 @@ void setupTympanHardware(void) {
   audioHardware.enable(); // activate AIC
   
   //choose input
-  switch (1) {
+  switch (3) {
     case 1: 
       //choose on-board mics
       audioHardware.inputSelect(TYMPAN_INPUT_ON_BOARD_MIC); // use the on board microphones
@@ -166,8 +166,8 @@ void setupTympanHardware(void) {
   }
   
   //set volumes
-  audioHardware.volume_dB(10.f);  // -63.6 to +24 dB in 0.5dB steps.  uses signed 8-bit
-  audioHardware.setInputGain_dB(0.f); // set MICPGA volume, 0-47.5dB in 0.5dB setps
+  audioHardware.volume_dB(0.f);  // -63.6 to +24 dB in 0.5dB steps.  uses signed 8-bit
+  audioHardware.setInputGain_dB(10.f); // set MICPGA volume, 0-47.5dB in 0.5dB setps
 }
 
 //define functions to setup the audio processing parameters
@@ -264,9 +264,21 @@ void servicePotentiometer(unsigned long curTime_millis) {
             testSignal.frequency(freq);
       #else
         #if USE_TYMPAN == 1
-              float vol_dB = 0.f + 15.0f * ((val - 0.5) * 2.0); //set volume as 0dB +/- 15 dB
-              Serial.print("Changing output volume frequency to = "); Serial.print(vol_dB); Serial.println(" dB");
-              audioHardware.volume_dB(vol_dB);
+              //float vol_dB = 0.f + 15.0f * ((val - 0.5) * 2.0); //set volume as 0dB +/- 15 dB
+              //Serial.print("Changing output volume to = "); Serial.print(vol_dB); Serial.println(" dB");
+              //audioHardware.volume_dB(vol_dB);
+
+              float min_mic_dB = +10.0f;
+              float vol_dB = min_mic_dB + 25.0f * ((val - 0.5) * 2.0); //set volume as 10dB +/- 25 dB
+              //vol_dB = 1.5*vol_dB + 10.0f; //(+/15*1.75 = +/-
+              Serial.print("Changing input gain = "); Serial.print(vol_dB); Serial.println(" dB");
+              if (vol_dB  < min_mic_dB) {
+                audioHardware.setInputGain_dB(min_mic_dB);
+                audioHardware.volume_dB(vol_dB-min_mic_dB);
+              } else {
+                audioHardware.setInputGain_dB(vol_dB);
+                audioHardware.volume_dB(0.0f);
+              }
         #else
               float vol = 0.70f + 0.15f * ((val - 0.5) * 2.0); //set volume as 0.70 +/- 0.15
               Serial.print("Setting output volume control to = "); Serial.println(vol);

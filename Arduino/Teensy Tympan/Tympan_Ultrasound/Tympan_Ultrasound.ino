@@ -28,7 +28,6 @@
 #define USE_STEREO 1
 
 // Include all the of the needed libraries
-//include "AudioStream_Mod.h" //include my custom AudioStream.h...this prevents the default one from being used
 //include <Audio.h>      //Teensy Audio Library
 #include <Wire.h>
 #include <SPI.h>
@@ -113,8 +112,8 @@ void setupAudioHardware(void) {
     audioHardware.enable(); // activate AIC
   
     //choose input
-    audioHardware.inputSelect(TYMPAN_INPUT_JACK_AS_MIC); // use the microphone jack
-    //audioHardware.inputSelect(TYMPAN_INPUT_ON_BOARD_MIC); // use the on board microphones // default
+    //audioHardware.inputSelect(TYMPAN_INPUT_JACK_AS_MIC); // use the microphone jack
+    audioHardware.inputSelect(TYMPAN_INPUT_ON_BOARD_MIC); // use the on board microphones // default
   
     //choose mic bias (if using mics on input jack)
     int myBiasLevel = TYMPAN_MIC_BIAS_2_5;  //choices: TYMPAN_MIC_BIAS_2_5, TYMPAN_MIC_BIAS_1_7, TYMPAN_MIC_BIAS_1_25, TYMPAN_MIC_BIAS_VSUPPLY
