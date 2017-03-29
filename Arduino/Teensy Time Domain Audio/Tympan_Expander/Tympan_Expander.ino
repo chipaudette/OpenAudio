@@ -12,7 +12,7 @@ const float sample_rate_Hz = 24000.f ; //24000 or 44117.64706f (or other frequen
 const int audio_block_samples = 32;  //do not make bigger than AUDIO_BLOCK_SAMPLES from AudioStream.h (which is 128)
 AudioSettings_F32   audio_settings(sample_rate_Hz, audio_block_samples);
 
-const float input_gain_dB = 20.0f; //gain on the microphone
+const float input_gain_dB = 15.0f; //gain on the microphone
 
 
 // GUItool: begin automatically generated code
@@ -81,18 +81,13 @@ void setupAlgorithms(void) {
   //setup the filters
   float corner_freq[] = { 500.f, 1500.f};
   configFIRFilterBank1.createFilterCoeff(N_CHAN, N_FIR, FS_HZ, &corner_freq[0], &fir_coeff[0][0]);
-//  for (int i=0; i< N_CHAN;i++) { 
-//    for (int j=0; j<N_FIR; j++) { 
-//      fir_coeff[i][j] = 0.0; 
-//    }
-//  }
-//  fir_coeff[0][0] = 1.0;
   for (int i=0; i< N_CHAN; i++) fir[i].begin(fir_coeff[i], N_FIR, audio_settings.audio_block_samples);
 
   //setup the expanders
-  float attack_ms = 5.f, release_ms = 300.f;
-  float thresh_dBFS[] = {-50.0f, -83.0f+2.0f, -73.f+2.0f};
+  float attack_ms = 5.f, release_ms = 200.f;
+  float thresh_dBFS[] = {-70.0f, -83.0f+2.0f, -73.f+2.0f};
   float expand_ratio[] = {1.f, 1.75f, 1.75f};
+  //float expand_ratio[] = {1.f, 1.f, 1.f};
   float linear_gain_dB = 0.f; //applied after comparison to threshold
   expander1.setParams(attack_ms, release_ms, thresh_dBFS[0], expand_ratio[0], linear_gain_dB);
   expander2.setParams(attack_ms, release_ms, thresh_dBFS[1], expand_ratio[1], linear_gain_dB);
@@ -103,7 +98,7 @@ void setupAlgorithms(void) {
   limiter1.setRelease_sec(release_ms / 1000.f, FS_HZ);
   limiter1.setPreGain_dB(0.f);
   limiter1.setThresh_dBFS(-10.f);
-  limiter1.setCompressionRatio(1.f);
+  limiter1.setCompressionRatio(5.f);
       
 }
 
@@ -165,7 +160,7 @@ void servicePotentiometer(unsigned long curTime_millis) {
       prev_val = val;  //save the value for comparison for the next time around
       val = 1.0 - val; //reverse direction of potentiometer (error with Tympan PCB)
       
-      float total_gain_dB = val*45.0;  //span 0 to 45
+      float total_gain_dB = val*45.0+15.0;  //span 0 to 45
       float linear_gain_dB = total_gain_dB - input_gain_dB;
       Serial.print("Total Gain = "); Serial.print(total_gain_dB); Serial.print(" dB, ");
       Serial.print("Mic Gain = "); Serial.print(input_gain_dB); Serial.print(" dB, ");
