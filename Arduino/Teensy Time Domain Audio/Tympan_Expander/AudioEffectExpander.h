@@ -102,7 +102,7 @@ class AudioEffectExpander_F32 : public AudioStream_F32
         diff_rel_thresh_dB = env_dBFS_block->data[k] - thresh_dBFS;
         if (diff_rel_thresh_dB < 0.f) {
           //expand!
-          gain_out[k] += (expand_ratio * diff_rel_thresh_dB);  //diff_rel_thresh_dB will be negative
+          gain_out[k] += ((expand_ratio-1.f) * diff_rel_thresh_dB);  //diff_rel_thresh_dB will be negative
         }
 
         //convert from dB into linear gain
