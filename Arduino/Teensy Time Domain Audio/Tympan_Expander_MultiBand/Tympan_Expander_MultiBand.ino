@@ -135,7 +135,7 @@ void setupAlgorithms(void) {
   limiter1.setAttack_sec(attack_msec / 1000.f, FS_HZ);
   limiter1.setRelease_sec(release_msec / 1000.f, FS_HZ);
   limiter1.setPreGain_dB(0.f);
-  limiter1.setThresh_dBFS(-10.f);
+  limiter1.setThresh_dBFS(-10.f);  //here's the threshold where it starts to kick-in.  Relative to "full-scale" (ie 0dBFS, ie where it clips digitally)
   limiter1.setCompressionRatio(5.f);     
 }
 
