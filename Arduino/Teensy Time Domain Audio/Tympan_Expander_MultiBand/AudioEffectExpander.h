@@ -131,8 +131,14 @@ class AudioEffectExpander_F32 : public AudioStream_F32
       
     }
 
-    void setGain_dB(float gain_dB) {
-      linear_gain_dB = gain_dB;
+    float setGain_dB(float gain_dB) {
+      return linear_gain_dB = gain_dB;
+    }
+    float incrementGain_dB(float increment_dB) {
+      return linear_gain_dB += increment_dB;
+    }
+    float getGain_dB(void) {
+      return linear_gain_dB;
     }
 
     //set all of the user parameters for the compressor
