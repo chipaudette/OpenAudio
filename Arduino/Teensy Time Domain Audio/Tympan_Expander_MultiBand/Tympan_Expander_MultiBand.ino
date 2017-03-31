@@ -6,17 +6,20 @@
 #include <SerialFlash.h>
 
 #include "AudioEffectExpander.h"
-//include "AudioMultiblockAverage.h"
 
 //use the expansion or not?  see setupExpanders() for more  settings
 #define USE_EXPANSION 1   //set to 1 to use expansion, set to 0 to defeat it
+#define USE_VOLUME_KNOB 1  //set to 1 to use volume knob to override total_gain_dB
+
+//define gains and per-channel gain offsets
+const int N_CHAN = 4;  //number of frequency bands (channels)
+const float input_gain_dB = 15.0f; //gain on the microphone
+float per_channel_gain_offsets_dB[] = {0.0f, 0.0f, 0.0f, 0.0f}; //gain adjustment per band
+float vol_knob_gain_dB = 20.0f; //will be overridden by volume knob
 
 const float sample_rate_Hz = 24000.f ; //24000 or 44117.64706f (or other frequencies in the table in AudioOutputI2S_F32
 const int audio_block_samples = 32;  //do not make bigger than AUDIO_BLOCK_SAMPLES from AudioStream.h (which is 128)
 AudioSettings_F32   audio_settings(sample_rate_Hz, audio_block_samples);
-
-const float input_gain_dB = 15.0f; //gain on the microphone
-const int N_CHAN = 4;  //number of frequency bands (channels)
 
 // GUItool: begin automatically generated code
 AudioInputI2S_F32        audioInI2S1(audio_settings);    //xy=126,110
@@ -141,9 +144,13 @@ void setupExpanders(float *corner_freq_Hz) {
       thresh_dBFS[i] = 10.f*log10f(baseline_density_per_Hz*BW_Hz);
       expand_ratio[i] = default_expand_ratio; //same expansioni ratio for all bands after the first
     }
+
+    linear_gain_dB = per_channel_gain_offsets_dB[i] + vol_knob_gain_dB;
+    
     Serial.print("setupExpanders: Channel "); Serial.print(i); 
-    Serial.print(": thresh dBFS = "); Serial.print(thresh_dBFS[i]);
-    Serial.print(": expansion ratio = "); Serial.print(expand_ratio[i]);
+    Serial.print("  : thresh dBFS = "); Serial.print(thresh_dBFS[i]);
+    Serial.print("  : expansion ratio = "); Serial.print(expand_ratio[i]);
+    Serial.print("  : linear gain dB = "); Serial.print(linear_gain_dB);
     Serial.println();
     expander[i].setParams(attack_ms, release_ms, thresh_dBFS[i], expand_ratio[i], linear_gain_dB);
   }
@@ -176,7 +183,7 @@ void loop(void) {
   asm(" WFI");  //ARM-specific.  Will wake on next interrupt.  The audio library issues tons of interrupts, so we wake up often.
 
   //service the potentiometer...if enough time has passed
-  servicePotentiometer(millis());
+  if (USE_VOLUME_KNOB) servicePotentiometer(millis());
 
   //update the memory and CPU usage...if enough time has passed
   printMemoryAndCPU(millis());
@@ -208,17 +215,30 @@ void servicePotentiometer(unsigned long curTime_millis) {
       prev_val = val;  //save the value for comparison for the next time around
       val = 1.0 - val; //reverse direction of potentiometer (error with Tympan PCB)
       
-      float total_gain_dB = val*45.0+15.0;  //span 0 to 45
-      float linear_gain_dB = total_gain_dB - input_gain_dB;
-      Serial.print("Total Gain = "); Serial.print(total_gain_dB); Serial.print(" dB, ");
-      Serial.print("Mic Gain = "); Serial.print(input_gain_dB); Serial.print(" dB, ");
-      Serial.print("Exp Linear Gain = "); Serial.print(linear_gain_dB); Serial.println();
-      for (int i=0; i<N_CHAN; i++) expander[i].setGain_dB(linear_gain_dB); //change gain on all bands
-     
+      //float total_gain_dB = val*45.0+15.0;  //span 0 to 45
+      vol_knob_gain_dB = val*45.0+15.0 - input_gain_dB;
+      prinGainSettings();
+      float linear_gain_dB;
+      for (int i=0; i<N_CHAN; i++) {
+        linear_gain_dB = vol_knob_gain_dB + per_channel_gain_offsets_dB[i];
+        expander[i].setGain_dB(linear_gain_dB);
+      }   
     }
     lastUpdate_millis = curTime_millis;
   } // end if
 } //end servicePotentiometer();
+
+void prinGainSettings() {
+  Serial.print("Changing volumes: ");
+  Serial.print("Knob gain dB = "); Serial.print(vol_knob_gain_dB);
+  Serial.print(", input gain dB = "); Serial.print(input_gain_dB);
+  Serial.print(", per-channel gains dB = ");
+  for (int i=0; i<N_CHAN; i++) {
+    Serial.print(per_channel_gain_offsets_dB[i]);
+    Serial.print(", ");
+  }
+  Serial.println();
+}
 
 void printMemoryAndCPU(unsigned long curTime_millis) {
   static unsigned long updatePeriod_millis = 3000; //how many milliseconds between updating gain reading?
