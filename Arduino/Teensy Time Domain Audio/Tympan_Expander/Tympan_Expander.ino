@@ -6,7 +6,6 @@
 #include <SerialFlash.h>
 
 #include "AudioEffectExpander.h"
-//include "AudioMultiblockAverage.h"
 
 const float sample_rate_Hz = 24000.f ; //24000 or 44117.64706f (or other frequencies in the table in AudioOutputI2S_F32
 const int audio_block_samples = 32;  //do not make bigger than AUDIO_BLOCK_SAMPLES from AudioStream.h (which is 128)

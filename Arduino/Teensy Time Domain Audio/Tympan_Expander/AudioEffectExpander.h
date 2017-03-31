@@ -1,5 +1,5 @@
 /*
- * AudioEffectExampander_F32: Expander
+ * AudioEffectExpander_F32: Expander
  * 
  * Created: Chip Audette (OpenAudio) Mar 2017
  * Derived From: AudioEffectCompWDRCF32
