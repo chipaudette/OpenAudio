@@ -6,9 +6,9 @@
 
 class SerialManager {
   public:
-    SerialManager(int n, AudioEffectExpander_F32 *p_exp) { 
+    SerialManager(int n, AudioEffectExpander_F32 *gain_algs) { 
       N_CHAN = n; 
-      expander = p_exp;
+      gain_algorithms = gain_algs;
     };
     void respondToByte(char c);
     
@@ -19,7 +19,7 @@ class SerialManager {
     float channelGainIncrement_dB = 2.5f;  
     int N_CHAN;
   private:
-    AudioEffectExpander_F32 *expander;  //point to first element in array of expanders
+    AudioEffectExpander_F32 *gain_algorithms;  //point to first element in array of expanders
   
 };
 
@@ -79,7 +79,7 @@ void SerialManager::respondToByte(char c) {
 
 void SerialManager::incrementChannelGain(int chan, float change_dB) {
   if (chan < N_CHAN) {
-    expander[chan].incrementGain_dB(change_dB);
+    gain_algorithms[chan].incrementGain_dB(change_dB);
     Serial.print("Incrementing gain on channel ");Serial.print(chan);
     Serial.print(" by "); Serial.print(change_dB); Serial.println(" dB");
     printGainSettings();  //in main sketch file
@@ -87,3 +87,4 @@ void SerialManager::incrementChannelGain(int chan, float change_dB) {
 }
 
 #endif
+

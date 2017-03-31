@@ -27,13 +27,13 @@
 
 //use the expansion or not?  see setupExpanders() for more  settings
 #define USE_EXPANSION 1    //set to 1 to use expansion, set to 0 to defeat it
-#define USE_VOLUME_KNOB 1  //set to 1 to use volume knob to override total_gain_dB
+#define USE_VOLUME_KNOB 1  //set to 1 to use volume knob to override the default vol_knob_gain_dB set a few lines below
 
 //define gains and per-channel gain offsets
 const int N_CHAN = 4;  //number of frequency bands (channels)
 const float input_gain_dB = 15.0f; //gain on the microphone
 const float init_per_channel_gain_offsets_dB[] = {0.0f, 0.0f, 0.0f, 0.0f}; //initial gain adjustment per band
-float vol_knob_gain_dB = 20.0f; //will be overridden by volume knob
+float vol_knob_gain_dB = 25.0f; //will be overridden by volume knob
 
 
 //define global audio settings
@@ -81,10 +81,10 @@ AudioConnection_F32         patchCord32(limiter1, 0, audioOutI2S1, 1);
 
 //control display and serial interaction
 bool enable_printMemoryAndCPU = false;
-bool enable_printAveSignalLevels = false;
-SerialManager serialManager(N_CHAN,&(expander[0]));
 extern void togglePrintMemroyAndCPU(void) { enable_printMemoryAndCPU = !enable_printMemoryAndCPU; }; //"extern" let's be it accessible outside
+bool enable_printAveSignalLevels = false;
 extern void togglePrintAveSignalLevels(void) { enable_printAveSignalLevels = !enable_printAveSignalLevels; }; //"extern" let's be it accessible outside
+SerialManager serialManager(N_CHAN,expander);
 
 //setup the tympan
 void setupAudioHardware(void) {

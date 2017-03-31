@@ -14,6 +14,7 @@
  * 
  */
 
+
 #ifndef _AudioEffectExpander_F32
 #define _AudioEffectExpander_F32
 
@@ -22,12 +23,19 @@
 #include <arm_math.h>
 #include <AudioCalcEnvelope_F32.h>
 #include "AudioCalcGainWDRC_F32.h"  //has definition of CHA_WDRC
-//#include "utility/textAndStringUtils.h"
 
 #define db2(x) (AudioCalcGainWDRC_F32::db2(x))  // does 20*log10(x) fast!
 #define undb2(x) (AudioCalcGainWDRC_F32::undb2(x)) //does pow(10,x/20) fast!
 
-class AudioEffectExpander_F32 : public AudioStream_F32
+//class AudioEffectTemplate_GainAlgorithm {
+//  public:
+//    virtual float setGain_dB(float)=0;
+//    virtual float incrementGain_dB(float)=0;
+//    virtual float getGain_dB(void)=0;
+//};
+
+
+class AudioEffectExpander_F32 : public AudioStream_F32  //, public AudioEffectTemplate_GainAlgorithm
 {
   //GUI: inputs:1, outputs:1  //this line used for automatic generation of GUI node
   //GUI: shortName: Expander
@@ -132,10 +140,10 @@ class AudioEffectExpander_F32 : public AudioStream_F32
     }
 
     float setGain_dB(float gain_dB) {
-      return linear_gain_dB = gain_dB;
+      return (linear_gain_dB = gain_dB);
     }
     float incrementGain_dB(float increment_dB) {
-      return linear_gain_dB += increment_dB;
+      return (linear_gain_dB += increment_dB);
     }
     float getGain_dB(void) {
       return linear_gain_dB;
