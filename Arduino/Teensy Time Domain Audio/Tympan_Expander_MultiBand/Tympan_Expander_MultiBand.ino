@@ -18,7 +18,7 @@ float per_channel_gain_offsets_dB[] = {0.0f, 0.0f, 0.0f, 0.0f}; //gain adjustmen
 float vol_knob_gain_dB = 20.0f; //will be overridden by volume knob
 
 const float sample_rate_Hz = 24000.f ; //24000 or 44117.64706f (or other frequencies in the table in AudioOutputI2S_F32
-const int audio_block_samples = 32;  //do not make bigger than AUDIO_BLOCK_SAMPLES from AudioStream.h (which is 128)
+const int audio_block_samples = 32;  //set N=128 for USB.  do not make bigger than AUDIO_BLOCK_SAMPLES from AudioStream.h (which is 128)
 AudioSettings_F32   audio_settings(sample_rate_Hz, audio_block_samples);
 
 // GUItool: begin automatically generated code
@@ -46,10 +46,14 @@ AudioConnection_F32         patchCord22(expander[1], 0, mixer4_1, 1);
 AudioConnection_F32         patchCord23(expander[2], 0, mixer4_1, 2);
 AudioConnection_F32         patchCord24(expander[3], 0, mixer4_1, 3);
 
-AudioConnection_F32         patchCord30(mixer4_1, limiter1);
+AudioConnection_F32         patchCord30(mixer4_1, 0, limiter1, 0);
 AudioConnection_F32         patchCord31(limiter1, 0, audioOutI2S1, 0);
 AudioConnection_F32         patchCord32(limiter1, 0, audioOutI2S1, 1);
 
+//AudioOutputUSB_F32          usb_out;
+//AudioInputUSB_F32           usb_in;
+//AudioConnection_F32         patchCord40(iir_hp, 0, usb_out, 0);
+//AudioConnection_F32         patchCord41(limiter1, 0, usb_out, 1);
 
 // GUItool: end automatically generated code
 
