@@ -15,7 +15,7 @@
 //define gains and per-channel gain offsets
 const int N_CHAN = 4;  //number of frequency bands (channels)
 const float input_gain_dB = 15.0f; //gain on the microphone
-const float init_per_channel_gain_offsets_dB[] = {0.0f, 0.0f, 0.0f, 0.0f}; //initial gain adjustment per band
+const float init_per_channel_gain_offsets_dB[] = {-2.5f, 0.0f, 2.5f, 12.5f}; //initial gain adjustment per band
 float vol_knob_gain_dB = 25.0f; //will be overridden by volume knob
 
 const float sample_rate_Hz = 24000.f ; //24000 or 44117.64706f (or other frequencies in the table in AudioOutputI2S_F32
@@ -118,7 +118,7 @@ void setupAlgorithms(void) {
 
 void setupExpCompLims(float *corner_freq_Hz) {
   //choose the overall parameters
-  float attack_ms = 5.f, release_ms = 600.f;  
+  float attack_ms = 5.f, release_ms = 400.f;  
   float linear_gain_dB = 0.f; //applied after comparison to threshold
   
 
@@ -136,7 +136,7 @@ void setupExpCompLims(float *corner_freq_Hz) {
   //step through each channel and define the parameter values
   for (int i=0;i<N_CHAN; i++) {
   
-    //set the the expansion
+    //set the the expansion portion of the curve
     float default_expand_ratio = 1.75;
     if (i==0) {  
       //set the bottom band to be different from the rest (less or no expansion)
@@ -154,19 +154,19 @@ void setupExpCompLims(float *corner_freq_Hz) {
       //the rest of the bands...scale the threshold for expansion by the bandwidth (assumes the noise is basically white)
       exp_thresh_dBFS[i] = -1000.f;  //this is the bottom of the expansion segment...this is ignored
       lin_thresh_dBFS[i] = 10.f*log10f(noise_density_per_Hz*BW_Hz); //this is the top of the expansion segment.
-      exp_ratio[i] = 1./(default_expand_ratio); //same expansioni ratio for all bands after the first
+      exp_ratio[i] = 1./(default_expand_ratio); //same expansion ratio for all bands after the first
     }
 
-    //set linear 
+    //set linear portion of the curve
     //lin_thresh_dBFS[i] = asdfasdfasdfasdf //this was already set in the expansion section
     lin_ratio[i] = 1.0f;  //the compression ratio for linear is, by definition, 1.0
 
-    //set compression
-    comp_thresh_dBFS[i] = -50.f;  //guess
+    //set compression portion of the curve
+    comp_thresh_dBFS[i] = -60.f;  //guess, start of compression band.  Pre-gain (input) dB full-scale
     comp_thresh_dBFS[i] = max(lin_thresh_dBFS[i],comp_thresh_dBFS[i]);
-    comp_ratio[i] = 1.33f;  //guess as to what sounds ok
+    comp_ratio[i] = 1.5f;  //compression ratio.  guess as to what sounds ok.  currently this is same for all bands
 
-    //set limitter...here we want the threshold to be on the output, which get's tricky.
+    //set limiter...here we want the threshold to be on the output, which gets tricky.
     //for now, let's defeat it and rely upon the broad-band limiter that comes later
     lim_thresh_dBFS[i] = 10000.f;  //some large number will defeat this
     //lim_thresh_dBFS[i] = max(comp_thresh_dBFS[i],lim_thresh_dBFS[i]);
