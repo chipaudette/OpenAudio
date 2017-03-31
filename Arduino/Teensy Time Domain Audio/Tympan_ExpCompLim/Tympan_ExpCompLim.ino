@@ -6,16 +6,21 @@
 #include <SerialFlash.h>
 
 #include "AudioEffectExpCompLim.h"
+#include "SerialManager.h"
 
 //use the expansion or not?  see setupexpCompLims() for more  settings
-#define USE_EXPAND_COMP 0   //set to 1 to use expansion, set to 0 to defeat it
+#define USE_EXPAND_COMP 1   //set to 1 to use the multi-band compression, set to 0 to defeat it (sets all cr to 1.0)
+#define USE_VOLUME_KNOB 1  //set to 1 to use volume knob to override the default vol_knob_gain_dB set a few lines below
+
+//define gains and per-channel gain offsets
+const int N_CHAN = 4;  //number of frequency bands (channels)
+const float input_gain_dB = 15.0f; //gain on the microphone
+const float init_per_channel_gain_offsets_dB[] = {0.0f, 0.0f, 0.0f, 0.0f}; //initial gain adjustment per band
+float vol_knob_gain_dB = 25.0f; //will be overridden by volume knob
 
 const float sample_rate_Hz = 24000.f ; //24000 or 44117.64706f (or other frequencies in the table in AudioOutputI2S_F32
 const int audio_block_samples = 32;  //do not make bigger than AUDIO_BLOCK_SAMPLES from AudioStream.h (which is 128)
 AudioSettings_F32   audio_settings(sample_rate_Hz, audio_block_samples);
-
-const float input_gain_dB = 15.0f; //gain on the microphone
-const int N_CHAN = 4;  //number of frequency bands (channels)
 
 // GUItool: begin automatically generated code
 AudioInputI2S_F32        audioInI2S1(audio_settings);    //xy=126,110
@@ -50,6 +55,13 @@ AudioConnection_F32         patchCord32(limiter1, 0, audioOutI2S1, 1);
 // GUItool: end automatically generated code
 
 #define POT_PIN A1
+
+//control display and serial interaction
+bool enable_printMemoryAndCPU = false;
+extern void togglePrintMemroyAndCPU(void) { enable_printMemoryAndCPU = !enable_printMemoryAndCPU; }; //"extern" let's be it accessible outside
+bool enable_printAveSignalLevels = false;
+extern void togglePrintAveSignalLevels(void) { enable_printAveSignalLevels = !enable_printAveSignalLevels; }; //"extern" let's be it accessible outside
+SerialManager serialManager(N_CHAN,expCompLim);
 
 //setup the tympan
 void setupAudioHardware(void) {
@@ -95,8 +107,8 @@ void setupAlgorithms(void) {
   //setup the expCompLims
   setupExpCompLims(corner_freq);
  
-  //setup the final compressor as a limitter
-  float attack_msec = 5.0, release_msec = 200.f;
+  //setup the final compressor as a limiter
+  float attack_msec = 5.0, release_msec = 600.f;
   limiter1.setAttack_sec(attack_msec / 1000.f, FS_HZ);
   limiter1.setRelease_sec(release_msec / 1000.f, FS_HZ);
   limiter1.setPreGain_dB(0.f);
@@ -106,7 +118,7 @@ void setupAlgorithms(void) {
 
 void setupExpCompLims(float *corner_freq_Hz) {
   //choose the overall parameters
-  float attack_ms = 5.f, release_ms = 300.f;  
+  float attack_ms = 5.f, release_ms = 600.f;  
   float linear_gain_dB = 0.f; //applied after comparison to threshold
   
 
@@ -150,12 +162,15 @@ void setupExpCompLims(float *corner_freq_Hz) {
     lin_ratio[i] = 1.0f;  //the compression ratio for linear is, by definition, 1.0
 
     //set compression
-    comp_thresh_dBFS[i] = max(lin_thresh_dBFS[i],-65.f);  //guess
-    comp_ratio[i] = 1.f;  //guess as to what sounds good
+    comp_thresh_dBFS[i] = -50.f;  //guess
+    comp_thresh_dBFS[i] = max(lin_thresh_dBFS[i],comp_thresh_dBFS[i]);
+    comp_ratio[i] = 1.33f;  //guess as to what sounds ok
 
-    //set limitter...defeat the per-band limitter.  We'll just use a broadband limitter
-    lim_thresh_dBFS[i] = 1000.f;  //some large number will defeat this
-    lim_ratio[i] = comp_ratio[i];  //this also ensures that it's no different than the previous segment
+    //set limitter...here we want the threshold to be on the output, which get's tricky.
+    //for now, let's defeat it and rely upon the broad-band limiter that comes later
+    lim_thresh_dBFS[i] = 10000.f;  //some large number will defeat this
+    //lim_thresh_dBFS[i] = max(comp_thresh_dBFS[i],lim_thresh_dBFS[i]);
+    lim_ratio[i] = 1.0;  //defeated
   }
 
   //should we defeat this processing
@@ -174,7 +189,8 @@ void setupExpCompLims(float *corner_freq_Hz) {
     expCompLim[Ichan].setAudioSettings(audio_settings);
 
     //set the overall settings
-    expCompLim[Ichan].setOverallParams(attack_ms,release_ms, linear_gain_dB);
+    linear_gain_dB = init_per_channel_gain_offsets_dB[Ichan] + vol_knob_gain_dB;
+    expCompLim[Ichan].setOverallParams(attack_ms, release_ms, linear_gain_dB);
 
     //print the per-segment parameters  
     Serial.print("Chan "); Serial.print(Ichan); Serial.println(":");
@@ -206,7 +222,9 @@ void setup(void) {
   setupAlgorithms();
   
   //End of setup
+  printGainSettings();
   Serial.println("Setup complete.");
+  serialManager.printHelp();
 };
 
 
@@ -218,16 +236,23 @@ void loop(void) {
   asm(" WFI");  //ARM-specific.  Will wake on next interrupt.  The audio library issues tons of interrupts, so we wake up often.
 
   //service the potentiometer...if enough time has passed
-  servicePotentiometer(millis());
+  if (USE_VOLUME_KNOB) servicePotentiometer(millis());
 
   //update the memory and CPU usage...if enough time has passed
-  printMemoryAndCPU(millis());
+  if (enable_printMemoryAndCPU) printMemoryAndCPU(millis());
 
   //print info about the signal processing
-  printUpdatedLevels(millis());
+  updateAveSignalLevels(millis());
+  if (enable_printAveSignalLevels) printAveSignalLevels(millis());
 }
 
-
+//this function gets called automatically if a character is recevied
+//from the serial link to the PC
+void serialEvent() {
+  while (Serial.available()) {
+    serialManager.respondToByte((char)Serial.read());
+  }
+}
 
 //servicePotentiometer: listens to the blue potentiometer and sends the new pot value
 //  to the audio processing algorithm as a control parameter
@@ -249,18 +274,40 @@ void servicePotentiometer(unsigned long curTime_millis) {
     if (abs(val - prev_val) > 0.05) { //is it different than befor?
       prev_val = val;  //save the value for comparison for the next time around
       val = 1.0 - val; //reverse direction of potentiometer (error with Tympan PCB)
-      
-      float total_gain_dB = val*45.0+15.0;  //span 0 to 45
-      float linear_gain_dB = total_gain_dB - input_gain_dB;
-      Serial.print("Total Gain = "); Serial.print(total_gain_dB); Serial.print(" dB, ");
-      Serial.print("Mic Gain = "); Serial.print(input_gain_dB); Serial.print(" dB, ");
-      Serial.print("Exp Linear Gain = "); Serial.print(linear_gain_dB); Serial.println();
-      for (int i=0; i<N_CHAN; i++) expCompLim[i].setGain_dB(linear_gain_dB); //change gain on all bands
-     
+
+      setVolKnobGain_dB(val*45.0 + 15.0 - input_gain_dB);    
     }
     lastUpdate_millis = curTime_millis;
   } // end if
 } //end servicePotentiometer();
+
+      
+extern void printGainSettings(void) { //"extern" to make it available to other files, such as SerialManager.h
+  Serial.print("Gain Settings: ");
+  Serial.print("Knob gain dB = "); Serial.print(vol_knob_gain_dB);
+  Serial.print(", input gain dB = "); Serial.print(input_gain_dB);
+  Serial.print(", per-channel gains dB = ");
+  for (int i=0; i<N_CHAN; i++) {
+    Serial.print(expCompLim[i].getGain_dB()-vol_knob_gain_dB);
+    Serial.print(", ");
+  }
+  Serial.println();
+}
+extern void incrementKnobGain(float increment_dB) { //"extern" to make it available to other files, such as SerialManager.h
+  setVolKnobGain_dB(vol_knob_gain_dB+increment_dB);
+}
+void setVolKnobGain_dB(float gain_dB) {
+    float prev_vol_knob_gain_dB = vol_knob_gain_dB;
+    vol_knob_gain_dB = gain_dB;
+    float linear_gain_dB;
+    for (int i=0; i<N_CHAN; i++) {
+      linear_gain_dB = vol_knob_gain_dB + (expCompLim[i].getGain_dB()-prev_vol_knob_gain_dB);
+      expCompLim[i].setGain_dB(linear_gain_dB);
+    }   
+    printGainSettings();  
+}
+
+      
 
 void printMemoryAndCPU(unsigned long curTime_millis) {
   static unsigned long updatePeriod_millis = 3000; //how many milliseconds between updating gain reading?
@@ -291,31 +338,33 @@ void printMemoryAndCPU(unsigned long curTime_millis) {
   }
 }
 
-void printUpdatedLevels(unsigned long curTime_millis) {
-  static unsigned long calc_updatePeriod_millis = 100; //how often to perform the averaging
-  static unsigned long calc_lastUpdate_millis = 0;
-  static unsigned long display_updatePeriod_millis = 3000; //how often to print the levels to the screen
-  static unsigned long display_lastUpdate_millis = 0;
-  static float ave_dB[N_CHAN];
+float aveSignalLevels_dB[N_CHAN];
+void updateAveSignalLevels(unsigned long curTime_millis) {
+  static unsigned long updatePeriod_millis = 100; //how often to perform the averaging
+  static unsigned long lastUpdate_millis = 0;
   float update_coeff = 0.1;
 
   //is it time to update the calculations
-  if (curTime_millis < calc_lastUpdate_millis) calc_lastUpdate_millis = 0; //handle wrap-around of the clock
-  if ((curTime_millis - calc_lastUpdate_millis) > calc_updatePeriod_millis) { //is it time to update the user interface?
+  if (curTime_millis < lastUpdate_millis) lastUpdate_millis = 0; //handle wrap-around of the clock
+  if ((curTime_millis - lastUpdate_millis) > updatePeriod_millis) { //is it time to update the user interface?
     for (int i=0; i<N_CHAN; i++) { //loop over each band
-      ave_dB[i] = (1.0-update_coeff)*ave_dB[i] + update_coeff*expCompLim[i].getCurrentLevel_dB(); //running average
+      aveSignalLevels_dB[i] = (1.0-update_coeff)*aveSignalLevels_dB[i] + update_coeff*expCompLim[i].getCurrentLevel_dB(); //running average
     }
-    calc_lastUpdate_millis = curTime_millis; //we will use this value the next time around.
+    lastUpdate_millis = curTime_millis; //we will use this value the next time around.
   }
-  
+}
+void printAveSignalLevels(unsigned long curTime_millis) {
+  static unsigned long updatePeriod_millis = 3000; //how often to print the levels to the screen
+  static unsigned long lastUpdate_millis = 0;
+
   //is it time to print to the screen
-  if (curTime_millis < display_lastUpdate_millis) display_lastUpdate_millis = 0; //handle wrap-around of the clock
-  if ((curTime_millis - display_lastUpdate_millis) > display_updatePeriod_millis) { //is it time to update the user interface?   
-    Serial.print("Signal Level Per-Band (dBFS) = ");
-    for (int i=0; i<N_CHAN; i++) { Serial.print(ave_dB[i]);  Serial.print(", ");  }
+  if (curTime_millis < lastUpdate_millis) lastUpdate_millis = 0; //handle wrap-around of the clock
+  if ((curTime_millis - lastUpdate_millis) > updatePeriod_millis) { //is it time to update the user interface?   
+    Serial.print("Ave Signal Level Per-Band (dBFS) = ");
+    for (int i=0; i<N_CHAN; i++) { Serial.print(aveSignalLevels_dB[i]);  Serial.print(", ");  }
     Serial.println();
     
-    display_lastUpdate_millis = curTime_millis; //we will use this value the next time around.
+    lastUpdate_millis = curTime_millis; //we will use this value the next time around.
   }
 }
 

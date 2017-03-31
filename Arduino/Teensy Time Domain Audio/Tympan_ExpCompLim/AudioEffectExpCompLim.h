@@ -22,12 +22,19 @@
 #include <arm_math.h>
 #include <AudioCalcEnvelope_F32.h>
 #include "AudioCalcGainWDRC_F32.h"  //has definition of CHA_WDRC
-//#include "utility/textAndStringUtils.h"
 
 #define db2(x) (AudioCalcGainWDRC_F32::db2(x))  // does 20*log10(x) fast!
 #define undb2(x) (AudioCalcGainWDRC_F32::undb2(x)) //does pow(10,x/20) fast!
 
-class AudioEffectExpCompLim_F32 : public AudioStream_F32
+//class AudioEffectTemplate_GainAlgorithm {
+//  public:
+//    virtual float setGain_dB(float)=0;
+//    virtual float incrementGain_dB(float)=0;
+//    virtual float getGain_dB(void)=0;
+//};
+
+
+class AudioEffectExpCompLim_F32 : public AudioStream_F32  //, public AudioEffectTemplate_GainAlgorithm
 {
   //GUI: inputs:1, outputs:1  //this line used for automatic generation of GUI node
   //GUI: shortName: expCompLim
@@ -115,15 +122,8 @@ class AudioEffectExpCompLim_F32 : public AudioStream_F32
         val_dB = env_dBFS_block->data[k];
 
         //find the segment of the dynamic processing curve that applies
-        I_seg = 2;
-        //Serial.print(I_seg); Serial.print(", ");
-        //Serial.print((n_segments-1)); Serial.print(", ");
-        //Serial.print(val_dB); Serial.print(", ");
-        //Serial.print(input_thresh_dBFS[I_seg+1]); Serial.print(", ");
-        //Serial.print((I_seg < (n_segments-1)));Serial.print(", ");
-        //Serial.print((val_dB < input_thresh_dBFS[I_seg+1]));Serial.print(", ");
-        //Serial.println((I_seg < (n_segments-1)) && (val_dB > input_thresh_dBFS[I_seg+1]));
-        while ((I_seg < (n_segments-1)) && (val_dB < input_thresh_dBFS[I_seg+1])) { I_seg++; };
+        I_seg = 0;
+        while ((I_seg < n_segments-2) && (val_dB > input_thresh_dBFS[I_seg+1])) { I_seg++; };
         
         // calculate the gain based on this section...assume joint between seg[0] and seg[1] is at linear_gain_dB
         if (I_seg == 0) {
@@ -158,10 +158,18 @@ class AudioEffectExpCompLim_F32 : public AudioStream_F32
       setSegmentParams(3,-10.f, 5);  //limiter
     }
 
-    void setGain_dB(float gain_dB) {
+    float setGain_dB(float gain_dB) {
       linear_gain_dB = gain_dB;
       recomputeGainAtTransitions();
+      return getGain_dB();
     }
+    float incrementGain_dB(float increment_dB) {
+      return setGain_dB(getGain_dB() + increment_dB);
+    }
+    float getGain_dB(void) {
+      return linear_gain_dB;
+    }
+    
 
     //set all of the user parameters for the compressor
     //assumes that the sample rate has already been set!!!
@@ -191,13 +199,13 @@ class AudioEffectExpCompLim_F32 : public AudioStream_F32
         gain_dB_at_transitions[i] = gain_dB_at_transitions[i-1] - (comp_ratio[i]-1.0)*(input_thresh_dBFS[i]-input_thresh_dBFS[i-1]);
       }
 
-      if (Serial) {
-        Serial.print("AudioEffectExpCompLim: recomputeGainAtTransitions: transitions dBFS = "); 
-        for (int i=0; i<n_segments;i++) {
-          Serial.print(gain_dB_at_transitions[i]); Serial.print(", ");
-        }
-        Serial.println();
-      } 
+//      if (Serial) {
+//        Serial.print("AudioEffectExpCompLim: recomputeGainAtTransitions: transitions dBFS = "); 
+//        for (int i=0; i<n_segments;i++) {
+//          Serial.print(gain_dB_at_transitions[i]); Serial.print(", ");
+//        }
+//        Serial.println();
+//      } 
     }
 
     void setSampleRate_Hz(const float _fs_Hz) {
