@@ -30,8 +30,8 @@ void SerialManager::printHelp(void) {
   Serial.println("   g: Print the gain settings of the device.");
   Serial.println("   C: Toggle printing of CPU and Memory usage");
   Serial.println("   L: Toggle printing of pre-gain per-channel signal levels");
-  Serial.print("   k: Increase the gain of all channels by "); Serial.print(channelGainIncrement_dB); Serial.println(" dB");
-  Serial.print("   K: Decrease the gain of all channels by "); Serial.print(channelGainIncrement_dB); Serial.println(" dB");
+  Serial.print("   k: Increase the gain of all channels (ie, knob gain) by "); Serial.print(channelGainIncrement_dB); Serial.println(" dB");
+  Serial.print("   K: Decrease the gain of all channels (ie, knob gain) by "); Serial.print(channelGainIncrement_dB); Serial.println(" dB");
   Serial.print("   1,2.3.4: Increase linear gain of given channel (1-4) by "); Serial.print(channelGainIncrement_dB); Serial.println(" dB");
   Serial.print("   !,@,#,$: Decrease linear gain of given channel (1-4) by "); Serial.print(channelGainIncrement_dB); Serial.println(" dB");
   Serial.println();
