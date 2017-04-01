@@ -2,11 +2,14 @@
 #ifndef _SerialManager_h
 #define _SerialManager_h
 
+//add in the algorithm whose gains we wish to set via this SerialManager
 #include "AudioEffectExpander.h"
+typedef AudioEffectExpander_F32 GainAlgorithm_t;
 
+//now, define the Serial Manager class
 class SerialManager {
   public:
-    SerialManager(int n, AudioEffectExpander_F32 *gain_algs) { 
+    SerialManager(int n, GainAlgorithm_t *gain_algs) { 
       N_CHAN = n; 
       gain_algorithms = gain_algs;
     };
@@ -19,7 +22,7 @@ class SerialManager {
     float channelGainIncrement_dB = 2.5f;  
     int N_CHAN;
   private:
-    AudioEffectExpander_F32 *gain_algorithms;  //point to first element in array of expanders
+    GainAlgorithm_t *gain_algorithms;  //point to first element in array of expanders
   
 };
 
@@ -71,8 +74,10 @@ void SerialManager::respondToByte(char c) {
     case '$':  //which is "shift 4"
       incrementChannelGain(4-1, -channelGainIncrement_dB); break;          
     case 'C': case 'c':
+      Serial.println("Command Received: toggle printing of memory and CPU usage.");
       togglePrintMemroyAndCPU(); break;
     case 'L': case 'l':
+      Serial.println("Command Received: toggle printing of per-band ave signal levels.");
       togglePrintAveSignalLevels(); break;
   }
 }
