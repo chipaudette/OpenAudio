@@ -1,3 +1,22 @@
+/*
+ * Tympan_ExpCompLim
+ * 
+ * Created: Chip Audette (OpenAudio), March 2017
+ * Purpose: Provide a 4-channel audio processing system.
+ *    * High-pass filter to remove lowest frequencies
+ *    * Break into 4 sub-bands via FIR filters
+ *      * Uses expansion at low SPL to manage noise (per-channel)
+ *      * Applies linear gain (per-channel)
+ *      * Applies compression for mid-SPL levels
+ *      * Applies limtter for high-SPL levels 
+ *    * Recombine sub-bands
+ *    * Apply broadband limiter to minimize likelihood of digital clipping
+ * 
+ * Hardware: Use with Teensy 3.6 and Tympan Rev A
+ * 
+ * MIT License.  Use at your own risk.
+ */
+
 #include <Tympan_Library.h>
 #include <Audio.h>
 #include <Wire.h>
@@ -8,11 +27,12 @@
 #include "AudioEffectExpCompLim.h"
 #include "SerialManager.h"
 
-//use the expansion or not?  see setupexpCompLims() for more  settings
-#define USE_EXPAND_COMP 1   //set to 1 to use the multi-band compression, set to 0 to defeat it (sets all cr to 1.0)
-#define USE_VOLUME_KNOB 1  //set to 1 to use volume knob to override the default vol_knob_gain_dB set a few lines below
+// overall algorithm control
+int USE_EXPAND_COMP = 1;   //set to 1 to use the multi-band compression, set to 0 to defeat it (sets all cr to 1.0)
+int USE_VOLUME_KNOB = 1;  //set to 1 to use volume knob to override the default vol_knob_gain_dB set a few lines below
 
 //define gains and per-channel gain offsets
+String overall_name = String("Tympan: MultiBand Expander-Compressor-Limiter with Overall Limiter");
 const int N_CHAN = 4;  //number of frequency bands (channels)
 const float input_gain_dB = 15.0f; //gain on the microphone
 const float init_per_channel_gain_offsets_dB[] = {-2.5f, 0.0f, 2.5f, 12.5f}; //initial gain adjustment per band
@@ -51,6 +71,11 @@ AudioConnection_F32         patchCord30(mixer4_1, limiter1); //overall limitter
 AudioConnection_F32         patchCord31(limiter1, 0, audioOutI2S1, 0);
 AudioConnection_F32         patchCord32(limiter1, 0, audioOutI2S1, 1);
 
+//AudioInputUSB_F32           usb_in;  //audio_block_samples must be 128 samples!
+//AudioOutputUSB_F32          usb_out;  //audio_block_samples must be 128 samples!
+//AudioConnection_F32         patchcord41(iir_hp, 0, usb_out, 0);
+//AudioConnection_F32         patchcord42(limiter1, 0, usb_out, 1);
+
 
 // GUItool: end automatically generated code
 
@@ -58,9 +83,9 @@ AudioConnection_F32         patchCord32(limiter1, 0, audioOutI2S1, 1);
 
 //control display and serial interaction
 bool enable_printMemoryAndCPU = false;
-extern void togglePrintMemroyAndCPU(void) { enable_printMemoryAndCPU = !enable_printMemoryAndCPU; }; //"extern" let's be it accessible outside
+void togglePrintMemroyAndCPU(void) { enable_printMemoryAndCPU = !enable_printMemoryAndCPU; }; //"extern" let's be it accessible outside
 bool enable_printAveSignalLevels = false;
-extern void togglePrintAveSignalLevels(void) { enable_printAveSignalLevels = !enable_printAveSignalLevels; }; //"extern" let's be it accessible outside
+void togglePrintAveSignalLevels(void) { enable_printAveSignalLevels = !enable_printAveSignalLevels; }; //"extern" let's be it accessible outside
 SerialManager serialManager(N_CHAN,expCompLim);
 
 //setup the tympan
@@ -108,7 +133,7 @@ void setupAlgorithms(void) {
   setupExpCompLims(corner_freq);
  
   //setup the final compressor as a limiter
-  float attack_msec = 5.0, release_msec = 600.f;
+  float attack_msec = 5.0, release_msec = 300.f;
   limiter1.setAttack_sec(attack_msec / 1000.f, FS_HZ);
   limiter1.setRelease_sec(release_msec / 1000.f, FS_HZ);
   limiter1.setPreGain_dB(0.f);
@@ -208,10 +233,11 @@ void setupExpCompLims(float *corner_freq_Hz) {
 
 }
 
-//The setup function is called once when the system starts up
+//This is the overall setup function is called once when the system starts up
 void setup(void) {
   //Start the USB serial link (to enable debugging)
   Serial.begin(115200); delay(500);
+  Serial.println(overall_name);
   Serial.println("Setup starting...");
   
   //Allocate dynamically shuffled memory for the audio subsystem
@@ -283,19 +309,21 @@ void servicePotentiometer(unsigned long curTime_millis) {
 
       
 extern void printGainSettings(void) { //"extern" to make it available to other files, such as SerialManager.h
-  Serial.print("Gain Settings: ");
-  Serial.print("Knob gain dB = "); Serial.print(vol_knob_gain_dB);
-  Serial.print(", input gain dB = "); Serial.print(input_gain_dB);
-  Serial.print(", per-channel gains dB = ");
+  Serial.print("Gain Settings (dB): ");
+  Serial.print("Vol Knob = "); Serial.print(vol_knob_gain_dB);
+  Serial.print(", Input PGA = "); Serial.print(input_gain_dB);
+  Serial.print(", Per-channel = ");
   for (int i=0; i<N_CHAN; i++) {
     Serial.print(expCompLim[i].getGain_dB()-vol_knob_gain_dB);
     Serial.print(", ");
   }
   Serial.println();
 }
+
 extern void incrementKnobGain(float increment_dB) { //"extern" to make it available to other files, such as SerialManager.h
   setVolKnobGain_dB(vol_knob_gain_dB+increment_dB);
 }
+
 void setVolKnobGain_dB(float gain_dB) {
     float prev_vol_knob_gain_dB = vol_knob_gain_dB;
     vol_knob_gain_dB = gain_dB;

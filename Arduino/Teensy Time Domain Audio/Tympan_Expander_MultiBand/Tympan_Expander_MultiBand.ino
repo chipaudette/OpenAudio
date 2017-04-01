@@ -22,14 +22,16 @@
 #include <SD.h>
 #include <SerialFlash.h>
 
+
 #include "AudioEffectExpander.h"
 #include "SerialManager.h"
 
-//use the expansion or not?  see setupExpanders() for more  settings
-#define USE_EXPANSION 1    //set to 1 to use expansion, set to 0 to defeat it
-#define USE_VOLUME_KNOB 1  //set to 1 to use volume knob to override the default vol_knob_gain_dB set a few lines below
+//use the expansion or not?  see setupexpCompLims() for more  settings
+int USE_EXPAND_COMP = 1;   //set to 1 to use the multi-band compression, set to 0 to defeat it (sets all cr to 1.0)
+int USE_VOLUME_KNOB = 1;  //set to 1 to use volume knob to override the default vol_knob_gain_dB set a few lines below
 
 //define gains and per-channel gain offsets
+String overall_name = String("Tympan: MultiBand Expander with Overall Limiter");
 const int N_CHAN = 4;  //number of frequency bands (channels)
 const float input_gain_dB = 15.0f; //gain on the microphone
 const float init_per_channel_gain_offsets_dB[] = {0.0f, 0.0f, 0.0f, 0.0f}; //initial gain adjustment per band
@@ -37,7 +39,7 @@ float vol_knob_gain_dB = 25.0f; //will be overridden by volume knob
 
 
 //define global audio settings
-const float sample_rate_Hz = 24000.f ; //24000 or 44117.64706f (or other frequencies in the table in AudioOutputI2S_F32
+const float sample_rate_Hz = 24000; //24000 or 44117 (or other frequencies in the table in AudioOutputI2S_F32
 const int audio_block_samples = 32;  //set N=128 for USB.  do not make bigger than AUDIO_BLOCK_SAMPLES from AudioStream.h (which is 128)
 AudioSettings_F32   audio_settings(sample_rate_Hz, audio_block_samples);
 
@@ -79,11 +81,12 @@ AudioConnection_F32         patchCord32(limiter1, 0, audioOutI2S1, 1);
 
 #define POT_PIN A1
 
+
 //control display and serial interaction
 bool enable_printMemoryAndCPU = false;
-extern void togglePrintMemroyAndCPU(void) { enable_printMemoryAndCPU = !enable_printMemoryAndCPU; }; //"extern" let's be it accessible outside
+void togglePrintMemroyAndCPU(void) { enable_printMemoryAndCPU = !enable_printMemoryAndCPU; }; 
 bool enable_printAveSignalLevels = false;
-extern void togglePrintAveSignalLevels(void) { enable_printAveSignalLevels = !enable_printAveSignalLevels; }; //"extern" let's be it accessible outside
+void togglePrintAveSignalLevels(void) { enable_printAveSignalLevels = !enable_printAveSignalLevels; }; 
 SerialManager serialManager(N_CHAN,expander);
 
 //setup the tympan
@@ -192,6 +195,7 @@ void setupExpanders(float *corner_freq_Hz) {
 void setup(void) {
   //Start the USB serial link (to enable debugging)
   Serial.begin(115200); delay(500);
+  Serial.println(overall_name);
   Serial.println("Setup starting...");
   
   //Allocate dynamically shuffled memory for the audio subsystem
@@ -264,10 +268,10 @@ void servicePotentiometer(unsigned long curTime_millis) {
 } //end servicePotentiometer();
 
 extern void printGainSettings(void) { //"extern" to make it available to other files, such as SerialManager.h
-  Serial.print("Gain Settings: ");
-  Serial.print("Knob gain dB = "); Serial.print(vol_knob_gain_dB);
-  Serial.print(", input gain dB = "); Serial.print(input_gain_dB);
-  Serial.print(", per-channel gains dB = ");
+  Serial.print("Gain Settings (dB): ");
+  Serial.print("Vol Knob = "); Serial.print(vol_knob_gain_dB);
+  Serial.print(", Input PGA = "); Serial.print(input_gain_dB);
+  Serial.print(", Per-channel = ");
   for (int i=0; i<N_CHAN; i++) {
     Serial.print(expander[i].getGain_dB()-vol_knob_gain_dB);
     Serial.print(", ");
@@ -278,6 +282,7 @@ extern void printGainSettings(void) { //"extern" to make it available to other f
 extern void incrementKnobGain(float increment_dB) { //"extern" to make it available to other files, such as SerialManager.h
   setVolKnobGain_dB(vol_knob_gain_dB+increment_dB);
 }
+
 void setVolKnobGain_dB(float gain_dB) {
     float prev_vol_knob_gain_dB = vol_knob_gain_dB;
     vol_knob_gain_dB = gain_dB;
