@@ -11,10 +11,12 @@ typedef AudioEffectExpCompLim_F32 GainAlgorithm_t; //change this if you change t
 //now, define the Serial Manager class
 class SerialManager {
   public:
-    SerialManager(int n, GainAlgorithm_t *gain_algs, AudioControlTestAmpSweep_F32 &_ampSweepTester)
-      : N_CHAN(n), gain_algorithms(gain_algs), ampSweepTester(_ampSweepTester) {};
+    SerialManager(int n, GainAlgorithm_t *gain_algs, 
+          AudioControlTestAmpSweep_F32 &_ampSweepTester,
+          AudioControlTestFreqSweep_F32 &_freqSweepTester)
+      : N_CHAN(n), gain_algorithms(gain_algs), ampSweepTester(_ampSweepTester), freqSweepTester(_freqSweepTester) {};
+      
     void respondToByte(char c);
-    
     void printHelp(void);
     void incrementChannelGain(int chan, float change_dB);
     void decreaseChannelGain(int chan);
@@ -24,6 +26,7 @@ class SerialManager {
   private:
     GainAlgorithm_t *gain_algorithms;  //point to first element in array of expanders
     AudioControlTestAmpSweep_F32 &ampSweepTester;
+    AudioControlTestFreqSweep_F32 &freqSweepTester;
 };
 
 void SerialManager::printHelp(void) {
@@ -32,8 +35,10 @@ void SerialManager::printHelp(void) {
   Serial.println("   h: Print this help");
   Serial.println("   g: Print the gain settings of the device.");
   Serial.println("   C: Toggle printing of CPU and Memory usage");
-  Serial.println("   L: Toggle printing of pre-gain per-channel signal levels");
-  Serial.println("   A: Test: amplitude sweep.");
+  Serial.println("   l: Toggle printing of pre-gain per-channel signal levels (dBFS)");
+  Serial.println("   L: Toggle printing of pre-gain per-channel signal levels (dBSPL, per DSL 'maxdB')");
+  Serial.println("   A: Self-Generated Test: Amplitude sweep.");
+  Serial.println("   F: Self-Generated Test: Frequency sweep.");
   Serial.print("   k: Increase the gain of all channels (ie, knob gain) by "); Serial.print(channelGainIncrement_dB); Serial.println(" dB");
   Serial.print("   K: Decrease the gain of all channels (ie, knob gain) by "); Serial.print(channelGainIncrement_dB); Serial.println(" dB");
   Serial.print("   1,2.3.4: Increase linear gain of given channel (1-4) by "); Serial.print(channelGainIncrement_dB); Serial.println(" dB");
@@ -45,9 +50,8 @@ void SerialManager::printHelp(void) {
 extern void incrementKnobGain(float);
 extern void printGainSettings(void);
 extern void togglePrintMemroyAndCPU(void);
-extern void togglePrintAveSignalLevels(void);
+extern void togglePrintAveSignalLevels(bool);
 
-//switch yard to determine the desired action
 void SerialManager::respondToByte(char c) {
   switch (c) {
     case 'h': case '?':
@@ -66,6 +70,14 @@ void SerialManager::respondToByte(char c) {
       incrementChannelGain(3-1, channelGainIncrement_dB); break;
     case '4':
       incrementChannelGain(4-1, channelGainIncrement_dB); break;
+    case '5':
+      incrementChannelGain(5-1, channelGainIncrement_dB); break;
+    case '6':
+      incrementChannelGain(6-1, channelGainIncrement_dB); break;
+    case '7':
+      incrementChannelGain(7-1, channelGainIncrement_dB); break;
+    case '8':      
+      incrementChannelGain(8-1, channelGainIncrement_dB); break;    
     case '!':  //which is "shift 1"
       incrementChannelGain(1-1, -channelGainIncrement_dB); break;
     case '@':  //which is "shift 2"
@@ -73,11 +85,19 @@ void SerialManager::respondToByte(char c) {
     case '#':  //which is "shift 3"
       incrementChannelGain(3-1, -channelGainIncrement_dB); break;
     case '$':  //which is "shift 4"
-      incrementChannelGain(4-1, -channelGainIncrement_dB); break;    
+      incrementChannelGain(4-1, -channelGainIncrement_dB); break;
+    case '%':  //which is "shift 5"
+      incrementChannelGain(5-1, -channelGainIncrement_dB); break;
+    case '^':  //which is "shift 6"
+      incrementChannelGain(6-1, -channelGainIncrement_dB); break;
+    case '&':  //which is "shift 7"
+      incrementChannelGain(7-1, -channelGainIncrement_dB); break;
+    case '*':  //which is "shift 8"
+      incrementChannelGain(8-1, -channelGainIncrement_dB); break;          
     case 'A':
       //amplitude sweep test
       { //limit the scope of any variables that I create here
-        ampSweepTester.setSignalFrequency(5000.f);
+        ampSweepTester.setSignalFrequency_Hz(1000.f);
         float start_amp_dB = -100.0f, end_amp_dB = 0.0f, step_amp_dB = 5.0f;
         ampSweepTester.setStepPattern(start_amp_dB, end_amp_dB, step_amp_dB);
         ampSweepTester.setTargetDurPerStep_sec(1.0);
@@ -90,9 +110,27 @@ void SerialManager::respondToByte(char c) {
     case 'C': case 'c':
       Serial.println("Command Received: toggle printing of memory and CPU usage.");
       togglePrintMemroyAndCPU(); break;
-    case 'L': case 'l':
+    case 'F':
+      //frequency sweep test
+      { //limit the scope of any variables that I create here
+        freqSweepTester.setSignalAmplitude_dBFS(-50.f);
+        float start_freq_Hz = 125.0f, end_freq_Hz = 16000.f, step_octave = sqrtf(2.0);
+        freqSweepTester.setStepPattern(start_freq_Hz, end_freq_Hz, step_octave);
+        freqSweepTester.setTargetDurPerStep_sec(1.0);
+      }
+      Serial.println("Command Received: starting test using frequency sweep...");
+      freqSweepTester.begin();
+      while (!freqSweepTester.available()) {delay(100);};
+      Serial.println("Press 'h' for help...");
+      break;      
+    case 'l':
       Serial.println("Command Received: toggle printing of per-band ave signal levels.");
-      togglePrintAveSignalLevels(); break;
+      { bool as_dBSPL = true; togglePrintAveSignalLevels(as_dBSPL); }
+      break;
+    case 'L':
+      Serial.println("Command Received: toggle printing of per-band ave signal levels.");
+      { bool as_dBSPL = true; togglePrintAveSignalLevels(as_dBSPL); }
+      break;
   }
 }
 

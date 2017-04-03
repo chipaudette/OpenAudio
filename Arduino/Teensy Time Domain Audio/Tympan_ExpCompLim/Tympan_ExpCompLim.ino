@@ -52,7 +52,8 @@ AudioMixer4_F32             mixer4_1;       //xy=587,275
 AudioEffectCompressor_F32   limiter1;     //xy=717,184
 AudioOutputI2S_F32          audioOutI2S1(audio_settings);   //xy=860,104
 AudioTestSignalMeasurement_F32  audioTestMeasurement(audio_settings);
-AudioControlTestAmpSweep_F32        ampSweepTester(audio_settings,audioTestGenerator,audioTestMeasurement);
+AudioControlTestAmpSweep_F32    ampSweepTester(audio_settings,audioTestGenerator,audioTestMeasurement);
+AudioControlTestFreqSweep_F32    freqSweepTester(audio_settings,audioTestGenerator,audioTestMeasurement);
 
 AudioControlTLV320AIC3206   audioHardware; //xy=161,42
 AudioConfigFIRFilterBank_F32 configFIRFilterBank1; //xy=349,45
@@ -92,9 +93,9 @@ AudioConnection_F32         patchCord34(limiter1, 0, audioTestMeasurement, 1);
 //control display and serial interaction
 bool enable_printMemoryAndCPU = false;
 void togglePrintMemroyAndCPU(void) { enable_printMemoryAndCPU = !enable_printMemoryAndCPU; }; //"extern" let's be it accessible outside
-bool enable_printAveSignalLevels = false;
-void togglePrintAveSignalLevels(void) { enable_printAveSignalLevels = !enable_printAveSignalLevels; }; //"extern" let's be it accessible outside
-SerialManager serialManager(N_CHAN,expCompLim,ampSweepTester);
+bool enable_printAveSignalLevels = false, printAveSignalLevels_as_dBSPL = false;
+void togglePrintAveSignalLevels(bool as_dBSPL) { enable_printAveSignalLevels = !enable_printAveSignalLevels; printAveSignalLevels_as_dBSPL = as_dBSPL;};
+SerialManager serialManager(N_CHAN,expCompLim,ampSweepTester,freqSweepTester);
 
 //setup the tympan
 void setupAudioHardware(void) {
@@ -124,6 +125,7 @@ void setupAudioHardware(void) {
 float fir_coeff[N_CHAN][N_FIR];
 
 //setup algorithm parameters
+float overall_cal_dBSPL_at0dBFS = 115.f;
 void setupAlgorithms(void) {
   
   //setup the leading high-pass filter
@@ -276,6 +278,11 @@ void loop(void) {
    //choose to sleep ("wait for interrupt") instead of spinning our wheels doing nothing but consuming power
   asm(" WFI");  //ARM-specific.  Will wake on next interrupt.  The audio library issues tons of interrupts, so we wake up often.
 
+  //respond to Serial commands
+  while (Serial.available()) {
+    serialManager.respondToByte((char)Serial.read());
+  }
+
   //service the potentiometer...if enough time has passed
   if (USE_VOLUME_KNOB) servicePotentiometer(millis());
 
@@ -284,16 +291,9 @@ void loop(void) {
 
   //print info about the signal processing
   updateAveSignalLevels(millis());
-  if (enable_printAveSignalLevels) printAveSignalLevels(millis());
+  if (enable_printAveSignalLevels) printAveSignalLevels(millis(),printAveSignalLevels_as_dBSPL);
 }
 
-//this function gets called automatically if a character is recevied
-//from the serial link to the PC
-void serialEvent() {
-  while (Serial.available()) {
-    serialManager.respondToByte((char)Serial.read());
-  }
-}
 
 //servicePotentiometer: listens to the blue potentiometer and sends the new pot value
 //  to the audio processing algorithm as a control parameter
@@ -381,35 +381,43 @@ void printMemoryAndCPU(unsigned long curTime_millis) {
   }
 }
 
-float aveSignalLevels_dB[N_CHAN];
+float aveSignalLevels_dBFS[N_CHAN];
 void updateAveSignalLevels(unsigned long curTime_millis) {
   static unsigned long updatePeriod_millis = 100; //how often to perform the averaging
   static unsigned long lastUpdate_millis = 0;
-  float update_coeff = 0.1;
+  float update_coeff = 0.2;
 
   //is it time to update the calculations
   if (curTime_millis < lastUpdate_millis) lastUpdate_millis = 0; //handle wrap-around of the clock
   if ((curTime_millis - lastUpdate_millis) > updatePeriod_millis) { //is it time to update the user interface?
     for (int i=0; i<N_CHAN; i++) { //loop over each band
-      aveSignalLevels_dB[i] = (1.0-update_coeff)*aveSignalLevels_dB[i] + update_coeff*expCompLim[i].getCurrentLevel_dB(); //running average
+      aveSignalLevels_dBFS[i] = (1.0-update_coeff)*aveSignalLevels_dBFS[i] + update_coeff*expCompLim[i].getCurrentLevel_dB(); //running average
     }
     lastUpdate_millis = curTime_millis; //we will use this value the next time around.
   }
 }
-void printAveSignalLevels(unsigned long curTime_millis) {
+void printAveSignalLevels(unsigned long curTime_millis, bool as_dBSPL) {
   static unsigned long updatePeriod_millis = 3000; //how often to print the levels to the screen
   static unsigned long lastUpdate_millis = 0;
+
+  float offset_dB = 0.0f;
+  String units_txt = String("dBFS");
+  if (as_dBSPL) {
+    offset_dB = overall_cal_dBSPL_at0dBFS;
+    units_txt = String("dBSPL, approx");
+  }
 
   //is it time to print to the screen
   if (curTime_millis < lastUpdate_millis) lastUpdate_millis = 0; //handle wrap-around of the clock
   if ((curTime_millis - lastUpdate_millis) > updatePeriod_millis) { //is it time to update the user interface?   
-    Serial.print("Ave Signal Level Per-Band (dBFS) = ");
-    for (int i=0; i<N_CHAN; i++) { Serial.print(aveSignalLevels_dB[i]);  Serial.print(", ");  }
+    Serial.print("Ave Input Level (");Serial.print(units_txt); Serial.print("), Per-Band = ");
+    for (int i=0; i<N_CHAN; i++) { Serial.print(aveSignalLevels_dBFS[i]+offset_dB,1);  Serial.print(", ");  }
     Serial.println();
     
     lastUpdate_millis = curTime_millis; //we will use this value the next time around.
   }
 }
+
 
 
 
