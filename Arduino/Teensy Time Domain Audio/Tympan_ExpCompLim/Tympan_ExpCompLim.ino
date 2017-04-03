@@ -26,6 +26,7 @@
 
 #include "AudioEffectExpCompLim.h"
 #include "SerialManager.h"
+#include "AudioControlTester.h"
 
 // overall algorithm control
 int USE_EXPAND_COMP = 1;   //set to 1 to use the multi-band compression, set to 0 to defeat it (sets all cr to 1.0)
@@ -44,20 +45,25 @@ AudioSettings_F32   audio_settings(sample_rate_Hz, audio_block_samples);
 
 // GUItool: begin automatically generated code
 AudioInputI2S_F32        audioInI2S1(audio_settings);    //xy=126,110
+AudioTestSignalGenerator_F32   audioTestGenerator;
 AudioFilterIIR_F32       iir_hp;
 AudioFilterFIR_F32       fir[N_CHAN];           //xy=223,216
 AudioEffectExpCompLim_F32  expCompLim[N_CHAN];
 AudioMixer4_F32             mixer4_1;       //xy=587,275
 AudioEffectCompressor_F32   limiter1;     //xy=717,184
 AudioOutputI2S_F32          audioOutI2S1(audio_settings);   //xy=860,104
+AudioTestSignalMeasurement_F32  audioTestMeasurement;
+AudioControlTestAmpSweep_F32        ampSweepTester(audio_settings,audioTestGenerator,audioTestMeasurement);
+
 AudioControlTLV320AIC3206   audioHardware; //xy=161,42
 AudioConfigFIRFilterBank_F32 configFIRFilterBank1; //xy=349,45
 
-AudioConnection_F32         patchCord0(audioInI2S1, 0, iir_hp, 0);
-AudioConnection_F32         patchCord1(iir_hp, 0, fir[0], 0);
-AudioConnection_F32         patchCord2(iir_hp, 0, fir[1], 0);
-AudioConnection_F32         patchCord3(iir_hp, 0, fir[2], 0);
-AudioConnection_F32         patchCord4(iir_hp, 0, fir[3], 0);
+AudioConnection_F32         patchCord0(audioInI2S1, 0, audioTestGenerator, 0);
+AudioConnection_F32         patchCord1(audioTestGenerator, 0, iir_hp, 0);
+AudioConnection_F32         patchCord2(iir_hp, 0, fir[0], 0);
+AudioConnection_F32         patchCord3(iir_hp, 0, fir[1], 0);
+AudioConnection_F32         patchCord4(iir_hp, 0, fir[2], 0);
+AudioConnection_F32         patchCord5(iir_hp, 0, fir[3], 0);
 AudioConnection_F32         patchCord11(fir[0], 0, expCompLim[0], 0);
 AudioConnection_F32         patchCord12(fir[1], 0, expCompLim[1], 0);
 AudioConnection_F32         patchCord13(fir[2], 0, expCompLim[2], 0);
@@ -70,6 +76,9 @@ AudioConnection_F32         patchCord24(expCompLim[3], 0, mixer4_1, 3);
 AudioConnection_F32         patchCord30(mixer4_1, limiter1); //overall limitter
 AudioConnection_F32         patchCord31(limiter1, 0, audioOutI2S1, 0);
 AudioConnection_F32         patchCord32(limiter1, 0, audioOutI2S1, 1);
+
+AudioConnection_F32         patchCord33(audioTestGenerator, 0, audioTestMeasurement, 0);
+AudioConnection_F32         patchCord34(limiter1, 0, audioTestMeasurement, 1);
 
 //AudioInputUSB_F32           usb_in;  //audio_block_samples must be 128 samples!
 //AudioOutputUSB_F32          usb_out;  //audio_block_samples must be 128 samples!
@@ -86,7 +95,7 @@ bool enable_printMemoryAndCPU = false;
 void togglePrintMemroyAndCPU(void) { enable_printMemoryAndCPU = !enable_printMemoryAndCPU; }; //"extern" let's be it accessible outside
 bool enable_printAveSignalLevels = false;
 void togglePrintAveSignalLevels(void) { enable_printAveSignalLevels = !enable_printAveSignalLevels; }; //"extern" let's be it accessible outside
-SerialManager serialManager(N_CHAN,expCompLim);
+SerialManager serialManager(N_CHAN,expCompLim,ampSweepTester);
 
 //setup the tympan
 void setupAudioHardware(void) {
