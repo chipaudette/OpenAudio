@@ -26,7 +26,6 @@
 
 #include "AudioEffectExpCompLim.h"
 #include "SerialManager.h"
-#include "AudioControlTester.h"
 
 // overall algorithm control
 int USE_EXPAND_COMP = 1;   //set to 1 to use the multi-band compression, set to 0 to defeat it (sets all cr to 1.0)

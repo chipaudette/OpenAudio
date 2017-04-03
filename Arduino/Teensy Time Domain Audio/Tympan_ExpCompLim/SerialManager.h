@@ -3,7 +3,6 @@
 #define _SerialManager_h
 
 #include <Tympan_Library.h>
-#include "AudioControlTester.h"
 
 //add in the algorithm whose gains we wish to set via this SerialManager
 #include "AudioEffectExpCompLim.h"    //change this if you change the name of the algorithm's source code filename
