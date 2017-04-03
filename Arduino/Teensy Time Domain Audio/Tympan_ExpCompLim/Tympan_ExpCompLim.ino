@@ -45,14 +45,14 @@ AudioSettings_F32   audio_settings(sample_rate_Hz, audio_block_samples);
 
 // GUItool: begin automatically generated code
 AudioInputI2S_F32        audioInI2S1(audio_settings);    //xy=126,110
-AudioTestSignalGenerator_F32   audioTestGenerator;
+AudioTestSignalGenerator_F32   audioTestGenerator(audio_settings);
 AudioFilterIIR_F32       iir_hp;
 AudioFilterFIR_F32       fir[N_CHAN];           //xy=223,216
 AudioEffectExpCompLim_F32  expCompLim[N_CHAN];
 AudioMixer4_F32             mixer4_1;       //xy=587,275
 AudioEffectCompressor_F32   limiter1;     //xy=717,184
 AudioOutputI2S_F32          audioOutI2S1(audio_settings);   //xy=860,104
-AudioTestSignalMeasurement_F32  audioTestMeasurement;
+AudioTestSignalMeasurement_F32  audioTestMeasurement(audio_settings);
 AudioControlTestAmpSweep_F32        ampSweepTester(audio_settings,audioTestGenerator,audioTestMeasurement);
 
 AudioControlTLV320AIC3206   audioHardware; //xy=161,42
@@ -227,11 +227,18 @@ void setupExpCompLims(float *corner_freq_Hz) {
     expCompLim[Ichan].setOverallParams(attack_ms, release_ms, linear_gain_dB);
 
     //print the per-segment parameters  
-    Serial.print("Chan "); Serial.print(Ichan); Serial.println(":");
-    Serial.print("  : Expansion: thresh(dBFS), ratio: "); Serial.print(exp_thresh_dBFS[Ichan]); Serial.print(", "); Serial.println(exp_ratio[Ichan]);
-    Serial.print("  : Linear: thresh(dBFS), ratio: "); Serial.print(lin_thresh_dBFS[Ichan]); Serial.print(", "); Serial.println(lin_ratio[Ichan]);
-    Serial.print("  : Compressor: thresh(dBFS), ratio: "); Serial.print(comp_thresh_dBFS[Ichan]); Serial.print(", "); Serial.println(comp_ratio[Ichan]);
-    Serial.print("  : Limiter: thresh(dBFS), ratio: "); Serial.print(lim_thresh_dBFS[Ichan]); Serial.print(", "); Serial.println(lim_ratio[Ichan]);
+    Serial.print("Channel "); Serial.print(Ichan); Serial.print(" Settings:");
+    if (Ichan==0) {
+      Serial.print(" Frequencies = "); Serial.print(0); Serial.print(" to "); Serial.print(corner_freq_Hz[0]); Serial.println(" Hz");
+    } else if (Ichan < N_CHAN-1) {
+      Serial.print(" Frequencies = "); Serial.print(corner_freq_Hz[Ichan-1]); Serial.print(" to "); Serial.print(corner_freq_Hz[Ichan]); Serial.println(" Hz");
+    } else {
+      Serial.print(" Frequencies = "); Serial.print(corner_freq_Hz[Ichan-1]); Serial.println(" Hz to Nyquist");
+    }  
+    Serial.print("  : Expand:   start knee (dBFS), comp ratio: "); Serial.print(exp_thresh_dBFS[Ichan]); Serial.print(", "); Serial.println(exp_ratio[Ichan]);
+    Serial.print("  : Linear:   start knee (dBFS), comp ratio: "); Serial.print(lin_thresh_dBFS[Ichan]); Serial.print(", "); Serial.println(lin_ratio[Ichan]);
+    Serial.print("  : Compress: start knee (dBFS), comp ratio: "); Serial.print(comp_thresh_dBFS[Ichan]); Serial.print(", "); Serial.println(comp_ratio[Ichan]);
+    Serial.print("  : Limit:    start knee (dBFS), comp ratio: "); Serial.print(lim_thresh_dBFS[Ichan]); Serial.print(", "); Serial.println(lim_ratio[Ichan]);
 
     //set the per-segment parameters  
     expCompLim[Ichan].setSegmentParams(0,exp_thresh_dBFS[Ichan],exp_ratio[Ichan]);
