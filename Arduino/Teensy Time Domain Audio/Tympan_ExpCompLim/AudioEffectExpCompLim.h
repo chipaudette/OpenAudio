@@ -134,7 +134,7 @@ class AudioEffectExpCompLim_F32 : public AudioStream_F32  //, public AudioEffect
         } else {
             //can be whatever expand/linear/compression/limit
             diff_rel_thresh_dB = val_dB - input_thresh_dBFS[I_seg];  //should be positive
-            gain_dB = gain_dB_at_transitions[I_seg] - (comp_ratio[I_seg]-1.0)*diff_rel_thresh_dB;
+            gain_dB = gain_dB_at_transitions[I_seg] - (comp_ratio[I_seg]-1.f)*diff_rel_thresh_dB;
         }
       
         //convert from dB into linear gain
@@ -196,7 +196,7 @@ class AudioEffectExpCompLim_F32 : public AudioStream_F32  //, public AudioEffect
       gain_dB_at_transitions[0] = 0.0;  //ignored
       gain_dB_at_transitions[1] = linear_gain_dB;  //this is the fixed point for all cases
       for (int i=2; i<n_segments;i++) {
-        gain_dB_at_transitions[i] = gain_dB_at_transitions[i-1] - (comp_ratio[i]-1.0)*(input_thresh_dBFS[i]-input_thresh_dBFS[i-1]);
+        gain_dB_at_transitions[i] = gain_dB_at_transitions[i-1] - (comp_ratio[i-1]-1.0)*(input_thresh_dBFS[i]-input_thresh_dBFS[i-1]);
       }
 
 //      if (Serial) {

@@ -26,6 +26,7 @@
 
 #include "AudioEffectExpCompLim.h"
 #include "SerialManager.h"
+#include "AudioControlTester.h"
 
 // overall algorithm control
 int USE_EXPAND_COMP = 1;   //set to 1 to use the multi-band compression, set to 0 to defeat it (sets all cr to 1.0)
@@ -44,20 +45,25 @@ AudioSettings_F32   audio_settings(sample_rate_Hz, audio_block_samples);
 
 // GUItool: begin automatically generated code
 AudioInputI2S_F32        audioInI2S1(audio_settings);    //xy=126,110
+AudioTestSignalGenerator_F32   audioTestGenerator(audio_settings);
 AudioFilterIIR_F32       iir_hp;
 AudioFilterFIR_F32       fir[N_CHAN];           //xy=223,216
 AudioEffectExpCompLim_F32  expCompLim[N_CHAN];
 AudioMixer4_F32             mixer4_1;       //xy=587,275
 AudioEffectCompressor_F32   limiter1;     //xy=717,184
 AudioOutputI2S_F32          audioOutI2S1(audio_settings);   //xy=860,104
+AudioTestSignalMeasurement_F32  audioTestMeasurement(audio_settings);
+AudioControlTestAmpSweep_F32        ampSweepTester(audio_settings,audioTestGenerator,audioTestMeasurement);
+
 AudioControlTLV320AIC3206   audioHardware; //xy=161,42
 AudioConfigFIRFilterBank_F32 configFIRFilterBank1; //xy=349,45
 
-AudioConnection_F32         patchCord0(audioInI2S1, 0, iir_hp, 0);
-AudioConnection_F32         patchCord1(iir_hp, 0, fir[0], 0);
-AudioConnection_F32         patchCord2(iir_hp, 0, fir[1], 0);
-AudioConnection_F32         patchCord3(iir_hp, 0, fir[2], 0);
-AudioConnection_F32         patchCord4(iir_hp, 0, fir[3], 0);
+AudioConnection_F32         patchCord0(audioInI2S1, 0, audioTestGenerator, 0);
+AudioConnection_F32         patchCord1(audioTestGenerator, 0, iir_hp, 0);
+AudioConnection_F32         patchCord2(iir_hp, 0, fir[0], 0);
+AudioConnection_F32         patchCord3(iir_hp, 0, fir[1], 0);
+AudioConnection_F32         patchCord4(iir_hp, 0, fir[2], 0);
+AudioConnection_F32         patchCord5(iir_hp, 0, fir[3], 0);
 AudioConnection_F32         patchCord11(fir[0], 0, expCompLim[0], 0);
 AudioConnection_F32         patchCord12(fir[1], 0, expCompLim[1], 0);
 AudioConnection_F32         patchCord13(fir[2], 0, expCompLim[2], 0);
@@ -70,6 +76,9 @@ AudioConnection_F32         patchCord24(expCompLim[3], 0, mixer4_1, 3);
 AudioConnection_F32         patchCord30(mixer4_1, limiter1); //overall limitter
 AudioConnection_F32         patchCord31(limiter1, 0, audioOutI2S1, 0);
 AudioConnection_F32         patchCord32(limiter1, 0, audioOutI2S1, 1);
+
+AudioConnection_F32         patchCord33(audioTestGenerator, 0, audioTestMeasurement, 0);
+AudioConnection_F32         patchCord34(limiter1, 0, audioTestMeasurement, 1);
 
 //AudioInputUSB_F32           usb_in;  //audio_block_samples must be 128 samples!
 //AudioOutputUSB_F32          usb_out;  //audio_block_samples must be 128 samples!
@@ -86,7 +95,7 @@ bool enable_printMemoryAndCPU = false;
 void togglePrintMemroyAndCPU(void) { enable_printMemoryAndCPU = !enable_printMemoryAndCPU; }; //"extern" let's be it accessible outside
 bool enable_printAveSignalLevels = false;
 void togglePrintAveSignalLevels(void) { enable_printAveSignalLevels = !enable_printAveSignalLevels; }; //"extern" let's be it accessible outside
-SerialManager serialManager(N_CHAN,expCompLim);
+SerialManager serialManager(N_CHAN,expCompLim,ampSweepTester);
 
 //setup the tympan
 void setupAudioHardware(void) {
@@ -218,11 +227,18 @@ void setupExpCompLims(float *corner_freq_Hz) {
     expCompLim[Ichan].setOverallParams(attack_ms, release_ms, linear_gain_dB);
 
     //print the per-segment parameters  
-    Serial.print("Chan "); Serial.print(Ichan); Serial.println(":");
-    Serial.print("  : Expansion: thresh(dBFS), ratio: "); Serial.print(exp_thresh_dBFS[Ichan]); Serial.print(", "); Serial.println(exp_ratio[Ichan]);
-    Serial.print("  : Linear: thresh(dBFS), ratio: "); Serial.print(lin_thresh_dBFS[Ichan]); Serial.print(", "); Serial.println(lin_ratio[Ichan]);
-    Serial.print("  : Compressor: thresh(dBFS), ratio: "); Serial.print(comp_thresh_dBFS[Ichan]); Serial.print(", "); Serial.println(comp_ratio[Ichan]);
-    Serial.print("  : Limiter: thresh(dBFS), ratio: "); Serial.print(lim_thresh_dBFS[Ichan]); Serial.print(", "); Serial.println(lim_ratio[Ichan]);
+    Serial.print("Channel "); Serial.print(Ichan); Serial.print(" Settings:");
+    if (Ichan==0) {
+      Serial.print(" Frequencies = "); Serial.print(0); Serial.print(" to "); Serial.print(corner_freq_Hz[0]); Serial.println(" Hz");
+    } else if (Ichan < N_CHAN-1) {
+      Serial.print(" Frequencies = "); Serial.print(corner_freq_Hz[Ichan-1]); Serial.print(" to "); Serial.print(corner_freq_Hz[Ichan]); Serial.println(" Hz");
+    } else {
+      Serial.print(" Frequencies = "); Serial.print(corner_freq_Hz[Ichan-1]); Serial.println(" Hz to Nyquist");
+    }  
+    Serial.print("  : Expand:   start knee (dBFS), comp ratio: "); Serial.print(exp_thresh_dBFS[Ichan]); Serial.print(", "); Serial.println(exp_ratio[Ichan]);
+    Serial.print("  : Linear:   start knee (dBFS), comp ratio: "); Serial.print(lin_thresh_dBFS[Ichan]); Serial.print(", "); Serial.println(lin_ratio[Ichan]);
+    Serial.print("  : Compress: start knee (dBFS), comp ratio: "); Serial.print(comp_thresh_dBFS[Ichan]); Serial.print(", "); Serial.println(comp_ratio[Ichan]);
+    Serial.print("  : Limit:    start knee (dBFS), comp ratio: "); Serial.print(lim_thresh_dBFS[Ichan]); Serial.print(", "); Serial.println(lim_ratio[Ichan]);
 
     //set the per-segment parameters  
     expCompLim[Ichan].setSegmentParams(0,exp_thresh_dBFS[Ichan],exp_ratio[Ichan]);
