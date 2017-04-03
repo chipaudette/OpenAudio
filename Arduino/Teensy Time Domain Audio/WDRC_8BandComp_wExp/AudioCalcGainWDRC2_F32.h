@@ -19,12 +19,10 @@
 #include <AudioStream_F32.h>
 #include "BTNRH_WDRC_Types.h"
 
-
-
 class AudioCalcGainWDRC2_F32 : public AudioStream_F32
 {
   //GUI: inputs:1, outputs:1  //this line used for automatic generation of GUI node
-  //GUI: shortName:calc_WDRCGain
+  //GUI: shortName:calc_WDRCGain2
   public:
     //default constructor
     AudioCalcGainWDRC2_F32(void) : AudioStream_F32(1, inputQueueArray_f32) { setDefaultValues(); };
@@ -83,25 +81,18 @@ class AudioCalcGainWDRC2_F32 : public AudioStream_F32
     	//bolt = broadband output limiting threshold (post-compression, dB SPL?)
 
     {
-    	//static int count = 0;
-      //count++;
-      
-    	//tkgain = 30; tk = 50;  bolt = 100; cr = 3;
-      
+     
       float gdb, tkgo, pblt;
       int k;
       float *pdb = env_dB; //just rename it to keep the code below unchanged (input SPL dB)
       float tk_tmp = tk;   //temporary, threshold for start of compression (input SPL dB)
       
-      // (50 + 30) = 80;  80 ?> 100.  No.  tk_tmp stays at 50
       if ((tk_tmp + tkgn) > bolt) { //after gain, would the compression threshold be above the output-limitting threshold ("bolt")
           tk_tmp = bolt - tkgn;  //if so, lower the compression threshold to be the pre-gain value resulting in "bolt"
       }
-      //tkgo = 30 + 50*(1-1/3) = 30 + 50*0.666 = 30+33.3 = 63.333;
+
       tkgo = tkgn + tk_tmp * (1.0f - 1.0f / cr);  //intermediate calc
-      //pblt = 2 * (100 - 63.3333) = 2*(36.666) = 73.3333;
       pblt = cr * (bolt - tkgo); //calc input level (dB) where we need to start limiting, not just compression
-      //cr_cosnt = ((1/3)-1) = -0.6666
       const float cr_const = ((1.0f / cr) - 1.0f); //pre-calc a constant that we'll need later
 
       //compute gain at transition between expansion and linear/compression regions
@@ -111,32 +102,19 @@ class AudioCalcGainWDRC2_F32 : public AudioStream_F32
       }
 
       float exp_cr_const = 1.f-max(0.01f,exp_cr);
-      //int branch = 0;
       for (k = 0; k < n; k++) {  //loop over each sample
         if (pdb[k] < exp_end_knee) {  //if below the expansion threshold, do expansion
           //expansion region.
           gdb = gain_at_exp_end_knee - ((exp_end_knee-pdb[k])*exp_cr_const); //reduce gain the farther down you are from the end of the expansion region
-          //branch = 1;
         } else if ((pdb[k] < tk_tmp) && (cr >= 1.0f)) {  //if below the compression threshold, go linear
             gdb = tkgn;  //we're in the linear region.  Apply linear gain.
-            //branch = 2;
         } else if (pdb[k] > pblt) { //we're beyond the compression region into the limitting region
-        	//assume pdb is 73.3333; gdb = 100 + ((73.333-73.333)/10) - 73.333 = 26.6667.  So, output would be 100 dB
-        	//assume pdb is 80 dB SPL input: gdb = 100 + ((80-73.33)/10)-80 = 100+((6.666/10)-80 = 20 + 0.666 = 20.6666;  So, output would be 100.666
             gdb = bolt + ((pdb[k] - pblt) / 10.0f) - pdb[k]; //10:1 limiting!
             //branch = 3;
         } else {
-        	//assume pdb = 50; gdb = -0.6666*60+63.333 = -40+63.333 = 23.333.  So, output would be 73.333 (should be 80?)
-        	//assume pdb = 73.3333; gcb = -0.6666*73.333 + 63.3333 = -48.8888+63.333 = 14.44444 gain.  So, output would be 87.7778 (shoud be 100)
             gdb = cr_const * pdb[k] + tkgo; 
-            //branch = 4;
-            
-            //assume pdb = 50; gdb = 30 - (50-50)/3 = 30
-            //assume pdb = 73.333; gdb = 30 - (73.333-50)/3 = 30 - 7.777 = 22.333
-            //gdb = tkgn - (pdb[k]-tk)/cr; //WEA thinks it should be this??
         }
         gain_out[k] = undb2(gdb);
-        //if ((gdb > 0.f) && (gdb < 25.0) && ((count % 9) == 6)) { Serial.print(branch); Serial.print(", "); Serial.println(gdb);}
         //y[k] = x[k] * undb2(gdb); //apply the gain
       }
     }
@@ -168,6 +146,21 @@ class AudioCalcGainWDRC2_F32 : public AudioStream_F32
       cr = _cr;
       bolt = _bolt;
     }
+
+    //set the linear gain of the system
+    float setGain_dB(float linear_gain_dB) {
+      tkgn  = linear_gain_dB;
+      return getGain_dB();
+    }
+    //increment the linear gain
+    float incrementGain_dB(float increment_dB) {
+      return setGain_dB(getGain_dB() + increment_dB);
+    }    
+    //returns the linear gain of the system
+    float getGain_dB(void) {
+      return tkgn;
+    }
+    
 
     //dB functions.  Feed it the envelope amplitude (not squared) and it computes 20*log10(x) or it does 10.^(x/20)
     static float undb2(const float &x)  { return expf(0.11512925464970228420089957273422f*x); } //faster:  exp(log(10.0f)*x/20);  this is exact

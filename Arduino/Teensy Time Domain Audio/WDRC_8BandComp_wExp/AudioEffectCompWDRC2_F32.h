@@ -20,13 +20,12 @@ class AudioCalcGainWDRC2_F32;  //forward declared.  Actually defined in later he
 #include <AudioCalcEnvelope_F32.h>
 #include "AudioCalcGainWDRC2_F32.h"  //has definition of CHA_WDRC
 #include "BTNRH_WDRC_Types.h"
-//#include "utility/textAndStringUtils.h"
 
 
 class AudioEffectCompWDRC2_F32 : public AudioStream_F32
 {
 	//GUI: inputs:1, outputs:1  //this line used for automatic generation of GUI node
-	//GUI: shortName: CompressWDRC
+	//GUI: shortName: CompressWDRC2
   public:
     AudioEffectCompWDRC2_F32(void): AudioStream_F32(1,inputQueueArray) { //need to modify this for user to set sample rate
       setSampleRate_Hz(AUDIO_SAMPLE_RATE);
@@ -137,6 +136,19 @@ class AudioEffectCompWDRC2_F32 : public AudioStream_F32
     }
 
     float getCurrentLevel_dB(void) { return AudioCalcGainWDRC_F32::db2(calcEnvelope.getCurrentLevel()); }  //this is 20*log10(abs(signal)) after the envelope smoothing
+
+    //set the linear gain of the system
+    float setGain_dB(float linear_gain_dB) {
+      return calcGain.setGain_dB(linear_gain_dB);
+    }
+    //increment the linear gain
+    float incrementGain_dB(float increment_dB) {
+      return calcGain.incrementGain_dB(increment_dB);
+    }    
+    //returns the linear gain of the system
+    float getGain_dB(void) {
+      return calcGain.getGain_dB();
+    }
 
     AudioCalcEnvelope_F32 calcEnvelope;
     AudioCalcGainWDRC2_F32 calcGain;
