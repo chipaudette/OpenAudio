@@ -16,7 +16,7 @@ static BTNRH_WDRC::CHA_DSL2 dsl = {5,  // attack (ms)
   {90.f, 90.f, 90.f, 90.f, 90.f, 91.f, 92.f, 93.f}    // broadband output limiting threshold (comp ratio 10)
 };
 
-//from GHA_Demo.c  from "amplify()"   Used for broad-band limiter.  This is defeated.
+//from GHA_Demo.c  from "amplify()"   Used for broad-band limiter.
 BTNRH_WDRC::CHA_WDRC2 gha = {5.f, // attack time (ms)
   300.f,    // release time (ms)
   24000.f,  // sampling rate (Hz)...ignored.  Set globally in the main program.
