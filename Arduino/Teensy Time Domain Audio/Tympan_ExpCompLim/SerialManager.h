@@ -76,8 +76,17 @@ void SerialManager::respondToByte(char c) {
     case '$':  //which is "shift 4"
       incrementChannelGain(4-1, -channelGainIncrement_dB); break;    
     case 'A':
-      ampSweepTester.setSignalFrequency(1000.f);
+      //amplitude sweep test
+      { //limit the scope of any variables that I create here
+        ampSweepTester.setSignalFrequency(5000.f);
+        float start_amp_dB = -100.0f, end_amp_dB = 0.0f, step_amp_dB = 5.0f;
+        ampSweepTester.setStepPattern(start_amp_dB, end_amp_dB, step_amp_dB);
+        ampSweepTester.setTargetDurPerStep_sec(1.0);
+      }
+      Serial.println("Command Received: starting test using amplitude sweep...");
       ampSweepTester.begin();
+      while (!ampSweepTester.available()) {delay(100);};
+      Serial.println("Press 'h' for help...");
       break;
     case 'C': case 'c':
       Serial.println("Command Received: toggle printing of memory and CPU usage.");

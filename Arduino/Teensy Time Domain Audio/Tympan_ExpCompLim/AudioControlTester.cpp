@@ -17,15 +17,24 @@ void AudioTestSignalGenerator_F32::update(void) {
   //so we can release the block for the original signal
   AudioStream_F32::release(in_block);
 
+  //allocate memory for block that we'll send
+  audio_block_f32_t *out_block = allocate_f32();
+  if (!out_block) return;
+
   //now generate the new siginal
   sine_gen.begin(); record_queue.begin();  //activate
-  sine_gen.update();
-  record_queue.update();
-  audio_block_f32_t *out_block = record_queue.getAudioBlock();
-  AudioStream_F32::transmit(out_block); // send the FIR output
+  sine_gen.update();  sine_gen.end();
+  gain_alg.update();
+  record_queue.update();  record_queue.end();
+  audio_block_f32_t *queue_block = record_queue.getAudioBlock();
+  
+  //copy to out_block (why can't I just send the queue_block?  I tried.  It doesn't seem to work. try it again later!
+  for (int i=0; i < queue_block->length; i++) out_block->data[i] = queue_block->data[i];
   record_queue.freeAudioBlock();
-  sine_gen.end(); record_queue.end();  //put them to sleep again
 
+  //send the data
+  AudioStream_F32::transmit(out_block); // send the FIR output
+  AudioStream_F32::release(out_block);
 }
 
 
@@ -35,11 +44,6 @@ void AudioTestSignalMeasurement_F32::update(void) {
   if (!is_testing) {
     return;
   }
-
-//  if (Serial) {
-//    Serial.print("AudioTestSignalMeasurement_F32: update(): is_testing ");
-//    Serial.println(is_testing);
-//  }
 
   //receive the input audio data...the baseline and the test
   audio_block_f32_t *in_block_baseline = AudioStream_F32::receiveReadOnly_f32(0);
@@ -54,6 +58,10 @@ void AudioTestSignalMeasurement_F32::update(void) {
   float baseline_rms = computeRMS(in_block_baseline->data, in_block_baseline->length);
   float test_rms = computeRMS(in_block_test->data, in_block_test->length);
 
+  //Release memory
+  AudioStream_F32::release(in_block_baseline);
+  AudioStream_F32::release(in_block_test);
+  
   //notify controller
   if (testController != NULL) testController->transferRMSValues(baseline_rms, test_rms);
 }
