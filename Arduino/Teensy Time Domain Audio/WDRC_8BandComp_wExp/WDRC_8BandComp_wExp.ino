@@ -43,7 +43,7 @@ const float sample_rate_Hz = 24000.0f ; //24000 or 44117.64706f (or other freque
 const int audio_block_samples = 32;  //do not make bigger than AUDIO_BLOCK_SAMPLES from AudioStream.h (which is 128)
 AudioSettings_F32   audio_settings(sample_rate_Hz, audio_block_samples);
 
-// //////////////////////////////////////////////
+// /////////// Define audio objects...they are configured later
 
 //create audio library objects for handling the audio
 AudioControlTLV320AIC3206     audioHardware;    //controller for the Teensy Audio Board
@@ -135,14 +135,20 @@ void setupTympanHardware(void) {
   pinMode(POT_PIN, INPUT); //set the potentiometer's input pin as an INPUT
 }
 
+
+// /////////// setup the audio processing
 //define functions to setup the audio processing parameters
-#include "GHA_Constants.h"  //this sets dsl and gha, which are used in the next line
-#define N_FIR 96
-float firCoeff[N_CHAN][N_FIR];
-float overall_cal_dBSPL_at0dBFS = dsl.maxdB; //overwritten later
+#include "GHA_Constants.h"  //this sets dsl and gha settings, which will be the defaults
+#include "GHA_Alternates.h"  //this sets alternate dsl and gha, which can be switched in via commands
 #define DSL_NORMAL 0
 #define DSL_FULLON 1
-int current_dsl_config = 0;
+int current_dsl_config = DSL_NORMAL; //used to select one of the configurations above for startup
+float overall_cal_dBSPL_at0dBFS; //will be set later
+
+//define the filterbank size
+#define N_FIR 96
+float firCoeff[N_CHAN][N_FIR];
+
 void setupAudioProcessing(void) {
   //make all of the audio connections
   makeAudioConnections();
@@ -190,7 +196,6 @@ void incrementDSLConfiguration(Stream *s) {
   }
 }
 
-//static void configureBroadbandWDRCs(, float fs_Hz, BTNRH_WDRC::CHA_WDRC2 *gha, AudioEffectCompWDRC2_F32 *WDRCs) {
 void configureBroadbandWDRCs(float fs_Hz, const BTNRH_WDRC::CHA_WDRC2 &this_gha, 
       float vol_knob_gain_dB, AudioEffectCompWDRC2_F32 &WDRC) 
 {  
@@ -256,6 +261,8 @@ void configurePerBandWDRCs(int nchan, float fs_Hz,
   }  
 }
 
+// ///////////////// Main setup() and loop() as required for all Arduino programs
+
 // define the setup() function, the function that is called once when the device is booting
 void setup() {
   Serial.begin(115200);   //Open USB Serial link...for debugging
@@ -306,6 +313,8 @@ void loop() {
 
 } //end loop()
 
+
+// ///////////////// Servicing routines
 
 //servicePotentiometer: listens to the blue potentiometer and sends the new pot value
 //  to the audio processing algorithm as a control parameter
