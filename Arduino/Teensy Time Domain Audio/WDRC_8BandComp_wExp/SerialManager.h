@@ -43,6 +43,7 @@ void SerialManager::printHelp(void) {
   Serial.print("   K: Decrease the gain of all channels (ie, knob gain) by "); Serial.print(channelGainIncrement_dB); Serial.println(" dB");
   Serial.print("   1,2,3,4,5,6,7,8: Increase linear gain of given channel (1-8) by "); Serial.print(channelGainIncrement_dB); Serial.println(" dB");
   Serial.print("   !,@,#,$,%,^,&,*: Decrease linear gain of given channel (1-8) by "); Serial.print(channelGainIncrement_dB); Serial.println(" dB");
+  Serial.println("   D: Toggle between DSL configurations: NORMAL vs FULL-ON");
   Serial.println();
 }
 
@@ -51,6 +52,7 @@ extern void incrementKnobGain(float);
 extern void printGainSettings(void);
 extern void togglePrintMemroyAndCPU(void);
 extern void togglePrintAveSignalLevels(bool);
+extern void incrementDSLConfiguration(Stream *);
 
 //switch yard to determine the desired action
 void SerialManager::respondToByte(char c) {
@@ -111,6 +113,10 @@ void SerialManager::respondToByte(char c) {
     case 'C': case 'c':
       Serial.println("Command Received: toggle printing of memory and CPU usage.");
       togglePrintMemroyAndCPU(); break;
+    case 'D':
+      Serial.println("Command Received: changing DSL configuration...you will lose any custom gain values...");
+      incrementDSLConfiguration(&Serial);
+      break;
     case 'F':
       //frequency sweep test
       { //limit the scope of any variables that I create here

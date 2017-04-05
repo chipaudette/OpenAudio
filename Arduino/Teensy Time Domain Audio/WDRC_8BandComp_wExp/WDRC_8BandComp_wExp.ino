@@ -1,5 +1,5 @@
 /*
-  MultiBandCompressor_Float
+  WDRC_8BandComp_wExp
 
   Created: Chip Audette (OpenAudio), Feb 2017
     Primarly built upon CHAPRO "Generic Hearing Aid" from 
@@ -136,29 +136,62 @@ void setupTympanHardware(void) {
 }
 
 //define functions to setup the audio processing parameters
+#include "GHA_Constants.h"  //this sets dsl and gha, which are used in the next line
 #define N_FIR 96
 float firCoeff[N_CHAN][N_FIR];
-float overall_cal_dBSPL_at0dBFS = 115.f; //overwritten later
+float overall_cal_dBSPL_at0dBFS = dsl.maxdB; //overwritten later
+#define DSL_NORMAL 0
+#define DSL_FULLON 1
+int current_dsl_config = 0;
 void setupAudioProcessing(void) {
   //make all of the audio connections
   makeAudioConnections();
 
-  //set the per-channel filter coefficients
-  #include "GHA_Constants.h"  //this sets dsl and gha, which are used in the next line
-  AudioConfigFIRFilterBank_F32 makeFIRcoeffs(N_CHAN, N_FIR, audio_settings.sample_rate_Hz, (float *)dsl.cross_freq, (float *)firCoeff);
-  for (int i=0; i< N_CHAN; i++) firFilt[i].begin(firCoeff[i], N_FIR, audio_settings.audio_block_samples);
-
-  //setup all of the the compressors
-  configureBroadbandWDRCs(audio_settings.sample_rate_Hz, &gha, vol_knob_gain_dB, compBroadband);
-  configurePerBandWDRCs(N_CHAN, audio_settings.sample_rate_Hz, &dsl, &gha, expCompLim);  
-
-  //overwrite the one-point calibration based on the dsl data structure
-  overall_cal_dBSPL_at0dBFS = dsl.maxdB;
+  //setup processing based on the DSL and GHA prescriptions
+  if (current_dsl_config == DSL_NORMAL) {
+    setupFromDSLandGHA(dsl, gha, N_CHAN, N_FIR, audio_settings);
+  } else if (current_dsl_config == DSL_FULLON) {
+    setupFromDSLandGHA(dsl_fullon, gha_fullon, N_CHAN, N_FIR, audio_settings);
+  }
 }
 
+void setupFromDSLandGHA(const BTNRH_WDRC::CHA_DSL2 &this_dsl, const BTNRH_WDRC::CHA_WDRC2 &this_gha,
+     const int n_chan_max, const int n_fir, const AudioSettings_F32 &settings)
+{
+  int n_chan = n_chan_max;  //maybe change this to be the value in the DSL itself.  other logic would need to change, too.
+  
+  //compute the per-channel filter coefficients
+  AudioConfigFIRFilterBank_F32 makeFIRcoeffs(n_chan, n_fir, settings.sample_rate_Hz, (float *)this_dsl.cross_freq, (float *)firCoeff);
+
+  //set the coefficients (if we lower n_chan, we should be sure to clean out the ones that aren't set)
+  for (int i=0; i< n_chan; i++) firFilt[i].begin(firCoeff[i], n_fir, settings.audio_block_samples);
+
+  //setup all of the per-channel compressors
+  configurePerBandWDRCs(n_chan, settings.sample_rate_Hz, this_dsl, this_gha, expCompLim);  
+
+  //setup the broad band compressor (limiter)
+  configureBroadbandWDRCs(settings.sample_rate_Hz, this_gha, vol_knob_gain_dB, compBroadband);
+
+  //overwrite the one-point calibration based on the dsl data structure
+  overall_cal_dBSPL_at0dBFS = this_dsl.maxdB;
+
+}
+
+void incrementDSLConfiguration(Stream *s) {
+  current_dsl_config++;
+  if (current_dsl_config==2) current_dsl_config=0;
+  switch (current_dsl_config) {
+    case (DSL_NORMAL):
+      if (s) s->println("incrementDSLConfiguration: changing to NORMAL dsl configuration");
+      setupFromDSLandGHA(dsl, gha, N_CHAN, N_FIR, audio_settings);  break;
+    case (DSL_FULLON):
+      if (s) s->println("incrementDSLConfiguration: changing to FULL-ON dsl configuration");
+      setupFromDSLandGHA(dsl_fullon, gha_fullon, N_CHAN, N_FIR, audio_settings); break;
+  }
+}
 
 //static void configureBroadbandWDRCs(, float fs_Hz, BTNRH_WDRC::CHA_WDRC2 *gha, AudioEffectCompWDRC2_F32 *WDRCs) {
-void configureBroadbandWDRCs(float fs_Hz, BTNRH_WDRC::CHA_WDRC2 *gha, 
+void configureBroadbandWDRCs(float fs_Hz, const BTNRH_WDRC::CHA_WDRC2 &this_gha, 
       float vol_knob_gain_dB, AudioEffectCompWDRC2_F32 &WDRC) 
 {  
   //assume all broadband compressors are the same
@@ -166,17 +199,17 @@ void configureBroadbandWDRCs(float fs_Hz, BTNRH_WDRC::CHA_WDRC2 *gha,
     //logic and values are extracted from from CHAPRO repo agc_prepare.c...the part setting CHA_DVAR
     
     //extract the parameters
-    float atk = (float)gha->attack;  //milliseconds!
-    float rel = (float)gha->release; //milliseconds!
-    //float fs = gha->fs;
+    float atk = (float)this_gha.attack;  //milliseconds!
+    float rel = (float)this_gha.release; //milliseconds!
+    //float fs = this_gha.fs;
     float fs = (float)fs_Hz; // WEA override...not taken from gha
-    float maxdB = (float) gha->maxdB;
-    float exp_cr = (float) gha->exp_cr;   
-    float exp_end_knee = (float) gha->exp_end_knee;
-    float tk = (float) gha->tk;
-    float comp_ratio = (float) gha->cr;
-    float tkgain = (float) gha->tkgain;
-    float bolt = (float) gha->bolt;
+    float maxdB = (float) this_gha.maxdB;
+    float exp_cr = (float) this_gha.exp_cr;   
+    float exp_end_knee = (float) this_gha.exp_end_knee;
+    float tk = (float) this_gha.tk;
+    float comp_ratio = (float) this_gha.cr;
+    float tkgain = (float) this_gha.tkgain;
+    float bolt = (float) this_gha.bolt;
     
     //set the compressor's parameters
     //WDRCs[i].setSampleRate_Hz(fs);
@@ -186,32 +219,34 @@ void configureBroadbandWDRCs(float fs_Hz, BTNRH_WDRC::CHA_WDRC2 *gha,
  // }
 }
     
-static void configurePerBandWDRCs(int nchan, float fs_Hz, BTNRH_WDRC::CHA_DSL2 *dsl, BTNRH_WDRC::CHA_WDRC2 *gha,AudioEffectCompWDRC2_F32 *WDRCs)
+void configurePerBandWDRCs(int nchan, float fs_Hz, 
+    const BTNRH_WDRC::CHA_DSL2 &this_dsl, const BTNRH_WDRC::CHA_WDRC2 &this_gha,
+    AudioEffectCompWDRC2_F32 *WDRCs)
 {
-  if (nchan > dsl->nchannel) {  
+  if (nchan > this_dsl.nchannel) {  
     Serial.println(F("configureWDRC.configure: *** ERROR ***: nchan > dsl.nchannel"));
     Serial.print(F("    : nchan = ")); Serial.println(nchan);
-    Serial.print(F("    : dsl.nchannel = ")); Serial.println(dsl->nchannel);
+    Serial.print(F("    : dsl.nchannel = ")); Serial.println(dsl.nchannel);
   }
   
   //now, loop over each channel
   for (int i=0; i < nchan; i++) {
     
     //logic and values are extracted from from CHAPRO repo agc_prepare.c
-    float atk = (float)dsl->attack;   //milliseconds!
-    float rel = (float)dsl->release;  //milliseconds!
+    float atk = (float)this_dsl.attack;   //milliseconds!
+    float rel = (float)this_dsl.release;  //milliseconds!
     //float fs = gha->fs;
     float fs = (float)fs_Hz; // WEA override
-    float maxdB = (float) dsl->maxdB;
-    float exp_cr = (float)dsl->exp_cr[i];
-    float exp_end_knee = (float)dsl->exp_end_knee[i];
-    float tk = (float) dsl->tk[i];
-    float comp_ratio = (float) dsl->cr[i];
-    float tkgain = (float) dsl->tkgain[i];
-    float bolt = (float) dsl->bolt[i];
+    float maxdB = (float) this_dsl.maxdB;
+    float exp_cr = (float)this_dsl.exp_cr[i];
+    float exp_end_knee = (float)this_dsl.exp_end_knee[i];
+    float tk = (float) this_dsl.tk[i];
+    float comp_ratio = (float) this_dsl.cr[i];
+    float tkgain = (float) this_dsl.tkgain[i];
+    float bolt = (float) this_dsl.bolt[i];
 
     // adjust BOLT
-    float cltk = (float)gha->tk;
+    float cltk = (float)this_gha.tk;
     if (bolt > cltk) bolt = cltk;
     if (tkgain < 0) bolt = bolt + tkgain;
 
