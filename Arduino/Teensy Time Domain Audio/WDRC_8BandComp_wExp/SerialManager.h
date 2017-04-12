@@ -132,7 +132,7 @@ void SerialManager::respondToByte(char c) {
       break;      
     case 'l':
       Serial.println("Command Received: toggle printing of per-band ave signal levels.");
-      { bool as_dBSPL = true; togglePrintAveSignalLevels(as_dBSPL); }
+      { bool as_dBSPL = false; togglePrintAveSignalLevels(as_dBSPL); }
       break;
     case 'L':
       Serial.println("Command Received: toggle printing of per-band ave signal levels.");
