@@ -46,16 +46,16 @@ AudioSettings_F32   audio_settings(sample_rate_Hz, audio_block_samples);
 // /////////// Define audio objects...they are configured later
 
 //create audio library objects for handling the audio
-AudioControlTLV320AIC3206     audioHardware;    //controller for the Teensy Audio Board
-AudioTestSignalGenerator_F32  audioTestGenerator(audio_settings);
-AudioInputI2S_F32             i2s_in(audio_settings);          //Digital audio *from* the Teensy Audio Board ADC.  Sends Int16.  Stereo.
-AudioOutputI2S_F32            i2s_out(audio_settings);        //Digital audio *to* the Teensy Audio Board DAC.  Expects Int16.  Stereo
+AudioControlTLV320AIC3206     audioHardware;            //controller for the Teensy Audio Board
+AudioInputI2S_F32             i2s_in(audio_settings);   //Digital audio *from* the Typmpan over the I2S bus
+AudioTestSignalGenerator_F32  audioTestGenerator(audio_settings); //move this to be *after* the creation of the i2s_in object
 
 //create audio objects for the algorithm
-AudioFilterFIR_F32          firFilt[N_CHAN];  //here are the filters to break up the audio into multipel bands
-AudioEffectCompWDRC2_F32    expCompLim[N_CHAN]; //here are the per-band compressors
-AudioMixer8_F32             mixer1; //mixer to reconstruct the broadband audio 
-AudioEffectCompWDRC2_F32    compBroadband; //broad band compressor
+AudioFilterFIR_F32          firFilt[N_CHAN];        //here are the filters to break up the audio into multipel bands
+AudioEffectCompWDRC2_F32    expCompLim[N_CHAN];     //here are the per-band compressors
+AudioMixer8_F32             mixer1;                 //mixer to reconstruct the broadband audio 
+AudioEffectCompWDRC2_F32    compBroadband;          //broad band compressor
+AudioOutputI2S_F32            i2s_out(audio_settings);  //Digital audio *to* the Tympan over the I2S bus.  I moved it here to be last.
 
 //complete the creation of the tester objects
 AudioTestSignalMeasurement_F32  audioTestMeasurement(audio_settings);
@@ -129,7 +129,7 @@ void setupTympanHardware(void) {
   
   //set volumes
   audioHardware.volume_dB(0.f);  // -63.6 to +24 dB in 0.5dB steps.  uses signed 8-bit
-  audioHardware.setInputGain_dB(15.f); // set MICPGA volume, 0-47.5dB in 0.5dB setps
+  audioHardware.setInputGain_dB(input_gain_dB); // set MICPGA volume, 0-47.5dB in 0.5dB setps
 
   //setup pin for potentiometer
   pinMode(POT_PIN, INPUT); //set the potentiometer's input pin as an INPUT
