@@ -25,7 +25,7 @@
 #define USE_TEST_TONE_INPUT 0
 
 //do stereo processing?
-#define USE_STEREO 1
+#define USE_STEREO 0
 
 // Include all the of the needed libraries
 //include <Audio.h>      //Teensy Audio Library
@@ -33,7 +33,7 @@
 #include <SPI.h>
 //include <SD.h>
 //include <SerialFlash.h>
-#include <OpenAudio_ArduinoLibrary.h> //for AudioConvert_I16toF32, AudioConvert_F32toI16, and AudioEffectGain_F32
+#include <Tympan_Library.h> //for AudioConvert_I16toF32, AudioConvert_F32toI16, and AudioEffectGain_F32
 
 
 const float sample_rate_Hz = 96000.0f ; //24000 or 44117.64706f (or other frequencies in the table in AudioOutputI2S_F32
@@ -120,8 +120,8 @@ void setupAudioHardware(void) {
     audioHardware.setMicBias(myBiasLevel); // set mic bias to 2.5 // default
   
     //set volumes
-    audioHardware.volume_dB(10);  // -63.6 to +24 dB in 0.5dB steps.  uses signed 8-bit
-    audioHardware.setInputGain_dB(0); // set MICPGA volume, 0-47.5dB in 0.5dB setps
+    audioHardware.volume_dB(0);  // -63.6 to +24 dB in 0.5dB steps.  uses signed 8-bit
+    audioHardware.setInputGain_dB(10); // set MICPGA volume, 0-47.5dB in 0.5dB setps
   #endif
 
   //setup the potentiometer.  same for Teensy Audio Board as for Tympan
