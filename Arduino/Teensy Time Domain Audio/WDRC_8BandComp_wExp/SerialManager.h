@@ -120,8 +120,8 @@ void SerialManager::respondToByte(char c) {
     case 'F':
       //frequency sweep test
       { //limit the scope of any variables that I create here
-        freqSweepTester.setSignalAmplitude_dBFS(-50.f);
-        float start_freq_Hz = 125.0f, end_freq_Hz = 16000.f, step_octave = sqrtf(2.0);
+        freqSweepTester.setSignalAmplitude_dBFS(-10.f);
+        float start_freq_Hz = 125.0f, end_freq_Hz = 16000.f, step_octave = powf(2.0,1.0/6.0); //pow(2.0,0.5) is 2 steps per octave
         freqSweepTester.setStepPattern(start_freq_Hz, end_freq_Hz, step_octave);
         freqSweepTester.setTargetDurPerStep_sec(1.0);
       }
