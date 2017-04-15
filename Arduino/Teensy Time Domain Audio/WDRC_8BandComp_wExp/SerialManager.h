@@ -13,8 +13,13 @@ class SerialManager {
   public:
     SerialManager(int n, GainAlgorithm_t *gain_algs, 
           AudioControlTestAmpSweep_F32 &_ampSweepTester,
-          AudioControlTestFreqSweep_F32 &_freqSweepTester)
-      : N_CHAN(n), gain_algorithms(gain_algs), ampSweepTester(_ampSweepTester), freqSweepTester(_freqSweepTester) {};
+          AudioControlTestFreqSweep_F32 &_freqSweepTester,
+          AudioControlTestFreqSweep_F32 &_freqSweepTester_FIR)
+      : N_CHAN(n), 
+        gain_algorithms(gain_algs), 
+        ampSweepTester(_ampSweepTester), 
+        freqSweepTester(_freqSweepTester),
+        freqSweepTester_FIR(_freqSweepTester_FIR) {};
       
     void respondToByte(char c);
     void printHelp(void);
@@ -27,6 +32,7 @@ class SerialManager {
     GainAlgorithm_t *gain_algorithms;  //point to first element in array of expanders
     AudioControlTestAmpSweep_F32 &ampSweepTester;
     AudioControlTestFreqSweep_F32 &freqSweepTester;
+    AudioControlTestFreqSweep_F32 &freqSweepTester_FIR;
 };
 
 void SerialManager::printHelp(void) {
@@ -37,8 +43,9 @@ void SerialManager::printHelp(void) {
   Serial.println("   C: Toggle printing of CPU and Memory usage");
   Serial.println("   l: Toggle printing of pre-gain per-channel signal levels (dBFS)");
   Serial.println("   L: Toggle printing of pre-gain per-channel signal levels (dBSPL, per DSL 'maxdB')");
-  Serial.println("   A: Self-Generated Test: Amplitude sweep.");
-  Serial.println("   F: Self-Generated Test: Frequency sweep.");
+  Serial.println("   A: Self-Generated Test: Amplitude sweep.  End-to-End Measurement.");
+  Serial.println("   F: Self-Generated Test: Frequency sweep.  End-to-End Measurement.");
+  Serial.println("   f: Self-Generated Test: Frequency sweep.  Measure filterbank.");
   Serial.print("   k: Increase the gain of all channels (ie, knob gain) by "); Serial.print(channelGainIncrement_dB); Serial.println(" dB");
   Serial.print("   K: Decrease the gain of all channels (ie, knob gain) by "); Serial.print(channelGainIncrement_dB); Serial.println(" dB");
   Serial.print("   1,2,3,4,5,6,7,8: Increase linear gain of given channel (1-8) by "); Serial.print(channelGainIncrement_dB); Serial.println(" dB");
@@ -118,16 +125,29 @@ void SerialManager::respondToByte(char c) {
       incrementDSLConfiguration(&Serial);
       break;
     case 'F':
-      //frequency sweep test
+      //frequency sweep test...end-to-end
       { //limit the scope of any variables that I create here
-        freqSweepTester.setSignalAmplitude_dBFS(-10.f);
-        float start_freq_Hz = 125.0f, end_freq_Hz = 16000.f, step_octave = powf(2.0,1.0/6.0); //pow(2.0,0.5) is 2 steps per octave
+        freqSweepTester.setSignalAmplitude_dBFS(-50.f);
+        float start_freq_Hz = 125.0f, end_freq_Hz = 16000.f, step_octave = powf(2.0,1.0/2.0); //pow(2.0,0.5) is 2 steps per octave
         freqSweepTester.setStepPattern(start_freq_Hz, end_freq_Hz, step_octave);
         freqSweepTester.setTargetDurPerStep_sec(1.0);
       }
-      Serial.println("Command Received: starting test using frequency sweep...");
+      Serial.println("Command Received: starting test using frequency sweep, end-to-end assessment...");
       freqSweepTester.begin();
       while (!freqSweepTester.available()) {delay(100);};
+      Serial.println("Press 'h' for help...");
+      break; 
+    case 'f':
+      //frequency sweep test
+      { //limit the scope of any variables that I create here
+        freqSweepTester_FIR.setSignalAmplitude_dBFS(-10.f);
+        float start_freq_Hz = 125.0f, end_freq_Hz = 16000.f, step_octave = powf(2.0,1.0/6.0); //pow(2.0,0.5) is 2 steps per octave
+        freqSweepTester_FIR.setStepPattern(start_freq_Hz, end_freq_Hz, step_octave);
+        freqSweepTester_FIR.setTargetDurPerStep_sec(1.0);
+      }
+      Serial.println("Command Received: starting test using frequency sweep.  Filterbank assessment...");
+      freqSweepTester_FIR.begin();
+      while (!freqSweepTester_FIR.available()) {delay(100);};
       Serial.println("Press 'h' for help...");
       break;      
     case 'l':
