@@ -65,7 +65,7 @@ AudioControlTestFreqSweep_F32    freqSweepTester(audio_settings,audioTestGenerat
 AudioControlTestFreqSweep_F32    freqSweepTester_FIR(audio_settings,audioTestGenerator,audioTestMeasurement_FIR);
 
 //make the audio connections
-#define N_MAX_CONNECTIONS 100
+#define N_MAX_CONNECTIONS 100  //some large number greater than the number of connections that we'll make
 AudioConnection_F32 *patchCord[N_MAX_CONNECTIONS];
 int makeAudioConnections(void) { //call this in setup() or somewhere like that
   int count=0;
