@@ -25,15 +25,15 @@
 
 
 // Define the overall setup
-String overall_name = String("Tympan: Frequency Warping FIR Expander-Compressor-Limiter with Overall Limiter");
-const int N_CHAN = 9;  //number of frequency bands (channels)
+String overall_name = String("Tympan: Frequency-Warping FIR Expander-Compressor-Limiter with Overall Limiter");
+const int N_CHAN = 8;  //number of frequency bands (channels)
 const float input_gain_dB = 25.0f; //gain on the microphone
 float vol_knob_gain_dB = 0.0; //will be overridden by volume knob
 
 int USE_VOLUME_KNOB = 1;  //set to 1 to use volume knob to override the default vol_knob_gain_dB set a few lines below
 
 const float sample_rate_Hz = 24000.0f ; //24000 or 44117.64706f (or other frequencies in the table in AudioOutputI2S_F32
-const int audio_block_samples = 32;  //do not make bigger than AUDIO_BLOCK_SAMPLES from AudioStream.h (which is 128)
+const int audio_block_samples = 16;  //do not make bigger than AUDIO_BLOCK_SAMPLES from AudioStream.h (which is 128)
 AudioSettings_F32   audio_settings(sample_rate_Hz, audio_block_samples);
 
 //create audio library objects for handling the audio
@@ -44,6 +44,8 @@ AudioFilterFreqWarpAllPassFIR_F32   freqWarpFilterBank(audio_settings);
 AudioEffectCompWDRC2_F32        expCompLim[N_CHAN];     //here are the per-band compressors
 AudioMixer8_F32                 mixer1;
 AudioMixer8_F32                 mixer2;
+AudioMixer8_F32                 mixer3;
+AudioEffectCompWDRC2_F32        compBroadband;     //here is the broadband compressor
 AudioOutputI2S_F32              i2s_out(audio_settings);       //Digital audio *to* the Teensy Audio Board DAC.
 
 //complete the creation of the tester objects
@@ -70,29 +72,33 @@ int makeAudioConnections(void) { //call this in setup() or somewhere like that
   //connect to the filter bank
   patchCord[count++] = new AudioConnection_F32(audioTestGenerator, 0, freqWarpFilterBank, 0);
 
-  //connect the filter bank to the mixer
-  patchCord[count++] = new AudioConnection_F32(freqWarpFilterBank, 0, mixer1, 0);
-  patchCord[count++] = new AudioConnection_F32(freqWarpFilterBank, 1, mixer1, 1);
-  patchCord[count++] = new AudioConnection_F32(freqWarpFilterBank, 2, mixer1, 2);
-  patchCord[count++] = new AudioConnection_F32(freqWarpFilterBank, 3, mixer1, 3);
-  patchCord[count++] = new AudioConnection_F32(freqWarpFilterBank, 4, mixer1, 4);
-  patchCord[count++] = new AudioConnection_F32(freqWarpFilterBank, 5, mixer1, 5);
-  patchCord[count++] = new AudioConnection_F32(freqWarpFilterBank, 6, mixer1, 6);
-  patchCord[count++] = new AudioConnection_F32(freqWarpFilterBank, 7, mixer1, 7);
-  patchCord[count++] = new AudioConnection_F32(mixer1, 0, mixer2, 0);
-  patchCord[count++] = new AudioConnection_F32(freqWarpFilterBank, 8, mixer2, 1);
+  //connect the filter bank to the compressors and then to the mixer
+  for (int Ichan=0; Ichan < min(N_CHAN,8); Ichan++) {
+    //patchCord[count++] = new AudioConnection_F32(freqWarpFilterBank, Ichan, mixer1, Ichan);
+    patchCord[count++] = new AudioConnection_F32(freqWarpFilterBank, Ichan, expCompLim[Ichan], 0);
+    patchCord[count++] = new AudioConnection_F32(expCompLim[Ichan], 0, mixer1, Ichan);
+  }
+  if (N_CHAN > 8) {
+    for (int Ichan=0; Ichan < min(N_CHAN-8,8); Ichan++) {
+      //patchCord[count++] = new AudioConnection_F32(freqWarpFilterBank, Ichan+8, mixer2, Ichan);
+      patchCord[count++] = new AudioConnection_F32(freqWarpFilterBank, Ichan+8, expCompLim[Ichan+8], 0);
+      patchCord[count++] = new AudioConnection_F32(expCompLim[Ichan+8], 0, mixer2, Ichan);
+    }
+  }
   
+  patchCord[count++] = new AudioConnection_F32(mixer1, 0, mixer3, 0);
+  patchCord[count++] = new AudioConnection_F32(mixer2, 0, mixer3, 1);
 
   for (int Ichan = 0; Ichan < N_CHAN; Ichan++) {
     patchCord[count++] = new AudioConnection_F32(freqWarpFilterBank, Ichan, audioTestMeasurement_FIR,1+Ichan);
   }
 
-  patchCord[count++] = new AudioConnection_F32(mixer2, 0, i2s_out, 0);  //left output
-  patchCord[count++] = new AudioConnection_F32(mixer2, 0, i2s_out, 1);  //right output
+  patchCord[count++] = new AudioConnection_F32(mixer3, 0, i2s_out, 0);  //left output
+  patchCord[count++] = new AudioConnection_F32(mixer3, 0, i2s_out, 1);  //right output
 
   //make the connections for the audio test measurements
   patchCord[count++] = new AudioConnection_F32(audioTestGenerator, 0, audioTestMeasurement, 0);
-  patchCord[count++] = new AudioConnection_F32(mixer2, 0, audioTestMeasurement, 1);
+  patchCord[count++] = new AudioConnection_F32(mixer3, 0, audioTestMeasurement, 1);
 
   return count;
 }
@@ -150,7 +156,7 @@ float overall_cal_dBSPL_at0dBFS; //will be set later
 
 //define the filterbank size
 //#define N_FIR 96
-#define N_FIR_FOO 16
+#define N_FIR_FOO 32
 //float firCoeff[N_CHAN][N_FIR];
 
 void setupAudioProcessing(void) {
@@ -168,17 +174,11 @@ void setupFromDSLandGHA(const BTNRH_WDRC::CHA_DSL2 &this_dsl, const BTNRH_WDRC::
 {
   int n_chan = n_chan_max;  //maybe change this to be the value in the DSL itself.  other logic would need to change, too.
   
-  //compute the per-channel filter coefficients
-  //AudioConfigFIRFilterBank_F32 makeFIRcoeffs(n_chan, n_fir, settings.sample_rate_Hz, (float *)this_dsl.cross_freq, (float *)firCoeff);
-
-  //set the coefficients (if we lower n_chan, we should be sure to clean out the ones that aren't set)
-  //for (int i=0; i< n_chan; i++) firFilt[i].begin(firCoeff[i], n_fir, settings.audio_block_samples);
-
   //setup all of the per-channel compressors
   configurePerBandWDRCs(n_chan, settings.sample_rate_Hz, this_dsl, this_gha, expCompLim);  
 
   //setup the broad band compressor (limiter)
-  //configureBroadbandWDRCs(settings.sample_rate_Hz, this_gha, vol_knob_gain_dB, compBroadband);
+  configureBroadbandWDRCs(settings.sample_rate_Hz, this_gha, vol_knob_gain_dB, compBroadband);
 
   //overwrite the one-point calibration based on the dsl data structure
   overall_cal_dBSPL_at0dBFS = this_dsl.maxdB;
@@ -198,34 +198,34 @@ void incrementDSLConfiguration(Stream *s) {
   }
 }
 
-//void configureBroadbandWDRCs(float fs_Hz, const BTNRH_WDRC::CHA_WDRC2 &this_gha, 
-//      float vol_knob_gain_dB, AudioEffectCompWDRC2_F32 &WDRC) 
-//{  
-//  //assume all broadband compressors are the same
-//  //for (int i=0; i< ncompressors; i++) {
-//    //logic and values are extracted from from CHAPRO repo agc_prepare.c...the part setting CHA_DVAR
-//    
-//    //extract the parameters
-//    float atk = (float)this_gha.attack;  //milliseconds!
-//    float rel = (float)this_gha.release; //milliseconds!
-//    //float fs = this_gha.fs;
-//    float fs = (float)fs_Hz; // WEA override...not taken from gha
-//    float maxdB = (float) this_gha.maxdB;
-//    float exp_cr = (float) this_gha.exp_cr;   
-//    float exp_end_knee = (float) this_gha.exp_end_knee;
-//    float tk = (float) this_gha.tk;
-//    float comp_ratio = (float) this_gha.cr;
-//    float tkgain = (float) this_gha.tkgain;
-//    float bolt = (float) this_gha.bolt;
-//    
-//    //set the compressor's parameters
-//    //WDRCs[i].setSampleRate_Hz(fs);
-//    //WDRCs[i].setParams(atk, rel, maxdB, exp_cr, exp_end_knee, tkgain, comp_ratio, tk, bolt);
-//    WDRC.setSampleRate_Hz(fs);
-//    WDRC.setParams(atk, rel, maxdB, exp_cr, exp_end_knee, tkgain + vol_knob_gain_dB, comp_ratio, tk, bolt);    
-// // }
-//}
-//    
+void configureBroadbandWDRCs(float fs_Hz, const BTNRH_WDRC::CHA_WDRC2 &this_gha, 
+      float vol_knob_gain_dB, AudioEffectCompWDRC2_F32 &WDRC) 
+{  
+  //assume all broadband compressors are the same
+  //for (int i=0; i< ncompressors; i++) {
+    //logic and values are extracted from from CHAPRO repo agc_prepare.c...the part setting CHA_DVAR
+    
+    //extract the parameters
+    float atk = (float)this_gha.attack;  //milliseconds!
+    float rel = (float)this_gha.release; //milliseconds!
+    //float fs = this_gha.fs;
+    float fs = (float)fs_Hz; // WEA override...not taken from gha
+    float maxdB = (float) this_gha.maxdB;
+    float exp_cr = (float) this_gha.exp_cr;   
+    float exp_end_knee = (float) this_gha.exp_end_knee;
+    float tk = (float) this_gha.tk;
+    float comp_ratio = (float) this_gha.cr;
+    float tkgain = (float) this_gha.tkgain;
+    float bolt = (float) this_gha.bolt;
+    
+    //set the compressor's parameters
+    //WDRCs[i].setSampleRate_Hz(fs);
+    //WDRCs[i].setParams(atk, rel, maxdB, exp_cr, exp_end_knee, tkgain, comp_ratio, tk, bolt);
+    WDRC.setSampleRate_Hz(fs);
+    WDRC.setParams(atk, rel, maxdB, exp_cr, exp_end_knee, tkgain + vol_knob_gain_dB, comp_ratio, tk, bolt);    
+ // }
+}
+    
 void configurePerBandWDRCs(int nchan, float fs_Hz, 
     const BTNRH_WDRC::CHA_DSL2 &this_dsl, const BTNRH_WDRC::CHA_WDRC2 &this_gha,
     AudioEffectCompWDRC2_F32 *WDRCs)
@@ -289,11 +289,16 @@ void setup() {
   setupAudioProcessing();
 
   //End of setup
+  if (USE_VOLUME_KNOB) servicePotentiometer(millis());
+  //delay(200);
+  //freqWarpFilterBank.setFirCoeff_viaFFT(); //prints filter coefficients
+  //freqWarpFilterBank.setFirCoeff(); //prints filter coefficients
   printGainSettings();
   Serial.println("Setup complete.");
+
+  //print help to tell user that we've started
   serialManager.printHelp();
 
-  freqWarpFilterBank.setFirCoeff_viaFFT();
 } //end setup()
 
 // define the loop() function, the function that is repeated over and over for the life of the device
@@ -437,7 +442,7 @@ void printAveSignalLevels(unsigned long curTime_millis, bool as_dBSPL) {
   if (curTime_millis < lastUpdate_millis) lastUpdate_millis = 0; //handle wrap-around of the clock
   if ((curTime_millis - lastUpdate_millis) > updatePeriod_millis) { //is it time to update the user interface?   
     Serial.print("Ave Input Level (");Serial.print(units_txt); Serial.print("), Per-Band = ");
-    //for (int i=0; i<N_CHAN; i++) { Serial.print(aveSignalLevels_dBFS[i]+offset_dB,1);  Serial.print(", ");  }
+    for (int i=0; i<N_CHAN; i++) { Serial.print(aveSignalLevels_dBFS[i]+offset_dB,1);  Serial.print(", ");  }
     Serial.println();
     
     lastUpdate_millis = curTime_millis; //we will use this value the next time around.
