@@ -16,7 +16,7 @@ BTNRH_WDRC::CHA_DSL2 dsl_fullon = {5,  // attack (ms)
   8,    //num channels...ignored.  8 is always assumed
   {317.1666, 502.9734, 797.6319, 1264.9, 2005.9, 3181.1, 5044.7},   // cross frequencies (Hz)
   {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0},           // compression ratio for low-SPL region (ie, the expander..values should be < 1.0)
-  {45.0, 45.0, 33.0, 32.0, 36.0, 34.0, 36.0, 40.0},   // expansion-end kneepoint.  not relevant when there is no expansion or compression.
+  {55.0, 37.0, 35.0, 35.0, 37.0, 37.0, 38.0, 43.0},   // expansion-end kneepoint.  not relevant when there is no expansion or compression.
   {40.0, 40.0, 40.0, 40.0, 40.0, 40.0, 40.0, 40.0},   // compression-start gain.  Tweak these values up until it sounds bad!
   {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0},           // compression ratio.  Set to 1.0 to defeat.
   {50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 50.0},   // compression-start kneepoint (input dB SPL).  not relevant when there is no compression
