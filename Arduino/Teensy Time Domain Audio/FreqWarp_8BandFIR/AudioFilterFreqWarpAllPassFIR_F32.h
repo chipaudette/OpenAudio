@@ -19,7 +19,7 @@
 class FreqWarpAllPass 
 {
   public:
-    FreqWarpAllPass(void) { setSampleRate_Hz(AUDIO_SAMPLE_RATE); }
+    FreqWarpAllPass(void) { setSampleRate_Hz(AUDIO_SAMPLE_RATE_EXACT); }
     FreqWarpAllPass(float _fs_Hz) { setSampleRate_Hz(_fs_Hz);  }
     
     void setSampleRate_Hz(float fs_Hz) {
@@ -48,15 +48,15 @@ class FreqWarpAllPass
 #define N_FREQWARP_SAMP (16)
 #define N_FREQWARP_ALLPASS (15)  //N-1
 #define N_FREQWARP_FIR (9)      //N/2+1
-class AudioFilterFreqWarpAllPassFIR : public AudioStream_F32
+class AudioFilterFreqWarpAllPassFIR_F32 : public AudioStream_F32
 {
    public:
     //constructor
-    AudioFilterFreqWarpAllPassFIR(void) : AudioStream_F32(1, inputQueueArray_f32) {
+    AudioFilterFreqWarpAllPassFIR_F32(void) : AudioStream_F32(1, inputQueueArray_f32) {
       setSampleRate_Hz(AUDIO_SAMPLE_RATE_EXACT);
       setFirCoeff();
     }
-    AudioFilterFreqWarpAllPassFIR(AudioSettings_F32 settings) : AudioStream_F32(1, inputQueueArray_f32) {
+    AudioFilterFreqWarpAllPassFIR_F32(AudioSettings_F32 settings) : AudioStream_F32(1, inputQueueArray_f32) {
       setSampleRate_Hz(settings.sample_rate_Hz);
       setFirCoeff();
     }
@@ -102,12 +102,12 @@ class AudioFilterFreqWarpAllPassFIR : public AudioStream_F32
       for (int Isamp=0; Isamp < (audio_block->length); Isamp++) {
         
         //increment the delay line
-        for (int Idelay=N_FREQWARP_ALLPASS-1; Idelay >= 0; Idelay--) {
-          delay_line[Idelay+1] = freqWarpAllPass[Idelay].update(delay_line[Idelay]); //delay line is one longer than freqWarpAllPass
-        }
-        //for (int Idelay=N_FREQWARP_ALLPASS; Idelay > 0; Idelay--) {
-        //  delay_line[Idelay]=delay_line[Idelay-1];
+        //for (int Idelay=N_FREQWARP_ALLPASS-1; Idelay >= 0; Idelay--) {
+        //  delay_line[Idelay+1] = freqWarpAllPass[Idelay].update(delay_line[Idelay]); //delay line is one longer than freqWarpAllPass
         //}
+        for (int Idelay=N_FREQWARP_SAMP-1; Idelay > 0; Idelay--) {
+          delay_line[Idelay]=delay_line[Idelay-1];
+        }
         
         //put the newest value into the start of the delay line
         delay_line[0] = audio_block->data[Isamp];
@@ -151,11 +151,15 @@ class AudioFilterFreqWarpAllPassFIR : public AudioStream_F32
           
           // scale
           win = 1.0;
-          win /= (float)N_FREQWARP_SAMP; //make gain of 1.0???
-          win *= (float)(2*I_fir);  //make higher frequencies louder
+          win = 1.f/sqrtf(N_FREQWARP_SAMP);
+          if ((I_fir ==0) || (I_fir == (N_FREQWARP_FIR-1))) {
+            win = win * 0.5f;
+          }
+          //win /= (float)N_FREQWARP_SAMP; //make gain of 1.0???
+          //win *= (float)(2*I_fir);  //make higher frequencies louder
           
           //hanning windowing
-          win *= (1.0 - cos(2.0*M_PI*((float(I))/((float)N_FREQWARP_SAMP-1)))/2.0);  //hanning
+          win *= (1.0 - cos(2.0*M_PI*((float(I))/((float)N_FREQWARP_SAMP-1))))/2.0;  //hanning
 
           //scale the coefficient and save
           foo_b = foo_b*win;
