@@ -93,12 +93,15 @@ int makeAudioConnections(void) { //call this in setup() or somewhere like that
     patchCord[count++] = new AudioConnection_F32(freqWarpFilterBank, Ichan, audioTestMeasurement_FIR,1+Ichan);
   }
 
-  patchCord[count++] = new AudioConnection_F32(mixer3, 0, i2s_out, 0);  //left output
-  patchCord[count++] = new AudioConnection_F32(mixer3, 0, i2s_out, 1);  //right output
+  patchCord[count++] = new AudioConnection_F32(mixer3, 0, compBroadband, 0);  //left output
+  
+  patchCord[count++] = new AudioConnection_F32(compBroadband, 0, i2s_out,0); //left output
+  patchCord[count++] = new AudioConnection_F32(compBroadband, 0, i2s_out, 1);  //right output
+  
 
   //make the connections for the audio test measurements
   patchCord[count++] = new AudioConnection_F32(audioTestGenerator, 0, audioTestMeasurement, 0);
-  patchCord[count++] = new AudioConnection_F32(mixer3, 0, audioTestMeasurement, 1);
+  patchCord[count++] = new AudioConnection_F32(compBroadband, 0, audioTestMeasurement, 1);
 
   return count;
 }
@@ -190,10 +193,10 @@ void incrementDSLConfiguration(Stream *s) {
   if (current_dsl_config==2) current_dsl_config=0;
   switch (current_dsl_config) {
     case (DSL_NORMAL):
-      if (s) s->println("incrementDSLConfiguration: changing to NORMAL dsl configuration");
+      if (s) s->println("incrementDSLConfiguration: changing to NORMAL DSL configuration");
       setupFromDSLandGHA(dsl, gha, N_CHAN, N_FIR_FOO, audio_settings);  break;
     case (DSL_FULLON):
-      if (s) s->println("incrementDSLConfiguration: changing to FULL-ON dsl configuration");
+      if (s) s->println("incrementDSLConfiguration: changing to FULL-ON DSL configuration");
       setupFromDSLandGHA(dsl_fullon, gha_fullon, N_CHAN, N_FIR_FOO, audio_settings); break;
   }
 }
