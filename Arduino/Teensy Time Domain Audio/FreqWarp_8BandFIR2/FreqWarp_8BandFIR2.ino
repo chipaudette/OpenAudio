@@ -27,7 +27,7 @@
 // Define the overall setup
 String overall_name = String("Tympan: Frequency-Warping FIR Expander-Compressor-Limiter with Overall Limiter");
 const int N_CHAN = 8;  //number of frequency bands (channels)
-const float input_gain_dB = 25.0f; //gain on the microphone
+const float input_gain_dB = 15.0f; //gain on the microphone
 float vol_knob_gain_dB = 0.0; //will be overridden by volume knob
 
 int USE_VOLUME_KNOB = 1;  //set to 1 to use volume knob to override the default vol_knob_gain_dB set a few lines below
