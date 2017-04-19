@@ -75,7 +75,7 @@ int makeAudioConnections(void) { //call this in setup() or somewhere like that
 
   //make the connection for the audio test measurements
   patchCord[count++] = new AudioConnection_F32(audioTestGenerator, 0, audioTestMeasurement, 0);
-  //patchCord[count++] = new AudioConnection_F32(audioTestGenerator, 0, audioTestMeasurement_FIR, 0);
+  patchCord[count++] = new AudioConnection_F32(audioTestGenerator, 0, audioTestMeasurement_FIR, 0);
   
   //make per-channel connections
   for (int i = 0; i < N_CHAN; i++) {
