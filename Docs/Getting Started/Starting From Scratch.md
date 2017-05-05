@@ -49,13 +49,9 @@ Switching to the Teensy
 Teensy Tutorials
 -----------------
 
-After you get the Teensy's light to blink (or if you got a board with no LED), you're ready to try some additional Teensy tutorials, so that you see a few more of the small differences between the Teensy and an Arduino.  Under the "Examples" / "Teensy" menu, I suggest the follwoing examples:
+After you get the Teensy's light to blink (or if you got a board with no LED), you're ready to try some additional Teensy tutorials, so that you see a few more of the small differences between the Teensy and an Arduino.  Under the "Examples" / "Teensy" menu, I suggest the follwoing example:
 
 * **HelloSerialMonitor**: Upload the code to the Teensy, start the Arduino Serial Monitor, and see the "Hello World" text.  Note that you'll have to change the Serial baud rate in the Serial Monitor to match the code.  The code is configured to 38400.  Did you see "Hello World"?  If you're successful, try changing the text.  Then try adding new messages.  Pretty easy.
-
-If you have also have Teensy Audio Board (BTNRH, the Audio Board is part of the unit that I sent), you can try some of the Audio examples to be sure that your hardware works.  Under the "Examples" / "Audio" menu, I suggest:
-
-* **HardwareTesting/ToneSweep**:  Upload the code to the Teensy, plug in your headphones, but don't put them on your ears.  The tonesweep is loud!!!  Try changing the volume to make it quieter (change the line `audioShield.volume(0.5);` to a smaller number).  Then, try changing the frequency range of the sweep (`t_lox` and `t_hix`) or the duration of the sweep (`t_timex`).  After the sweep stops, try pressing the button on the Teensy.  It resets the Teensy, which will restart the sweep (after 3 seconds of dead time).
 
 Next Steps
 -------------
