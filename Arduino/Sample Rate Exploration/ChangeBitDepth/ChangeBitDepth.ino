@@ -5,7 +5,7 @@
 *   Purpose: Change the bit depth of the system
 *
 *   Uses Tympan Audio Adapter.
-*   Blue potentiometer adjusts the digital gain applied to the audio signal.
+*   Blue potentiometer adjusts the frequency of the tone
 *   
 *   MIT License.  use at your own risk.
 */
@@ -24,14 +24,18 @@ AudioSettings_F32 audio_settings(sample_rate_Hz, audio_block_samples, bit_depth)
 AudioControlTLV320AIC3206 audioHardware;
 //AudioInputI2S_32bit_F32         i2s_in(audio_settings);   //Digital audio *from* the Tympan AIC. 
 AudioSynthWaveformSine_F32  sine1(audio_settings);
-AudioEffectGain_F32       gain1, gain2;             //Applies digital gain to audio data.
-AudioOutputI2S_32bit_F32        i2s_out(audio_settings);  //Digital audio *to* the Tympan AIC.  Always list last to minimize latency
+
+#if 0
+  //original 16-bit version
+  AudioOutputI2S_32bit_F32        i2s_out(audio_settings);  //Digital audio *to* the Tympan AIC.  Always list last to minimize latency
+#else
+  //new 32-bit version
+  AudioOutputI2S_32bit_F32        i2s_out(audio_settings);  //Digital audio *to* the Tympan AIC.  Always list last to minimize latency
+#endif
 
 //Make all of the audio connections
-AudioConnection_F32       patchCord1(sine1, 0, gain1, 0);    //connect the Left input 
-AudioConnection_F32       patchCord2(sine1, 0, gain2, 0);    //connect the Right input
-AudioConnection_F32       patchCord11(gain1, 0, i2s_out, 0);  //connect the Left gain to the Left output
-AudioConnection_F32       patchCord12(gain2, 0, i2s_out, 1);  //connect the Right gain to the Right output
+AudioConnection_F32       patchCord11(sine1, 0, i2s_out, 0);  //connect the Left gain to the Left output
+AudioConnection_F32       patchCord12(sine1, 0, i2s_out, 1);  //connect the Right gain to the Right output
 
 
 //I have a potentiometer on the Teensy Audio Board
@@ -43,7 +47,7 @@ float vol_knob_gain_dB = 0.0;      //will be overridden by volume knob
 void setup() {
   //begin the serial comms (for debugging)
   Serial.begin(115200);  delay(500);
-  Serial.println("ChangeBitDepth (BasicGain): starting setup()...");
+  Serial.println("ChangeBitDepth (Tone): starting setup()...");
   
   //allocate the audio memory
   AudioMemory(10); AudioMemory_F32(200,audio_settings); //allocate both kinds of memory
@@ -109,13 +113,12 @@ void servicePotentiometer(unsigned long curTime_millis, unsigned long updatePeri
       val = 1.0 - val; //reverse direction of potentiometer (error with Tympan PCB)
       
       //choose the desired gain value based on the knob setting
-      const float min_gain_dB = -20.0, max_gain_dB = 40.0; //set desired gain range
-      vol_knob_gain_dB = min_gain_dB + (max_gain_dB - min_gain_dB)*val; //computed desired gain value in dB
+      const float min_val = 200.0, max_val = 2000.0; //set desired range
+      float new_value = min_val + (max_val - min_val)*val; //
 
       //command the new gain setting
-      gain1.setGain_dB(vol_knob_gain_dB);  //set the gain of the Left-channel gain processor
-      gain2.setGain_dB(vol_knob_gain_dB);  //set the gain of the Right-channel gain processor
-      Serial.print("servicePotentiometer: Digital Gain dB = "); Serial.println(vol_knob_gain_dB); //print text to Serial port for debugging
+      sine1.frequency(new_value); 
+      Serial.print("servicePotentiometer: Frequency (Hz) = "); Serial.println(new_value); //print text to Serial port for debugging
     }
     lastUpdate_millis = curTime_millis;
   } // end if
