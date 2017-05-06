@@ -15,8 +15,8 @@ class AudioEffectFreqDomain_F32 : public AudioStream_F32
     //constructors
     AudioEffectFreqDomain_F32(void) : AudioStream_F32(1, inputQueueArray_f32) {};
     AudioEffectFreqDomain_F32(const AudioSettings_F32 &settings) : AudioStream_F32(1, inputQueueArray_f32) { 
-      int _N_FFT = 2*settings.audio_block_samples;  //default to 50% overlap!
-      setup(settings,_N_FFT);
+      //int _N_FFT = 2*settings.audio_block_samples;  //default to 50% overlap!
+      //setup(settings,_N_FFT);
     }
     AudioEffectFreqDomain_F32(const AudioSettings_F32 &settings, const int _N_FFT) : AudioStream_F32(1, inputQueueArray_f32) { 
       setup(settings,_N_FFT);
@@ -35,9 +35,9 @@ class AudioEffectFreqDomain_F32 : public AudioStream_F32
     void setup(const AudioSettings_F32 &settings, const int _N_FFT) {
       //choose valid _N_FFT
       if (!myFFT.is_valid_N_FFT(_N_FFT)) {
-          Serial.println("AudioEffectFreqDomain_F32: *** ERROR ***");
-          Serial.print("  : N_FFT "); Serial.print(_N_FFT); 
-          Serial.print(" is not allowed.  Try a power of 2 between 16 and 2048");
+          Serial.println(F("AudioEffectFreqDomain_F32: *** ERROR ***"));
+          Serial.print(F("  : N_FFT ")); Serial.print(_N_FFT); 
+          Serial.print(F(" is not allowed.  Try a power of 2 between 16 and 2048"));
           return;
       }
       
@@ -50,9 +50,9 @@ class AudioEffectFreqDomain_F32 : public AudioStream_F32
       N_FFT = N_BUFF_BLOCKS * audio_block_samples;
       
       //print FFT parameters
-      Serial.println("AudioEffectFreqDomain: setup...");
-      Serial.print("    : N_FFT = "); Serial.println(N_FFT);
-      Serial.print("    : N_BUFF_BLOCKS = "); Serial.println(N_BUFF_BLOCKS);
+      Serial.println(F("AudioEffectFreqDomain: setup..."));
+      Serial.print(F("    : N_FFT = ")); Serial.println(N_FFT);
+      Serial.print(F("    : N_BUFF_BLOCKS = ")); Serial.println(N_BUFF_BLOCKS);
 
       //setup the FFT routines
       myFFT.setup(N_FFT); myFFT.useHanningWindow();
@@ -284,14 +284,14 @@ void AudioEffectFreqDomain_F32::update(void)
   //do overlap and add with previously computed data
   int output_count = 0;
   for (int i = 0; i < N_BUFF_BLOCKS - 1; i++) { //Notice that this loop does NOT do the last block.  That's a special case after.
-    for (int j = 0; j < AUDIO_BLOCK_SAMPLES; j++) {
+    for (int j = 0; j < audio_block_samples; j++) {
       output_buff_blocks[i]->data[j] +=  second_complex_buffer[2*output_count]; //add the real part into the previous results
       output_count++;
     }
   }
 
   //now write in the newest data into the last block, overwriting any garbage that might have existed there
-  for (int j = 0; j < AUDIO_BLOCK_SAMPLES; j++) {
+  for (int j = 0; j < audio_block_samples; j++) {
     output_buff_blocks[N_BUFF_BLOCKS - 1]->data[j] =  second_complex_buffer[2*output_count]; //overwrite with the newest data
     output_count++;
   }

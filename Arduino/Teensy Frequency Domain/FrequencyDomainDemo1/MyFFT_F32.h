@@ -23,10 +23,16 @@ class MyFFT_F32
       setup(_N_FFT,_is_IFFT);
     }
     void setup(const int _N_FFT, const int _is_IFFT) {
+      if (!is_valid_N_FFT(_N_FFT)) {
+        Serial.println(F("MyFFT_F32: *** ERROR ***"));
+        Serial.print(F("    : Cannot use N_FFT = ")); Serial.println(N_FFT);
+        Serial.print(F("    : Must be power of 2 between 16 and 2048"));
+        return;
+      }
       N_FFT = _N_FFT;
       is_IFFT = _is_IFFT;
 
-      if ((N_FFT % 4) == 0) { //if ((N_FFT == 16) || (N_FFT == 64) || (N_FFT == 256) || (N_FFT == 1024)) {
+      if ((N_FFT == 16) || (N_FFT == 64) || (N_FFT == 256) || (N_FFT == 1024)) {
         arm_cfft_radix4_init_f32(&fft_inst_r4, N_FFT, is_IFFT, 1); //FFT
         is_rad4 = 1;
       } else {

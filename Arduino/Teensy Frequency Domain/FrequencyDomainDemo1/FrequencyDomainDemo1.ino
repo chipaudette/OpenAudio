@@ -20,18 +20,18 @@
 
 //set the sample rate and block size
 const float sample_rate_Hz = 24000.0f ; //24000 or 44117 (or other frequencies in the table in AudioOutputI2S_F32)
-const int audio_block_samples = 128;     //for freq domain processing choose a power of 2 (16, 32, 64, 128) but no higher than 128
+const int audio_block_samples = 64;     //for freq domain processing choose a power of 2 (16, 32, 64, 128) but no higher than 128
 AudioSettings_F32 audio_settings(sample_rate_Hz, audio_block_samples);
 
 //create audio library objects for handling the audio
 AudioControlTLV320AIC3206 audioHardware;
 AudioInputI2S_F32         i2s_in(audio_settings);   //Digital audio *from* the Tympan AIC. 
-AudioSynthWaveformSine_F32  sine1;                  //alternate input source
-AudioEffectFreqDomain_F32     audioEffectFD;
+AudioSynthWaveformSine_F32  sine1(audio_settings);                  //alternate input source
+AudioEffectFreqDomain_F32   audioEffectFD(audio_settings);
 AudioOutputI2S_F32        i2s_out(audio_settings);  //Digital audio *to* the Tympan AIC.
 
 //Make all of the audio connections
-#if 0
+#if 1
   //use microphone as input
   AudioConnection_F32       patchCord1(i2s_in, 0, audioEffectFD, 0);    //connect the Left input 
 #else
@@ -56,12 +56,11 @@ void setup() {
  
   // Audio connections require memory to work.  For more
   // detailed information, see the MemoryAndCpuUsage example
-  AudioMemory(10); AudioMemory_F32(50, audio_settings);
-  Serial.println("Memory allocated.");
+  AudioMemory(10); AudioMemory_F32(20, audio_settings);
 
   // Configure the frequency-domain algorithm
   int N_FFT = 256;
-  audioEffectFD.setup(audio_settings,N_FFT); //do after AudioMemory();
+  audioEffectFD.setup(audio_settings,N_FFT); //do after AudioMemory_F32();
 
  //Enable the Tympan to start the audio flowing!
   audioHardware.enable(); // activate AIC
@@ -81,7 +80,7 @@ void setup() {
 
   // Create a synthetic sine wave, for testing
   // To use this, edit the connections above
-  sine1.amplitude(0.5); //betweeon zero and one
+  sine1.amplitude(0.1); //betweeon zero and one
   sine1.frequency(1000.0f);
 
   // check the volume knob
