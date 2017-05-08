@@ -7,7 +7,7 @@
 #include "MyFFT_F32.h"
 //#include "utility/dspinst.h"  //copied from analyze_fft256.cpp.  Do we need this?
 
-#define MAX_N_BUFF_BLOCKS 16  //some number larger than you'll want to use
+#define MAX_N_BUFF_BLOCKS 32  //some number larger than you'll want to use
 
 class AudioEffectFreqDomain_F32 : public AudioStream_F32
 {
