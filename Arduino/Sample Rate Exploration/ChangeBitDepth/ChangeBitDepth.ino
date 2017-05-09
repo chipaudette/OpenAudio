@@ -76,7 +76,7 @@ void setup() {
   servicePotentiometer(millis(),0);  //the "0" is not relevant here.
 
   sine1.frequency(1000.f);
-  sine1.amplitude(0.1);
+  sine1.amplitude(0.03);
   Serial.println("Setup complete.");
 } //end setup()
 
