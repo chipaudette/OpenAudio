@@ -27,7 +27,7 @@ AudioSynthWaveformSine_F32  sine1(audio_settings);
 
 #if 0
   //original 16-bit version
-  AudioOutputI2S_32bit_F32        i2s_out(audio_settings);  //Digital audio *to* the Tympan AIC.  Always list last to minimize latency
+  AudioOutputI2S_F32        i2s_out(audio_settings);  //Digital audio *to* the Tympan AIC.  Always list last to minimize latency
 #else
   //new 32-bit version
   AudioOutputI2S_32bit_F32        i2s_out(audio_settings);  //Digital audio *to* the Tympan AIC.  Always list last to minimize latency
@@ -116,7 +116,7 @@ void servicePotentiometer(unsigned long curTime_millis, unsigned long updatePeri
       const float min_val = 200.0, max_val = 2000.0; //set desired range
       float new_value = min_val + (max_val - min_val)*val; //
 
-      //command the new gain setting
+      //command the new frequency setting
       sine1.frequency(new_value); 
       Serial.print("servicePotentiometer: Frequency (Hz) = "); Serial.println(new_value); //print text to Serial port for debugging
     }
