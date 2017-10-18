@@ -1,6 +1,6 @@
 
-#ifndef effect_freqDomain_h_
-#define effect_freqDomain_h_
+#ifndef _effect_freqDomain_h
+#define _effect_freqDomain_h
 
 #include "Arduino.h"
 #include "AudioStream.h"
