@@ -37,9 +37,9 @@ int count=0;
 void loop() {
   // put your main code here, to run repeatedly:
 
-  if (count++ < 2) {
-    const int N_N = 5;
-    int32_t all_N[] = {32, 64, 128, 256, 512};
+  if (count++ < 1) {
+    const int N_N = 8;
+    int32_t all_N[] = {16, 32, 64, 128, 256, 512, 1024, 2048};
     for (int i=0; i < N_N; i++) {
       tryInitFFT(all_N[i]);
     }
