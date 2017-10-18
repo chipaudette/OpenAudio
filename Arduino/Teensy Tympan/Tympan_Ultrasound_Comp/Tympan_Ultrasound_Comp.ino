@@ -46,7 +46,6 @@ AudioSettings_F32   audio_settings(sample_rate_Hz, audio_block_samples);
 #endif
 AudioSynthWaveformSine_F32  testSignal(audio_settings);          //use to generate test tone as input
 AudioInputI2S_F32           i2s_in(audio_settings);          //Digital audio *from* the Teensy Audio Board ADC.  Sends Int16.  Stereo.
-AudioOutputI2S_F32          i2s_out(audio_settings);        //Digital audio *to* the Teensy Audio Board DAC.  Expects Int16.  Stereo
 
 // GUItool: begin automatically generated code
 AudioEffectGain_F32      preGainL, preGainR;          //xy=176,192
@@ -54,8 +53,9 @@ AudioFilterBiquad_F32       iirL1, iirL2;           //xy=271,258
 AudioFilterBiquad_F32       iirR1, iirR2;           //xy=280,275
 AudioSynthWaveformSine_F32 sine2(audio_settings);          //xy=275,397
 AudioMultiply_F32        multiplyL, multiplyR;      //xy=408,318
-AudioEffectCompWDRC_F32    compBroadband;          //broad band compressor
 AudioMixer4_F32             mixerL, mixerR;
+AudioEffectCompWDRC_F32  compWDRC1;      //xy=427,172
+AudioOutputI2S_F32          i2s_out(audio_settings);        //Digital audio *to* the Teensy Audio Board DAC.  Expects Int16.  Stereo
 
 #if USE_TEST_TONE_INPUT
   AudioConnection_F32         patchCord1(testSignal, 0, preGainL, 0);
@@ -63,7 +63,7 @@ AudioMixer4_F32             mixerL, mixerR;
     AudioConnection_F32         patchCord101(testSignal, 0, preGainR, 0);
   #endif
 #else
-  AudioConnection_F32         patchCord1(i2s_in, 1, preGainL, 0);
+  AudioConnection_F32         patchCord1(i2s_in, 0, preGainL, 0); 
   #if USE_STEREO
     AudioConnection_F32         patchCord101(i2s_in, 1, preGainR, 0);
   #endif
@@ -74,8 +74,8 @@ AudioConnection_F32         patchCord10(iirL2, 0, multiplyL, 0);
 AudioConnection_F32         patchCord4(sine2, 0, multiplyL, 1);
 AudioConnection_F32         patchCord20(i2s_in, 0, mixerL, 0);
 AudioConnection_F32         patchCord21(multiplyL, 0, mixerL, 1);
-AudioConnection_F32         patchCord31(mixerL, 0, compBroadband, 0);
-AudioConnection_F32         patchCord5(compBroadband, 0, i2s_out, 0);
+AudioConnection_F32         patchCord27(mixerL, 0, compWDRC1, 0);
+AudioConnection_F32         patchCord5(compWDRC1, 0, i2s_out, 0);
 
 #if USE_STEREO
   AudioConnection_F32         patchCord200(preGainR, 0, iirR1, 0);
@@ -86,7 +86,7 @@ AudioConnection_F32         patchCord5(compBroadband, 0, i2s_out, 0);
   AudioConnection_F32         patchCord2100(multiplyR, 0, mixerR, 1);
   AudioConnection_F32         patchCord500(mixerR, 0, i2s_out, 1);
 #else
-  AudioConnection_F32         patchCord6(mixerL, 0, i2s_out, 1);
+  AudioConnection_F32         patchCord6(compWDRC1, 0, i2s_out, 1);
 #endif
 
 
@@ -121,7 +121,7 @@ void setupAudioHardware(void) {
   
     //set volumes
     audioHardware.volume_dB(0);  // -63.6 to +24 dB in 0.5dB steps.  uses signed 8-bit
-    audioHardware.setInputGain_dB(30); // set MICPGA volume, 0-47.5dB in 0.5dB setps
+    audioHardware.setInputGain_dB(20); // set MICPGA volume, 0-47.5dB in 0.5dB setps
   #endif
 
   //setup the potentiometer.  same for Teensy Audio Board as for Tympan
@@ -137,8 +137,8 @@ float32_t carrier_freq_Hz = 38000.0f;
 //define functions to setup the audio processing parameters
 void setupAudioProcessing(void) {
   //set the pre-gain (if used)
-  preGainL.setGain_dB(0.0f);
-  preGainR.setGain_dB(0.0f);
+  preGainL.setGain_dB(10.0f);
+  preGainR.setGain_dB(10.0f);
 
   //setup the HP filter
   iirL1.setFilterCoeff_Matlab(hp_a, hp_b);
