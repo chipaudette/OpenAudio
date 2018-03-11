@@ -15,7 +15,7 @@
 #include <Tympan_Library.h>  //include the Tympan Library
 
 //set the sample rate and block size
-const float sample_rate_Hz = 44117.f ; //24000 or 44117 (or other frequencies in the table in AudioOutputI2S_F32)
+const float sample_rate_Hz = 44117.64706 * 2 ; //24000 or 44117 (or other frequencies in the table in AudioOutputI2S_F32)
 const int audio_block_samples = 128;     //do not make bigger than AUDIO_BLOCK_SAMPLES from AudioStream.h (which is 128)
 const int bit_depth = 32;
 AudioSettings_F32 audio_settings(sample_rate_Hz, audio_block_samples, bit_depth);
@@ -48,6 +48,13 @@ void setup() {
   //begin the serial comms (for debugging)
   Serial.begin(115200);  delay(500);
   Serial.println("ChangeBitDepth (Tone): starting setup()...");
+
+  //hard reset the AIC
+  Serial.println("Hardware reset of AIC...");
+  pinMode(21,OUTPUT); 
+  digitalWrite(21,HIGH);delay(100); //not reset
+  digitalWrite(21,LOW);delay(100);  //reset
+  digitalWrite(21,HIGH);delay(1000);//not reset
   
   //allocate the audio memory
   AudioMemory(10); AudioMemory_F32(200,audio_settings); //allocate both kinds of memory
@@ -61,8 +68,8 @@ void setup() {
   
 
   //Choose the desired input
-  audioHardware.inputSelect(TYMPAN_INPUT_ON_BOARD_MIC); // use the on board microphones
-  //  audioHardware.inputSelect(TYMPAN_INPUT_JACK_AS_MIC); // use the microphone jack - defaults to mic bias 2.5V
+  //audioHardware.inputSelect(TYMPAN_INPUT_ON_BOARD_MIC); // use the on board microphones
+  audioHardware.inputSelect(TYMPAN_INPUT_JACK_AS_MIC); // use the microphone jack - defaults to mic bias 2.5V
   //  audioHardware.inputSelect(TYMPAN_INPUT_JACK_AS_LINEIN); // use the microphone jack - defaults to mic bias OFF
 
   //Set the desired volume levels
