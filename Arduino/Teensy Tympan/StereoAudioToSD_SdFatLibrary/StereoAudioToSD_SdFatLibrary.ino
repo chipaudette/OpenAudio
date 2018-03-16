@@ -193,7 +193,7 @@ void serviceSD(void) {
     //check to see if potentiometer has been set to start recording
     if (potentiometer_value > 0.55) {
       //yes, start recording
-      char *fname = "RECORD.RAW";
+      char *fname = "RECORD1.RAW";
       if (my_SD_writer.open(fname)) {
         Serial.print("Opened "); Serial.print(fname); Serial.println(" on SD for writing.");
         queueLeft.begin(); queueRight.begin();

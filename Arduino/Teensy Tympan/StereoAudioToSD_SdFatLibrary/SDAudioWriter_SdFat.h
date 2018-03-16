@@ -60,16 +60,12 @@ class SDAudioWriter_SdFat
     }
 
     bool open(char *fname) {
-      if (file.exists(fname)) {  //maybe this isn't necessary when using the O_TRUNC flag below
+      if (sd.exists(fname)) {  //maybe this isn't necessary when using the O_TRUNC flag below
         // The SD library writes new data to the end of the
         // file, so to start a new recording, the old file
         // must be deleted before new data is written.
-        file.open(fname);
-        file.remove();
+        sd.remove(fname);
       }
-      //if (file.open(fname, O_CREAT | O_TRUNC | O_RDWR)) { //the O_TRUNC causes this to overwrite the existing file
-      //  //if (!file.preAllocate(PRE_ALLOCATE_SIZE)) sd.errorHalt("file.preAllocate failed");
-      //}
       file.createContiguous(fname,PRE_ALLOCATE_SIZE); 
       return isFileOpen();
     }
