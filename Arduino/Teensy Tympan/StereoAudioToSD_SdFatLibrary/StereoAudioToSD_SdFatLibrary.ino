@@ -14,10 +14,10 @@
 
 //here are the libraries that we need
 #include <Tympan_Library.h>  //AudioControlTLV320AIC3206 lives here
-#include "SDAudioWriter_SdFat.h"
+#include "SDAudioWriter_SdFat.h" 
 
-#define PRINT_SD_TIMING 1
-#define MAX_F32_BLOCKS (300)   //Can't seem to use more than 192.  Won't run at all if much above 400.  
+#define PRINT_SD_TIMING 1      //set to 1 to print timing information of *every* write operation.  Great for logging to file.  Bad for real-time human reading.
+#define MAX_F32_BLOCKS (300)   //Can't seem to use more than 192, so you could set it to 192.  Won't run at all if much above 400.  
 
 //set the sample rate and block size
 const float sample_rate_Hz = 44117.0f ; //24000 or 44117 (or other frequencies in the table in AudioOutputI2S_F32)
@@ -40,11 +40,10 @@ AudioConnection_F32       patchcord4(i2s_in, 1, i2s_out, 1);    //echo audio to 
 
 //The Tympan has a potentiometer and some LEDs
 #define POT_PIN A1  //potentiometer is tied to this pin
-#define RED_LED_PIN A16  //Red LED
-#define AMBER_LED_PIN A17 //Amber LED
+#define RED_LED_PIN A16  //Red LED...shows that system is ready but not trying to write to SD
+#define AMBER_LED_PIN A17 //Amber LED...shows that system thinks that it is writing to SD
 
 // Create variables to decide how long to record to SD
-//SDAudioWriter my_SD_writer;
 SDAudioWriter_SdFat my_SD_writer;
 
 // define the setup() function, the function that is called once when the device is booting

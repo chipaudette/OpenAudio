@@ -8,9 +8,6 @@
 #ifndef _SDAudioWriter_SdFAT
 #define _SDAudioWriter_SdFAT
 
-//include "kinetis.h"
-//include "core_pins.h"
-
 //include <Tympan_Library.h>  //for data types float32_t and int16_t and whatnot
 #include <AudioStream.h>   //for AUDIO_BLOCK_SAMPLES
 #include "SdFat.h"        //https://github.com/greiman/SdFat
