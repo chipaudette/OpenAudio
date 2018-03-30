@@ -8,9 +8,10 @@
 #ifndef _SDAudioWriter_SdFAT
 #define _SDAudioWriter_SdFAT
 
-//include <Tympan_Library.h>  //for data types float32_t and int16_t and whatnot
-#include <AudioStream.h>   //for AUDIO_BLOCK_SAMPLES
-#include "SdFat.h"        //https://github.com/greiman/SdFat
+#include <SdFat_Gre.h>       //originally from https://github.com/greiman/SdFat  but class names have been modified to prevent collisions with Teensy Audio/SD libraries
+#include <Tympan_Library.h>  //for data types float32_t and int16_t and whatnot
+#include <AudioStream.h>     //for AUDIO_BLOCK_SAMPLES
+
 
 // Preallocate 40MB file.
 const uint64_t PRE_ALLOCATE_SIZE = 40ULL << 20;
@@ -39,7 +40,7 @@ class SDAudioWriter_SdFat
     int writeF32AsInt16(float32_t *chan1, float32_t *chan2, int nsamps) {
       const int buffer_len = 2 * nsamps; //it'll be stereo, so 2*nsamps
       int count = 0;
-      if (file) {
+      if (file.isOpen()) {
         for (int Isamp = 0; Isamp < nsamps; Isamp++) {
           //convert the F32 to Int16 and interleave
           write_buffer[count++] = (int16_t)(chan1[Isamp] * 32767.0);
@@ -73,7 +74,7 @@ class SDAudioWriter_SdFat
       return 0;
     }
     bool isFileOpen(void) {
-      if (file) {
+      if (file.isOpen()) {
         return true;
       } else {
         return false;
@@ -96,9 +97,9 @@ class SDAudioWriter_SdFat
     }
 
   private:
-    //SdFatSdio sd; 
-    SdFatSdioEX sd; 
-    File file;
+    //SdFatSdio sd; //slower
+    SdFatSdioEX sd; //faster
+    SdFile_Gre file;
     int16_t write_buffer[MAX_AUDIO_BUFF_LEN];
     boolean flagPrintElapsedWriteTime = false;
     elapsedMicros usec;

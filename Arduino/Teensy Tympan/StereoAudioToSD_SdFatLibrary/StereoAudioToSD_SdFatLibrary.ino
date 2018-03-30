@@ -2,8 +2,9 @@
  * StereoAudioToSD
  * 
  * Digitizes two channels and records to SD card.
- * Start recording by having potentiometer set to > 55%
- * Stop recording by having potentiometer set to < 45%
+ * 
+ *    >>> START recording by having potentiometer turned above half-way
+ *    >>> STOP recording by having potentiometer turned below half-way
  * 
  * Assumes use of Teensy 3.6 and Tympan Rev A or C.
  * 
@@ -13,14 +14,15 @@
  */
 
 //here are the libraries that we need
-#include <Tympan_Library.h>  //AudioControlTLV320AIC3206 lives here
 #include "SDAudioWriter_SdFat.h" 
+#include <Tympan_Library.h>  //AudioControlTLV320AIC3206 lives here
 
 #define PRINT_SD_TIMING 1      //set to 1 to print timing information of *every* write operation.  Great for logging to file.  Bad for real-time human reading.
-#define MAX_F32_BLOCKS (300)   //Can't seem to use more than 192, so you could set it to 192.  Won't run at all if much above 400.  
+#define MAX_F32_BLOCKS (256)   //Can't seem to use more than 192, so you could set it to 192.  Won't run at all if much above 400.  
 
 //set the sample rate and block size
-const float sample_rate_Hz = 44117.0f ; //24000 or 44117 (or other frequencies in the table in AudioOutputI2S_F32)
+//const float sample_rate_Hz = 44117.0f ; //24000 or 44117 (or other frequencies in the table in AudioOutputI2S_F32)
+const float sample_rate_Hz = 96000.0f ; //24000 or 44117 (or other frequencies in the table in AudioOutputI2S_F32)
 const int audio_block_samples = 128;     //do not make bigger than AUDIO_BLOCK_SAMPLES from AudioStream.h (which is 128)
 AudioSettings_F32 audio_settings(sample_rate_Hz, audio_block_samples);
 
@@ -56,19 +58,19 @@ void setup() {
   
   //allocate the audio memory
   AudioMemory(10); AudioMemory_F32(MAX_F32_BLOCKS,audio_settings); //I can only seem to allocate 400 blocks
-
- Serial.println("StereoAudioToSD: memory allocated.");
+  Serial.println("StereoAudioToSD: memory allocated.");
   
   //Enable the Tympan to start the audio flowing!
   audioHardware.enable(); // activate AIC
+  Serial.print("StereoAudioToSD: runnng at a sample rate of (Hz): ");
+  Serial.println(sample_rate_Hz);
   
   //Choose the desired audio input on the Typman
-  //audioHardware.inputSelect(TYMPAN_INPUT_ON_BOARD_MIC); // use the on board microphones
+  audioHardware.inputSelect(TYMPAN_INPUT_ON_BOARD_MIC); // use the on-board microphones
   //audioHardware.inputSelect(TYMPAN_INPUT_JACK_AS_MIC); // use the microphone jack - defaults to mic bias 2.5V
-  audioHardware.inputSelect(TYMPAN_INPUT_JACK_AS_LINEIN); // use the microphone jack - defaults to mic bias OFF
+  //audioHardware.inputSelect(TYMPAN_INPUT_JACK_AS_LINEIN); // use the microphone jack - defaults to mic bias OFF
 
-  //Set the desired volume levels
-  audioHardware.volume_dB(0);                   // headphone amplifier.  -63.6 to +24 dB in 0.5dB steps.
+  //Set the desired input gain level
   audioHardware.setInputGain_dB(input_gain_dB); // set input volume, 0-47.5dB in 0.5dB setps
   
   // setup any other other features
@@ -157,7 +159,8 @@ void serviceSD(void) {
       //my_SD_writer.writeF32AsInt16(queueLeft.readBuffer(),audio_block_samples);  //mono
       my_SD_writer.writeF32AsInt16(queueLeft.readBuffer(),queueRight.readBuffer(),audio_block_samples); //stereo
       queueLeft.freeBuffer(); queueRight.freeBuffer();
-      
+
+      //print timing information to help debug hiccups in the audio.  Are the writes fast enough?  Are there overruns?
       if (PRINT_SD_TIMING) {
         Serial.print("Overrun: "); 
         Serial.print(queueLeft.getOverrun()); //zero means no overrun
@@ -179,7 +182,7 @@ void serviceSD(void) {
     }
 
     //check to see if potentiometer is set to turn off recording
-    if (potentiometer_value < 0.45) {
+    if (potentiometer_value < 0.45) {  //turn below half-way to stop the recording
       //stop recording
       Serial.println("Closing SD File...");
       my_SD_writer.close();
@@ -190,7 +193,7 @@ void serviceSD(void) {
     //no SD recording currently, so no SD action
 
     //check to see if potentiometer has been set to start recording
-    if (potentiometer_value > 0.55) {
+    if (potentiometer_value > 0.55) {   //turn above half-way to start the recording
       //yes, start recording
       char *fname = "RECORD1.RAW";
       if (my_SD_writer.open(fname)) {
