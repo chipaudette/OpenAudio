@@ -13,8 +13,9 @@
 // See: https://forum.pjrc.com/threads/41371-Quad-channel-output-on-Teensy-3-6
 // See: https://forum.pjrc.com/threads/29373-Bit-bang-multiple-I2S-inputs-simultaneously?p=79606&viewfull=1#post79606
 //
-// On Teensy 3.6, RXD1 is Teensy Pin XXX, and TXD1 is Teensy Pin XXX.  The Teensy Audio code
-// for the I2SQuad objects follows to the correct pins for the second Tympan board.  Yay.
+// On Teensy 3.6, RXD1 is Teensy 3.6 Pin 38 (PTC11), and TXD1 is Teensy 3.6 Pin 15 (PTC0).
+// The Teensy Audio code for the I2SQuad objects follows to the correct pins for the second
+// Tympan board.  Yay.
 
 #include <Audio.h>
 #include <control_tlv320aic3206.h>
