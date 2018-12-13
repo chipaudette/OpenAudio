@@ -19,7 +19,6 @@
 
 #include <Audio.h>
 #include <control_tlv320aic3206.h>
-#include <WireKinetis.h>
 
 // Define audio objects
 AudioInputI2SQuad        i2s_quad_in;      //xy=228,103
@@ -30,8 +29,11 @@ AudioSynthNoisePink      pink2;          //xy=223,243
 AudioSynthWaveformSine   sine2;          //xy=224,186
 AudioOutputI2SQuad       i2s_quad_out;      //xy=584,97
 //AudioOutputI2S       i2s_quad_out;      //xy=584,97
-AudioControlTLV320AIC3206     tympan1;
-AudioControlTLV320AIC3206     tympan2;  
+
+AudioControlTLV320AIC3206     tympan1;  //using I2C bus SCL0/SDA0
+#define AIC_ALT_REST_PIN 20
+#define AIC_ALT_I2C_BUS 2
+AudioControlTLV320AIC3206     tympan2(AIC_ALT_REST_PIN,AIC_ALT_I2C_BUS);  //second Tympan! using I2C bus SCL2/SDA2
 
 //define connections
 #if 1
@@ -60,8 +62,8 @@ void setup() {
   AudioMemory(50);
 
   //Enable the Tympan to start the audio flowing!
-  tympan1.enable(0,AIC3206_DEFAULT_RESET_PIN); // activate AIC  using I2C bus SCL0/SDA0
-  tympan2.enable(2,AIC3206_ALTERNATIVE_RESET_PIN); // activate AIC using I2C bus SCL2/SDA2
+  tympan1.enable();
+  tympan2.enable();
 
   //Choose the desired input
   //tympan1.inputSelect(TYMPAN_INPUT_ON_BOARD_MIC);     // use the on board microphones
@@ -91,11 +93,13 @@ void loop() {
   delay(1000);
   Serial.println("playing...");
 
+  //change output volume on one of the two Tympans to confirm that we can control
+  //one (and just that one) Tympan.
   setQuiet = !setQuiet;
   if (setQuiet) {
-    tympan1.volume_dB(vol_knob_gain_dB-10.0);
+    tympan2.volume_dB(vol_knob_gain_dB-10.0);
   } else {
-    tympan1.volume_dB(vol_knob_gain_dB);
+    tympan2.volume_dB(vol_knob_gain_dB);
   }
   
 }
