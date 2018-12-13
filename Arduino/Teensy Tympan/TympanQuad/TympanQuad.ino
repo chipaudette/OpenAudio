@@ -19,6 +19,7 @@
 
 #include <Audio.h>
 #include <control_tlv320aic3206.h>
+#include <WireKinetis.h>
 
 // Define audio objects
 AudioInputI2SQuad        i2s_quad_in;      //xy=228,103
@@ -33,7 +34,7 @@ AudioControlTLV320AIC3206     tympan1;
 AudioControlTLV320AIC3206     tympan2;  
 
 //define connections
-#if 0
+#if 1
 //play synthetic sounds
 AudioConnection          patchCord1(sine1, 0, i2s_quad_out, 0);
 AudioConnection          patchCord2(pink1, 0, i2s_quad_out, 1);
@@ -53,13 +54,14 @@ float vol_knob_gain_dB = 0.0;      //will be overridden by volume knob
 void setup() {
   Serial.begin(115200);  delay(500);
   Serial.println("AudioPassThru: Starting setup()...");
+  Wire1.end(); //delete Wire1;
 
   //allocate the dynamic memory for audio processing blocks
   AudioMemory(50);
 
   //Enable the Tympan to start the audio flowing!
-  tympan1.enable(); // activate AIC
-  tympan2.enable(); // activate AIC
+  tympan1.enable(0,AIC3206_DEFAULT_RESET_PIN); // activate AIC  using I2C bus SCL0/SDA0
+  tympan2.enable(2,AIC3206_ALTERNATIVE_RESET_PIN); // activate AIC using I2C bus SCL2/SDA2
 
   //Choose the desired input
   //tympan1.inputSelect(TYMPAN_INPUT_ON_BOARD_MIC);     // use the on board microphones
@@ -84,8 +86,17 @@ void setup() {
   Serial.println("Setup complete.");
 }
 
+bool setQuiet = false;
 void loop() {
   delay(1000);
   Serial.println("playing...");
+
+  setQuiet = !setQuiet;
+  if (setQuiet) {
+    tympan1.volume_dB(vol_knob_gain_dB-10.0);
+  } else {
+    tympan1.volume_dB(vol_knob_gain_dB);
+  }
+  
 }
 
