@@ -17,40 +17,40 @@
 // The Teensy Audio code for the I2SQuad objects follows to the correct pins for the second
 // Tympan board.  Yay.
 
-#include <Audio.h>
-#include <control_tlv320aic3206.h>
+#include <Audio.h>   //yes, I'm going to use the Teensy Audio library
+#include <control_tlv320aic3206.h>  //from the Tympan library, I'm including just this one header file.
 
-// Define audio objects
-AudioInputI2SQuad        i2s_quad_in;      //xy=228,103
-//AudioInputI2S        i2s_quad_in;      //xy=228,103
-AudioSynthNoisePink      pink1;          //xy=223,243
-AudioSynthWaveformSine   sine1;          //xy=224,186
-AudioSynthNoisePink      pink2;          //xy=223,243
-AudioSynthWaveformSine   sine2;          //xy=224,186
-AudioOutputI2SQuad       i2s_quad_out;      //xy=584,97
-//AudioOutputI2S       i2s_quad_out;      //xy=584,97
 
+// Define audio objects...notice that I'm using the Teensy Audio library, not the Tympan library
+AudioInputI2SQuad        i2s_quad_in;    //This is the Teensy Audio library's built-in 4-channel I2S class        
+AudioSynthNoisePink      pink1,pink2;        
+AudioSynthWaveformSine   sine1,sine2;          
+AudioOutputI2SQuad       i2s_quad_out;   //This is the Teensy Audio library's built-in 4-channel I2S class   
+
+//setup the first Tympan using the default settings
 AudioControlTLV320AIC3206     tympan1;  //using I2C bus SCL0/SDA0
+
+//setup the second Tympan using the pins just for the second AIC
 #define AIC_ALT_REST_PIN 20
 #define AIC_ALT_I2C_BUS 2
 AudioControlTLV320AIC3206     tympan2(AIC_ALT_REST_PIN,AIC_ALT_I2C_BUS);  //second Tympan! using I2C bus SCL2/SDA2
 
-//define connections
+//define the audio connections (again, using the Teensy Audio library classes, not Tympan library)
 #if 1
-//play synthetic sounds
-AudioConnection          patchCord1(sine1, 0, i2s_quad_out, 0);
-AudioConnection          patchCord2(pink1, 0, i2s_quad_out, 1);
-AudioConnection          patchCord3(pink2, 0, i2s_quad_out, 2);
-AudioConnection          patchCord4(sine2, 0, i2s_quad_out, 3);
+  //play synthetic sounds...tests only the *output* of the 4-channel system
+  AudioConnection          patchCord1(sine1, 0, i2s_quad_out, 0); //sine on left, Tympan1.  Freq is set later.
+  AudioConnection          patchCord2(pink1, 0, i2s_quad_out, 1); //pink noise on right, Tympan1
+  AudioConnection          patchCord3(pink2, 0, i2s_quad_out, 2); //pink noise on right, Tympan2
+  AudioConnection          patchCord4(sine2, 0, i2s_quad_out, 3); //sine on left, Tympan2.  Freq is set later.
 #else
-//copy the input to the output...but jump between the two boards
-AudioConnection          patchCord1(i2s_quad_in, 2, i2s_quad_out, 0);
-AudioConnection          patchCord2(i2s_quad_in, 3, i2s_quad_out, 1);
-AudioConnection          patchCord3(i2s_quad_in, 0, i2s_quad_out, 2);
-AudioConnection          patchCord4(i2s_quad_in, 1, i2s_quad_out, 3);
+  //connect the pink input jack (as line-in, not mic-in) to the output...test both input and output
+  AudioConnection          patchCord1(i2s_quad_in, 0, i2s_quad_out, 0);
+  AudioConnection          patchCord2(i2s_quad_in, 1, i2s_quad_out, 1);
+  AudioConnection          patchCord3(i2s_quad_in, 2, i2s_quad_out, 2);
+  AudioConnection          patchCord4(i2s_quad_in, 3, i2s_quad_out, 3);
 #endif
 
-const float input_gain_dB = 0.0f; //gain on the microphone
+const float input_gain_dB = 20.0f; //gain on the microphone
 float vol_knob_gain_dB = 0.0;      //will be overridden by volume knob
 
 void setup() {
@@ -79,28 +79,64 @@ void setup() {
   tympan2.setInputGain_dB(input_gain_dB); // set input volume, 0-47.5dB in 0.5dB setps
 
   //setup sound sources
-  sine1.frequency(250.0);sine1.amplitude(0.2);
+  sine1.frequency(250.0);sine1.amplitude(0.2);  //set frequency...this one is low
   pink1.amplitude(0.2);
   pink2.amplitude(0.2);
-  sine2.frequency(1900.0);sine2.amplitude(0.2);
+  sine2.frequency(1900.0);sine2.amplitude(0.2);  //set frequency...this one is high
    
-  
   Serial.println("Setup complete.");
 }
 
 bool setQuiet = false;
 void loop() {
+
   delay(1000);
   Serial.println("playing...");
-
-  //change output volume on one of the two Tympans to confirm that we can control
-  //one (and just that one) Tympan.
-  setQuiet = !setQuiet;
-  if (setQuiet) {
-    tympan2.volume_dB(vol_knob_gain_dB-10.0);
-  } else {
-    tympan2.volume_dB(vol_knob_gain_dB);
-  }
   
+  #if 1
+    //change output volume on just Tympan 2 to confirm that we can control one (and only one) Tympan
+    setQuiet = !setQuiet;
+    if (setQuiet) {
+      tympan2.volume_dB(vol_knob_gain_dB-10.0);
+    } else {
+      tympan2.volume_dB(vol_knob_gain_dB);
+    }
+  #else
+    //check the potentiometer
+    //servicePotentiometer(millis(),100); //service the potentiometer every 100 msec
+  #endif
 }
+
+
+////servicePotentiometer: listens to the blue potentiometer and sends the new pot value
+////  to the audio processing algorithm as a control parameter
+//void servicePotentiometer(unsigned long curTime_millis, unsigned long updatePeriod_millis) {
+//  //static unsigned long updatePeriod_millis = 100; //how many milliseconds between updating the potentiometer reading?
+//  static unsigned long lastUpdate_millis = 0;
+//  static float prev_val = -1.0;
+//
+//  //has enough time passed to update everything?
+//  if (curTime_millis < lastUpdate_millis) lastUpdate_millis = 0; //handle wrap-around of the clock
+//  if ((curTime_millis - lastUpdate_millis) > updatePeriod_millis) { //is it time to update the user interface?
+//
+//    //read potentiometer
+//    float val = float(analogRead(POT_PIN)) / 1024.0; //0.0 to 1.0
+//    val = (1.0/9.0) * (float)((int)(9.0 * val + 0.5)); //quantize so that it doesn't chatter...0 to 1.0
+//
+//    //send the potentiometer value to your algorithm as a control parameter
+//    if (abs(val - prev_val) > 0.05) { //is it different than before?
+//      prev_val = val;  //save the value for comparison for the next time around
+//
+//      //choose the desired gain value based on the knob setting
+//      const float min_gain_dB = -20.0, max_gain_dB = 40.0; //set desired gain range
+//      vol_knob_gain_dB = min_gain_dB + (max_gain_dB - min_gain_dB)*val; //computed desired gain value in dB
+//
+//      //command the new gain setting
+//      gain1.setGain_dB(vol_knob_gain_dB);  //set the gain of the Left-channel gain processor
+//      gain2.setGain_dB(vol_knob_gain_dB);  //set the gain of the Right-channel gain processor
+//      Serial.print("servicePotentiometer: Digital Gain dB = "); Serial.println(vol_knob_gain_dB); //print text to Serial port for debugging
+//    }
+//    lastUpdate_millis = curTime_millis;
+//  } // end if
+//} //end servicePotentiometer();
 
