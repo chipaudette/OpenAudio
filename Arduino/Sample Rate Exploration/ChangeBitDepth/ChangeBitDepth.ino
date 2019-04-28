@@ -21,9 +21,9 @@ const int bit_depth = 32;
 AudioSettings_F32 audio_settings(sample_rate_Hz, audio_block_samples, bit_depth);
 
 //create audio library objects for handling the audio
-AudioControlTLV320AIC3206 audioHardware;
-//AudioInputI2S_32bit_F32         i2s_in(audio_settings);   //Digital audio *from* the Tympan AIC. 
-AudioSynthWaveformSine_F32  sine1(audio_settings);
+AudioControlAIC3206          audioHardware;
+//AudioInputI2S_32bit_F32    i2s_in(audio_settings);   //Digital audio *from* the Tympan AIC. 
+AudioSynthWaveformSine_F32   sine1(audio_settings);
 
 #if 0
   //original 16-bit version

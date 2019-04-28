@@ -23,11 +23,8 @@
 #define USE_STEREO 0
 
 // Include all the of the needed libraries
-//include <Audio.h>      //Teensy Audio Library
 #include <Wire.h>
 #include <SPI.h>
-//include <SD.h>
-//include <SerialFlash.h>
 #include <Tympan_Library.h> //for AudioConvert_I16toF32, AudioConvert_F32toI16, and AudioEffectGain_F32
 
 
@@ -36,7 +33,7 @@ const int audio_block_samples = 128;  //do not make bigger than AUDIO_BLOCK_SAMP
 AudioSettings_F32   audio_settings(sample_rate_Hz, audio_block_samples);
 
 //create audio library objects for handling the audio
-AudioControlTLV320AIC3206   audioHardware;    //controller for the Teensy Audio Board
+AudioControlAIC3206         audioHardware;    //controller for the Teensy Audio Board
 //AudioSynthWaveformSine_F32  testSignal(audio_settings);          //use to generate test tone as input
 AudioInputI2S_F32           i2s_in(audio_settings);          //Digital audio *from* the Teensy Audio Board ADC.  Sends Int16.  Stereo.
 AudioOutputI2S_F32          i2s_out(audio_settings);        //Digital audio *to* the Teensy Audio Board DAC.  Expects Int16.  Stereo

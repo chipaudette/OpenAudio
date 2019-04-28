@@ -42,7 +42,7 @@ AudioSettings_F32   audio_settings(sample_rate_Hz, audio_block_samples);
 #if USE_TYMPAN == 0
   AudioControlSGTL5000        audioHardware;    //controller for the Teensy Audio Board
 #else
-  AudioControlTLV320AIC3206   audioHardware;    //controller for the Teensy Audio Board
+  AudioControlAIC3206   audioHardware;    //controller for the Teensy Audio Board
 #endif
 AudioSynthWaveformSine_F32  testSignal(audio_settings);          //use to generate test tone as input
 AudioInputI2S_F32           i2s_in(audio_settings);          //Digital audio *from* the Teensy Audio Board ADC.  Sends Int16.  Stereo.
@@ -52,7 +52,7 @@ AudioEffectGain_F32      preGainL, preGainR;          //xy=176,192
 AudioFilterBiquad_F32       iirL1, iirL2;           //xy=271,258
 AudioFilterBiquad_F32       iirR1, iirR2;           //xy=280,275
 AudioSynthWaveformSine_F32 sine2(audio_settings);          //xy=275,397
-AudioMultiply_F32        multiplyL, multiplyR;      //xy=408,318
+AudioMathMultiply_F32        multiplyL, multiplyR;      //xy=408,318
 AudioMixer4_F32             mixerL, mixerR;
 AudioEffectCompWDRC_F32  compWDRC1;      //xy=427,172
 AudioOutputI2S_F32          i2s_out(audio_settings);        //Digital audio *to* the Teensy Audio Board DAC.  Expects Int16.  Stereo
@@ -132,7 +132,7 @@ void setupAudioHardware(void) {
 float32_t hp_b[] = {0.186694333116378,  -0.373388666232757,   0.186694333116378};
 float32_t hp_a[] = { 1.000000000000000,   0.462938025291041,   0.209715357756555};
 
-float32_t carrier_freq_Hz = 38000.0f;
+float32_t carrier_freq_Hz = 37000.0f;
 
 //define functions to setup the audio processing parameters
 void setupAudioProcessing(void) {

@@ -18,7 +18,7 @@
 #include "SerialManager.h"
 
 //create audio library objects for handling the audio
-AudioControlTLV320AIC3206 audioHardware;
+AudioControlAIC3206       audioHardware;
 AudioSynthWaveformSine_F32 sine1;
 AudioEffectGain_F32       gain1;                      //Applies digital gain to audio data.
 AudioOutputI2S_F32        i2s_out;    //Digital audio out *to* the Teensy Audio Board DAC. 

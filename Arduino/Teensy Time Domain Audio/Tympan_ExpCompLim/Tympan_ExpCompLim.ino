@@ -18,11 +18,11 @@
  */
 
 #include <Tympan_Library.h>
-#include <Audio.h>
+//include <Audio.h>
 #include <Wire.h>
 #include <SPI.h>
-#include <SD.h>
-#include <SerialFlash.h>
+//include <SD.h>
+//include <SerialFlash.h>
 
 #include "AudioEffectExpCompLim.h"
 #include "SerialManager.h"
@@ -55,7 +55,7 @@ AudioTestSignalMeasurement_F32  audioTestMeasurement(audio_settings);
 AudioControlTestAmpSweep_F32    ampSweepTester(audio_settings,audioTestGenerator,audioTestMeasurement);
 AudioControlTestFreqSweep_F32    freqSweepTester(audio_settings,audioTestGenerator,audioTestMeasurement);
 
-AudioControlTLV320AIC3206   audioHardware; //xy=161,42
+AudioControlAIC3206          audioHardware; //xy=161,42
 AudioConfigFIRFilterBank_F32 configFIRFilterBank1; //xy=349,45
 
 AudioConnection_F32         patchCord0(audioInI2S1, 0, audioTestGenerator, 0);
@@ -99,7 +99,7 @@ SerialManager serialManager(N_CHAN,expCompLim,ampSweepTester,freqSweepTester);
 
 //setup the tympan
 void setupAudioHardware(void) {
-    // Setup the TLV320
+    // Setup the AIC3206
   audioHardware.enable(); // activate AIC
 
   // Choose the desired input

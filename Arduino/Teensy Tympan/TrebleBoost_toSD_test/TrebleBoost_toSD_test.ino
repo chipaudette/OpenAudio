@@ -14,7 +14,7 @@
 
 //here are the libraries that we need
 #include "MyWriteAudioToSD.h"
-#include <Tympan_Library.h>  //AudioControlTLV320AIC3206 lives here
+#include <Tympan_Library.h>  //AudioControlAIC3206 lives here
 
 //set the sample rate and block size
 const float sample_rate_Hz = 44117.0f ; //24000 or 44117 (or other frequencies in the table in AudioOutputI2S_F32)
@@ -22,7 +22,7 @@ const int audio_block_samples = 128;     //do not make bigger than AUDIO_BLOCK_S
 AudioSettings_F32 audio_settings(sample_rate_Hz, audio_block_samples);
 
 //create audio library objects for handling the audio
-AudioControlTLV320AIC3206 audioHardware;
+AudioControlAIC3206       audioHardware;
 AudioInputI2S_F32         i2s_in(audio_settings);     //Digital audio in *from* the Teensy Audio Board ADC. 
 AudioFilterBiquad_F32     hp_filt1(audio_settings);   //IIR filter doing a highpass filter.
 AudioEffectGain_F32       gain1;                      //Applies digital gain to audio data. 

@@ -15,7 +15,7 @@
 
 //here are the libraries that we need
 #include "SDAudioWriter_SdFat.h" 
-#include <Tympan_Library.h>  //AudioControlTLV320AIC3206 lives here
+#include <Tympan_Library.h>  //AudioControlAIC3206 lives here
 
 #define PRINT_SD_TIMING 1      //set to 1 to print timing information of *every* write operation.  Great for logging to file.  Bad for real-time human reading.
 #define MAX_F32_BLOCKS (256)   //Can't seem to use more than 192, so you could set it to 192.  Won't run at all if much above 400.  
@@ -27,7 +27,7 @@ const int audio_block_samples = 128;     //do not make bigger than AUDIO_BLOCK_S
 AudioSettings_F32 audio_settings(sample_rate_Hz, audio_block_samples);
 
 //create audio library objects for handling the audio
-AudioControlTLV320AIC3206 audioHardware;
+AudioControlAIC3206       audioHardware;
 AudioInputI2S_F32         i2s_in(audio_settings);     //Digital audio in *from* the Teensy Audio Board ADC. 
 AudioRecordQueue_F32      queueLeft(audio_settings);     //gives access to audio data (will use for SD card)
 AudioRecordQueue_F32      queueRight(audio_settings);     //gives access to audio data (will use for SD card)

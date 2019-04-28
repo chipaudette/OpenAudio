@@ -24,11 +24,11 @@ const int audio_block_samples = 64;     //for freq domain processing choose a po
 AudioSettings_F32 audio_settings(sample_rate_Hz, audio_block_samples);
 
 //create audio library objects for handling the audio
-AudioControlTLV320AIC3206 audioHardware;
-AudioInputI2S_F32         i2s_in(audio_settings);   //Digital audio *from* the Tympan AIC. 
+AudioControlAIC3206         audioHardware;
+AudioInputI2S_F32           i2s_in(audio_settings);   //Digital audio *from* the Tympan AIC. 
 AudioSynthWaveformSine_F32  sine1(audio_settings);                  //alternate input source
 AudioEffectFreqDomain_F32   audioEffectFD(audio_settings);
-AudioOutputI2S_F32        i2s_out(audio_settings);  //Digital audio *to* the Tympan AIC.
+AudioOutputI2S_F32          i2s_out(audio_settings);  //Digital audio *to* the Tympan AIC.
 
 //Make all of the audio connections
 #if 1

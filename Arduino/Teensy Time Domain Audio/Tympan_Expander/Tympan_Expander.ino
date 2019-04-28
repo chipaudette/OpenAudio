@@ -1,5 +1,5 @@
 #include <Tympan_Library.h>
-#include <Audio.h>
+//include <Audio.h>
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
@@ -23,7 +23,7 @@ AudioEffectExpander_F32     expander2(audio_settings);         //xy=398,261
 AudioMixer4_F32          mixer4_1;       //xy=587,275
 AudioEffectCompressor_F32  limiter1;     //xy=717,184
 AudioOutputI2S_F32       audioOutI2S1(audio_settings);   //xy=860,104
-AudioControlTLV320AIC3206 audioHardware; //xy=161,42
+AudioControlAIC3206 	 audioHardware; //xy=161,42
 AudioConfigFIRFilterBank_F32 configFIRFilterBank1; //xy=349,45
 
 AudioConnection_F32         patchCord1(audioInI2S1, 0, fir[0], 0);
@@ -46,7 +46,7 @@ AudioConnection_F32         patchCord32(limiter1, 0, audioOutI2S1, 1);
 
 //setup the tympan
 void setupAudioHardware(void) {
-    // Setup the TLV320
+    // Setup the Tympan
   audioHardware.enable(); // activate AIC
 
   // Choose the desired input

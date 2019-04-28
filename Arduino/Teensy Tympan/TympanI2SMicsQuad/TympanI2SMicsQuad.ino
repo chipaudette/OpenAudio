@@ -18,7 +18,7 @@
 // Tympan board.  Yay.
 
 #include <Audio.h>   //yes, I'm going to use the Teensy Audio library
-#include <control_tlv320aic3206.h>  //from the Tympan library, I'm including just this one header file.
+#include <control_aic3206.h>  //from the Tympan library, I'm including just this one header file.
 #include "AudioEffectGain.h"
 
 // Define audio objects...notice that I'm using the Teensy Audio library, not the Tympan library
@@ -29,14 +29,14 @@ AudioEffectGain         gain1, gain2;
 AudioOutputI2SQuad       i2s_quad_out;   //This is the Teensy Audio library's built-in 4-channel I2S class   
 
 //setup the first Tympan using the default settings
-AudioControlTLV320AIC3206     tympan1;  //using I2C bus SCL0/SDA0
+AudioControlAIC3206      tympan1;  //using I2C bus SCL0/SDA0
 
 #define POT_PIN 39
 
 //setup the second Tympan using the pins just for the second AIC
 //define AIC_ALT_REST_PIN 20
 //define AIC_ALT_I2C_BUS 2
-//AudioControlTLV320AIC3206     tympan2(AIC_ALT_REST_PIN,AIC_ALT_I2C_BUS);  //second Tympan! using I2C bus SCL2/SDA2
+//AudioControlAIC3206     tympan2(AIC_ALT_REST_PIN,AIC_ALT_I2C_BUS);  //second Tympan! using I2C bus SCL2/SDA2
 
 //define the audio connections (again, using the Teensy Audio library classes, not Tympan library)
 #if 0

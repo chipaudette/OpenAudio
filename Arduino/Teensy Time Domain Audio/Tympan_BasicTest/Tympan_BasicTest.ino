@@ -1,5 +1,5 @@
 /*
- * Tympan_TLV320AIC.ino
+ * Tympan_BasicTest.ino
  * 
  * Created: BPF and WEA, Creare LLC, Jan/Feb 2017
  * Purpose: Demonstrate basic audio pass-thru using the Tympan Audio Board,

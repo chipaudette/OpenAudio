@@ -14,7 +14,7 @@
 
 //here are the libraries that we need
 #include "SDAudioWriter.h"
-#include <Tympan_Library.h>  //AudioControlTLV320AIC3206 lives here
+#include <Tympan_Library.h>  //AudioControlAIC3206 lives here
 
 #define PRINT_SD_TIMING 1
 #define MAX_F32_BLOCKS (300)   //Can't seem to use more than 192.  Won't run at all if much above 400.  
@@ -25,7 +25,7 @@ const int audio_block_samples = 128;     //do not make bigger than AUDIO_BLOCK_S
 AudioSettings_F32 audio_settings(sample_rate_Hz, audio_block_samples);
 
 //create audio library objects for handling the audio
-AudioControlTLV320AIC3206 audioHardware;
+AudioControlAIC3206       audioHardware;
 AudioInputI2S_F32         i2s_in(audio_settings);     //Digital audio in *from* the Teensy Audio Board ADC. 
 AudioRecordQueue_F32      queueLeft(audio_settings);     //gives access to audio data (will use for SD card)
 AudioRecordQueue_F32      queueRight(audio_settings);     //gives access to audio data (will use for SD card)
@@ -55,9 +55,10 @@ void setup() {
   Serial.println("StereoAudioToSD: Starting setup()...");
   
   //allocate the audio memory
-  AudioMemory(10); AudioMemory_F32(MAX_F32_BLOCKS,audio_settings); //I can only seem to allocate 400 blocks
+  //AudioMemory(10);
+  AudioMemory_F32(MAX_F32_BLOCKS,audio_settings); //I can only seem to allocate 400 blocks
 
- Serial.println("StereoAudioToSD: memory allocated.");
+  Serial.println("StereoAudioToSD: memory allocated.");
   
   //Enable the Tympan to start the audio flowing!
   audioHardware.enable(); // activate AIC
