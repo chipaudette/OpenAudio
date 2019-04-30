@@ -36,26 +36,28 @@ AudioControlAIC3206     tympan1;  //using I2C bus SCL0/SDA0
 AudioControlAIC3206     tympan2(AIC_ALT_REST_PIN,AIC_ALT_I2C_BUS);  //second Tympan! using I2C bus SCL2/SDA2
 
 //define the audio connections (again, using the Teensy Audio library classes, not Tympan library)
-#if 1
+#if 0
   //play synthetic sounds...tests only the *output* of the 4-channel system
   AudioConnection          patchCord1(sine1, 0, i2s_quad_out, 0); //sine on left, Tympan1.  Freq is set later.
   AudioConnection          patchCord2(pink1, 0, i2s_quad_out, 1); //pink noise on right, Tympan1
   AudioConnection          patchCord3(pink2, 0, i2s_quad_out, 2); //pink noise on right, Tympan2
   AudioConnection          patchCord4(sine2, 0, i2s_quad_out, 3); //sine on left, Tympan2.  Freq is set later.
+  bool modulate_chan3_4_audio = true; //toggle the volume high/low every second
 #else
   //connect the pink input jack (as line-in, not mic-in) to the output...test both input and output
   AudioConnection          patchCord1(i2s_quad_in, 0, i2s_quad_out, 0);
   AudioConnection          patchCord2(i2s_quad_in, 1, i2s_quad_out, 1);
   AudioConnection          patchCord3(i2s_quad_in, 2, i2s_quad_out, 2);
   AudioConnection          patchCord4(i2s_quad_in, 3, i2s_quad_out, 3);
+  bool modulate_chan3_4_audio = false; //do not toggle the volume high/low every second
 #endif
 
-const float input_gain_dB = 20.0f; //gain on the microphone
+float input_gain_dB = 0.0f; //gain on the microphone
 float vol_knob_gain_dB = 0.0;      //will be overridden by volume knob
 
 void setup() {
   Serial.begin(115200);  delay(500);
-  Serial.println("AudioPassThru: Starting setup()...");
+  Serial.println("TympanQuad: Starting setup()...");
   Wire1.end(); //delete Wire1;
 
   //allocate the dynamic memory for audio processing blocks
@@ -66,12 +68,23 @@ void setup() {
   tympan2.enable();
 
   //Choose the desired input
-  //tympan1.inputSelect(TYMPAN_INPUT_ON_BOARD_MIC);     // use the on board microphones
-  //tympan2.inputSelect(TYMPAN_INPUT_ON_BOARD_MIC);     // use the on board microphones
-  //tympan1.inputSelect(TYMPAN_INPUT_JACK_AS_MIC);    // use the microphone jack - defaults to mic bias 2.5V
-  //tympan2.inputSelect(TYMPAN_INPUT_JACK_AS_MIC);    // use the microphone jack - defaults to mic bias 2.5V
-  tympan1.inputSelect(TYMPAN_INPUT_JACK_AS_LINEIN); // use the microphone jack - defaults to mic bias OFF
-  tympan2.inputSelect(TYMPAN_INPUT_JACK_AS_LINEIN); // use the microphone jack - defaults to mic bias OFF
+  switch (3) {
+    case 1:
+      tympan1.inputSelect(TYMPAN_INPUT_ON_BOARD_MIC);     // use the on board microphones
+      tympan2.inputSelect(TYMPAN_INPUT_ON_BOARD_MIC);     // use the on board microphones
+      input_gain_dB = 15.0;
+      break;
+    case 2:
+      tympan1.inputSelect(TYMPAN_INPUT_JACK_AS_MIC);    // use the microphone jack - defaults to mic bias 2.5V
+      tympan2.inputSelect(TYMPAN_INPUT_JACK_AS_MIC);    // use the microphone jack - defaults to mic bias 2.5V
+      input_gain_dB = 15.0;
+      break;
+    case 3: 
+      tympan1.inputSelect(TYMPAN_INPUT_JACK_AS_LINEIN); // use the microphone jack - defaults to mic bias OFF
+      tympan2.inputSelect(TYMPAN_INPUT_JACK_AS_LINEIN); // use the microphone jack - defaults to mic bias OFF
+      input_gain_dB = 0.0;
+      break;
+  }
 
   tympan1.volume_dB(vol_knob_gain_dB);                   // headphone amplifier.  -63.6 to +24 dB in 0.5dB steps.
   tympan1.setInputGain_dB(input_gain_dB); // set input volume, 0-47.5dB in 0.5dB setps
@@ -93,7 +106,7 @@ void loop() {
   delay(1000);
   Serial.println("playing...");
   
-  #if 1
+  if (modulate_chan3_4_audio) {
     //change output volume on just Tympan 2 to confirm that we can control one (and only one) Tympan
     setQuiet = !setQuiet;
     if (setQuiet) {
@@ -101,10 +114,10 @@ void loop() {
     } else {
       tympan2.volume_dB(vol_knob_gain_dB);
     }
-  #else
+  } else {
     //check the potentiometer
     //servicePotentiometer(millis(),100); //service the potentiometer every 100 msec
-  #endif
+  }
 }
 
 
