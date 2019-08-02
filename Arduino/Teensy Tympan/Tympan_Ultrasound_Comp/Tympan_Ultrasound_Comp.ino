@@ -26,12 +26,9 @@
 #define USE_STEREO 0
 
 // Include all the of the needed libraries
-//include <Audio.h>      //Teensy Audio Library
-#include <Wire.h>
-#include <SPI.h>
-//include <SD.h>
-//include <SerialFlash.h>
-#include <Tympan_Library.h> //for AudioConvert_I16toF32, AudioConvert_F32toI16, and AudioEffectGain_F32
+#include <Wire.h>  //I don't think that we need this.  Try it without! 
+#include <SPI.h>   //I don't think that we need this.  Try it without!
+#include <Tympan_Library.h> 
 
 
 const float sample_rate_Hz = 96000.0f ; //24000 or 44117.64706f (or other frequencies in the table in AudioOutputI2S_F32
